@@ -73,9 +73,10 @@ app.post('/api/payments/webhook', async (req, res) => {
                 message: "Malipo hayajakamilika au yamegoma." 
             });
         }
-    } catc (err) {
-        console.error("Hitilafu kwenye malipo webhook:", err.message);
-        res.status(500).json({ error: err.message });
+} catch (err) {
+    console.error("Hitilafu wakati wa kuwasiliana na Router:", err.message);
+}
+
     }
 });
 // ==========================================
