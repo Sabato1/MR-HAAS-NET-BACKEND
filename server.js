@@ -146,3 +146,31 @@ async function activateClientService(clientUsername, phone, amount, gateway) {
     // Hapa ndipo unaweka ile code ya MikroTik RouterOS API tuliyoijadili awali
     // Ili kuongeza muda wa mkataba kwenye database au kusasisha PPPoE secret ya mteja.
 }
+// Kuongeza jedwali la kuweka taarifa za malipo za kila WISP (Tenant)
+db.run(`
+  CREATE TABLE IF NOT EXISTS tenant_payment_gateways (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id TEXT NOT NULL,
+    gateway_name TEXT NOT NULL, -- Mfano: 'azampay', 'selcom', 'clickpesa', 'pesapal', 'beem'
+    api_key TEXT,
+    api_secret TEXT,
+    merchant_id TEXT,
+    is_active INTEGER DEFAULT 1,
+    FOREIGN KEY(tenant_id) REFERENCES tenants(id)
+  )
+`);
+// Kitendakazi kinachochakata malipo kutoka GATEWAY YOYOTE kwa WISP yeyote
+async function processMultiTenantPayment(tenantId, clientUsername, amount, gatewayName) {
+    console.log(`[${gatewayName}] Malipo ya TZS ${amount} yamepokelewa kwa WISP: ${tenantId}, Mteja: ${clientUsername}`);
+
+    // 1. Tafuta taarifa za MikroTik Router ya huyu WISP kwenye database
+    db.get(`SELECT * FROM devices WHERE tenant_id = ? AND type = 'mikrotik'`, [tenantId], async (err, router) => {
+        if (err || !router) {
+            console.error("Router ya WISP huyu haikupatikana!");
+            return;
+        }
+
+        // 2. Unganisha na Router ya MikroTik na weka/sasisha PPPoE/Hotspot user
+        // (Code za RouterOSClient zitaongeza mkataba wa mteja)
+    });
+}
