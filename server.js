@@ -78,3 +78,65 @@ app.post('/api/payments/webhook', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// ==========================================
+// WEBHOOKS ZA MIFUMO YOTE YA MALIPO
+// ==========================================
+
+// 1. Azam Pay Webhook
+app.post('/api/payments/azampay/webhook', async (req, res) => {
+    const { transactionid, amount, msisdn, utilityref, paymentstatus } = req.body;
+    if (paymentstatus === 'Succeeded' || paymentstatus === 'COMPLETED') {
+        await activateClientService(utilityref, msisdn, amount, 'AzamPay');
+        return res.status(200).json({ success: true, message: "AzamPay malipo yamepokelewa." });
+    }
+    res.status(400).json({ success: false, message: "Malipo hayajakamilika." });
+});
+
+// 2. ClickPesa Webhook
+app.post('/api/payments/clickpesa/webhook', async (req, res) => {
+    const { reference, phone_number, amount, status } = req.body;
+    if (status === 'success') {
+        await activateClientService(reference, phone_number, amount, 'ClickPesa');
+        return res.status(200).json({ success: true });
+    }
+    res.status(400).json({ success: false });
+});
+
+// 3. Selcom Webhook
+app.post('/api/payments/selcom/webhook', async (req, res) => {
+    const { order_id, transid, amount, payment_status, phone } = req.body;
+    if (payment_status === 'COMPLETED') {
+        await activateClientService(order_id, phone, amount, 'Selcom');
+        return res.status(200).json({ success: true });
+    }
+    res.status(400).json({ success: false });
+});
+
+// 4. Pesapal Webhook (IPN - Instant Payment Notification)
+app.get('/api/payments/pesapal/webhook', async (req, res) => {
+    const { OrderTrackingId, OrderMerchantReference } = req.query;
+    // Hapa Pesapal hutuma ombi la kuangalia hali ya malipo kwa kutumia OrderTrackingId
+    // Ikithibitishwa kuwa imefanikiwa:
+    await activateClientService(OrderMerchantReference, 'Pesapal_Client', 0, 'Pesapal');
+    res.status(200).json({ success: true });
+});
+
+// 5. Palmpesa Webhook
+app.post('/api/payments/palmpesa/webhook', async (req, res) => {
+    const { referenceId, accountNo, amountPaid, transStatus } = req.body;
+    if (transStatus === 'SUCCESS') {
+        await activateClientService(accountNo, 'PalmUser', amountPaid, 'PalmPesa');
+        return res.status(200).json({ success: true });
+    }
+    res.status(400).json({ success: false });
+});
+
+// 6. Beem Africa Webhook (Bpay)
+app.post('/api/payments/beem/webhook', async (req, res) => {
+    const { transaction_id, reference_no, amount, status, msisdn } = req.body;
+    if (status === 'SUCCESS') {
+        await activateClientService(reference_no, msisdn, amount, 'BeemAfrica');
+        return res.status(200).json({ success: true });
+    }
+    res.status(400).json({ success: false });
+});
