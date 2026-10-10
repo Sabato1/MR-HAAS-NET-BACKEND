@@ -140,3 +140,9 @@ app.post('/api/payments/beem/webhook', async (req, res) => {
     }
     res.status(400).json({ success: false });
 });
+async function activateClientService(clientUsername, phone, amount, gateway) {
+    console.log(`[${gateway}] Malipo ya TZS ${amount} yamefanikiwa kutoka kwa ${phone} kwa ajili ya mteja: ${clientUsername}`);
+    
+    // Hapa ndipo unaweka ile code ya MikroTik RouterOS API tuliyoijadili awali
+    // Ili kuongeza muda wa mkataba kwenye database au kusasisha PPPoE secret ya mteja.
+}
