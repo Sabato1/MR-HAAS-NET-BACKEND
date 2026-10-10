@@ -1,14 +1,14 @@
 {
   "name": "mr-haas-net-backend",
   "version": "1.0.0",
-  "description": "WISP Billing and Management System",
+  "description": "WISP Billing SaaS",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "sqlite3": "^5.1.7",
-    "routeros-client": "^6.0.0"
+    "routeros-client": "^4.0.0",
+    "sqlite3": "^5.1.7"
   }
 }
