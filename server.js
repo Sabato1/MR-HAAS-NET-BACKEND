@@ -51,3 +51,30 @@ app.get('/api/devices/:tenant_id', (req, res) => {
         res.json({ devices: rows });
     });
 });
+// API ya kupokea majibu ya malipo (Webhook/Callback kutoka Gateway ya Malipo)
+app.post('/api/payments/webhook', async (req, res) => {
+    const { transaction_id, phone_number, amount, status, client_username } = req.body;
+
+    try {
+        // Angalia kama malipo yamefanikiwa
+        if (status === 'SUCCESS' || status === 'COMPLETED') {
+            console.log(`Malipo yamefanikiwa kutoka kwa ${phone_number} ya kiasi ${amount}`);
+
+            // Hapa unaweza kuongeza code za kuwasha mteja kwenye MikroTik au Database
+            // Mfano: Kusasisha hali ya mkataba au akaunti ya mteja kuwa hai
+
+            return res.status(200).json({ 
+                success: true, 
+                message: "Malipo yamepokewa na huduma imewashwa!" 
+            });
+        } else {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Malipo hayajakamilika au yamegoma." 
+            });
+        }
+    } catc (err) {
+        console.error("Hitilafu kwenye malipo webhook:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
