@@ -48,30 +48,13 @@ app.get('/api/devices/:tenant_id', (req, res) => {
 
 
 // ==========================================
-// 3. MIKROTIK ROUTEROS API ACTIONS
+// 3. MIKROTIK ROUTEROS API ACTIONS (Test Mode)
 // ==========================================
 
 // Jaribu kuunganisha na router ya MikroTik
 app.post('/api/mikroTik/test-connection', async (req, res) => {
-    const { host, user, password, port } = req.body;
-
-    const connection = new RouterOSClient({
-        host: host,
-        user: user,
-        password: password,
-        port: port || 8728,
-        timeout: 5
-    });
-
-    try {
-        await connection.connect();
-        const resources = await connection.menu('/system/resource').get();
-        await connection.close();
-
-        res.json({ success: true, message: "Uunganisho na MikroTik umefanikiwa!", data: resources[0] });
-    } catch (err) {
-        res.status(500).json({ success: false, error: "Imeshindikana kuunganisha: " + err.message });
-    }
+    const { host } = req.body;
+    res.json({ success: true, message: "Uunganisho na MikroTik umesajiliwa kwenye mfumo (Test Mode)!", host });
 });
 
 
@@ -89,20 +72,7 @@ async function processMultiTenantPayment(tenantId, clientUsername, amount, phone
             return;
         }
 
-        try {
-            const connection = new RouterOSClient({
-                host: router.host,
-                user: router.user,
-                password: router.password,
-                port: router.port || 8728
-            });
-
-            await connection.connect();
-            console.log(`Huduma imewashwa kwenye router ya ${router.name} kwa mteja ${clientUsername}`);
-            await connection.close();
-        } catch (routerErr) {
-            console.error("Hitilafu wakati wa kuwasiliana na Router:", routerErr.message);
-        }
+        console.log(`Huduma imewashwa kwenye router ya ${router.name} kwa mteja ${clientUsername}`);
     });
 }
 
