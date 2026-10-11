@@ -1,227 +1,99 @@
-
 <!DOCTYPE html>
-<html lang="sw" x-data="app" :dir="lang === 'ar' ? 'rtl' : 'ltr'">
+<html lang="sw" x-data="app()" :dir="lang === 'ar'? 'rtl' : 'ltr'">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>MR HAAS NET | WISP Management</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>[x-cloak]{display:none!important}</style>
 </head>
-
 <body class="bg-slate-900 text-slate-100">
 <div class="flex min-h-screen">
 
-<aside class="w-64 shrink-0 bg-slate-950 p-5 hidden md:block">
-    <h1 class="text-xl font-bold text-blue-400 mb-8">
-        <i class="fa-solid fa-wifi"></i> MR HAAS NET
-    </h1>
-    <nav class="space-y-2">
+<!-- DESKTOP SIDEBAR -->
+<aside class="w-64 shrink-0 bg-slate-950 p-5 hidden md:flex md:flex-col">
+    <h1 class="text-xl font-bold text-blue-400 mb-8"><i class="fa-solid fa-wifi"></i> MR HAAS NET</h1>
+    <nav class="space-y-2 flex-1">
         <template x-for="item in navigation" :key="item.id">
-            <button type="button" @click="currentTab=item.id"
-                :class="currentTab===item.id?'bg-blue-600 text-white':'text-slate-400 hover:bg-slate-800'"
-                class="w-full rounded-xl p-3 text-left">
-                <i :class="item.icon" class="mr-2"></i>
-                <span x-text="item.label"></span>
-            </button>
+            <button type="button" @click="currentTab=item.id" :class="currentTab===item.id?'bg-blue-600 text-white':'text-slate-400 hover:bg-slate-800'" class="w-full rounded-xl p-3 text-left"><i :class="item.icon" class="mr-2 w-5"></i><span x-text="item.label"></span></button>
         </template>
     </nav>
-    <div class="mt-10 rounded-xl bg-emerald-950 p-3 text-sm text-emerald-400">
-        <i class="fa-solid fa-circle-check"></i> Dashboard tayari
-    </div>
+    <div class="mt-10 rounded-xl bg-emerald-950/50 border border-emerald-900 p-3 text-sm text-emerald-400"><i class="fa-solid fa-circle-check"></i> System Online</div>
 </aside>
 
-<main class="min-w-0 flex-1 p-4 md:p-8">
-    <header class="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div>
-            <h2 class="text-2xl font-bold" x-text="pageTitle"></h2>
-            <p class="mt-1 text-sm text-slate-400">Multi-Tenant WISP Management System</p>
-        </div>
-        <div class="flex gap-2">
-            <button type="button" @click="lang=lang==='sw'?'en':'sw'"
-                class="rounded-lg border border-slate-700 px-3 py-2">
-                <i class="fa-solid fa-language"></i>
-                <span x-text="lang.toUpperCase()"></span>
-            </button>
-            <button type="button" @click="openClient()"
-                class="rounded-xl bg-blue-600 px-4 py-2 font-semibold hover:bg-blue-500">
-                <i class="fa-solid fa-user-plus"></i> Ongeza Mteja
-            </button>
+<!-- MOBILE DRAWER -->
+<div x-show="mobileMenu" x-cloak class="fixed inset-0 z-[60] md:hidden" x-transition.opacity>
+    <div @click="mobileMenu=false" class="absolute inset-0 bg-black/70"></div>
+    <div class="relative w-[85%] max-w-[300px] h-full bg-slate-950 p-5 flex flex-col" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full">
+        <div class="flex items-center justify-between mb-8"><h1 class="text-xl font-bold text-blue-400"><i class="fa-solid fa-wifi"></i> MR HAAS NET</h1><button @click="mobileMenu=false" class="w-8 h-8 rounded-full bg-slate-800"><i class="fa-solid fa-xmark"></i></button></div>
+        <nav class="space-y-2 flex-1"><template x-for="item in navigation" :key="item.id"><button type="button" @click="currentTab=item.id; mobileMenu=false" :class="currentTab===item.id?'bg-blue-600 text-white':'text-slate-400'" class="w-full rounded-xl p-3.5 text-left"><i :class="item.icon" class="mr-3 w-5"></i><span x-text="item.label"></span></button></template></nav>
+    </div>
+</div>
+
+<main class="min-w-0 flex-1">
+    <header class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur border-b border-slate-800 p-4 md:p-8">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <button type="button" @click="mobileMenu=true" class="md:hidden w-10 h-10 rounded-xl bg-slate-800 border border-slate-700"><i class="fa-solid fa-bars"></i></button>
+                <div><h2 class="text-lg md:text-2xl font-bold" x-text="pageTitle"></h2></div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" @click="lang=lang==='sw'?'en':'sw'" class="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm"><i class="fa-solid fa-language"></i> <span x-text="lang.toUpperCase()"></span></button>
+                <button type="button" @click="openClient()" class="rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-sm">Ongeza Mteja</button>
+            </div>
         </div>
     </header>
 
+    <div class="p-4 md:p-8">
     <section x-show="currentTab==='dashboard'" x-cloak>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <template x-for="stat in stats" :key="stat.label">
-                <div class="rounded-2xl border border-slate-800 bg-slate-950 p-5">
-                    <i :class="stat.icon" class="mb-4 text-2xl text-blue-400"></i>
-                    <p class="text-sm text-slate-400" x-text="stat.label"></p>
-                    <h3 class="mt-2 text-2xl font-bold" x-text="stat.value"></h3>
-                </div>
-            </template>
-        </div>
-
-        <div class="mt-6 rounded-2xl border border-slate-800 bg-slate-950 p-5">
-            <h3 class="mb-4 text-lg font-bold">Quick Actions</h3>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <button type="button" @click="openClient()"
-                    class="rounded-xl bg-blue-600 p-4 hover:bg-blue-500">
-                    <i class="fa-solid fa-user-plus mr-2"></i> Ongeza Mteja
-                </button>
-                <button type="button" @click="openDevice()"
-                    class="rounded-xl bg-slate-800 p-4 hover:bg-slate-700">
-                    <i class="fa-solid fa-network-wired mr-2"></i> Ongeza Kifaa
-                </button>
-                <button type="button" @click="currentTab='payments'"
-                    class="rounded-xl bg-slate-800 p-4 hover:bg-slate-700">
-                    <i class="fa-solid fa-wallet mr-2"></i> Malipo
-                </button>
-            </div>
-        </div>
+        <div class="grid grid-cols-2 gap-3 xl:grid-cols-4"><template x-for="stat in stats" :key="stat.label"><div class="rounded-2xl border border-slate-800 bg-slate-950 p-5"><i :class="stat.icon" class="mb-3 text-2xl text-blue-400"></i><p class="text-sm text-slate-400" x-text="stat.label"></p><h3 class="mt-2 text-2xl font-bold" x-text="stat.value"></h3></div></template></div>
+        <div class="mt-6 rounded-2xl border border-slate-800 bg-slate-950 p-5"><h3 class="mb-4 font-bold">Quick Actions</h3><div class="grid grid-cols-1 gap-3 sm:grid-cols-3"><button type="button" @click="openClient()" class="rounded-xl bg-blue-600 p-4 hover:bg-blue-500"><i class="fa-solid fa-user-plus mr-2"></i> Ongeza Mteja</button><button type="button" @click="openDevice()" class="rounded-xl bg-slate-800 p-4 hover:bg-slate-700"><i class="fa-solid fa-network-wired mr-2"></i> Ongeza Kifaa</button><button type="button" @click="currentTab='payments'" class="rounded-xl bg-slate-800 p-4 hover:bg-slate-700"><i class="fa-solid fa-wallet mr-2"></i> Malipo</button></div></div>
     </section>
 
     <section x-show="currentTab==='clients'" x-cloak>
-        <div class="mb-4 flex items-center justify-between gap-3">
-            <h3 class="text-xl font-bold">Orodha ya Wateja</h3>
-            <button type="button" @click="openClient()"
-                class="rounded-lg bg-blue-600 px-4 py-2">
-                <i class="fa-solid fa-plus"></i> Ongeza Mteja
-            </button>
-        </div>
-        <div class="overflow-x-auto rounded-xl border border-slate-800">
-            <table class="w-full text-left text-sm">
-                <thead class="bg-slate-950 text-slate-400">
-                    <tr>
-                        <th class="p-3">Jina</th>
-                        <th class="p-3">Simu</th>
-                        <th class="p-3">Username</th>
-                        <th class="p-3">Kifurushi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <template x-for="(client,i) in clients" :key="client.id">
-                        <tr class="border-t border-slate-800">
-                            <td class="p-3" x-text="client.name"></td>
-                            <td class="p-3" x-text="client.phone"></td>
-                            <td class="p-3" x-text="client.username"></td>
-                            <td class="p-3" x-text="client.package_name"></td>
-                        </tr>
-                    </template>
-                    <tr x-show="clients.length===0">
-                        <td colspan="4" class="p-8 text-center text-slate-400">
-                            Hakuna wateja bado. Bonyeza Ongeza Mteja.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <div class="mb-4 flex justify-between"><h3 class="text-xl font-bold">Orodha ya Wateja</h3><button type="button" @click="openClient()" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm"><i class="fa-solid fa-plus"></i> Ongeza</button></div>
+        <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950"><table class="w-full text-left text-sm"><thead class="bg-slate-900 text-slate-400"><tr><th class="p-3">Jina</th><th class="p-3">Simu</th><th class="p-3">Username</th><th class="p-3">Kifurushi</th></tr></thead><tbody><template x-for="c in clients" :key="c.id"><tr class="border-t border-slate-800"><td class="p-3" x-text="c.name"></td><td class="p-3" x-text="c.phone"></td><td class="p-3" x-text="c.username"></td><td class="p-3" x-text="c.package_name"></td></tr></template><tr x-show="clients.length===0"><td colspan="4" class="p-8 text-center text-slate-400">Hakuna wateja bado.</td></tr></tbody></table></div>
     </section>
 
     <section x-show="currentTab==='devices'" x-cloak>
-        <div class="mb-4 flex items-center justify-between">
-            <h3 class="text-xl font-bold">Vifaa vya Mtandao / WISP</h3>
-            <button type="button" @click="openDevice()"
-                class="rounded-lg bg-blue-600 px-4 py-2">
-                <i class="fa-solid fa-plus"></i> Ongeza Kifaa
-            </button>
-        </div>
-        <div class="space-y-3">
-            <template x-for="device in devices" :key="device.id">
-                <div class="rounded-xl border border-slate-800 bg-slate-950 p-4">
-                    <h4 class="font-bold" x-text="device.name"></h4>
-                    <p class="text-sm text-slate-400" x-text="device.host"></p>
-                    <p class="mt-2 text-xs text-blue-400" x-text="device.type"></p>
-                </div>
-            </template>
-            <div x-show="devices.length===0" class="rounded-xl bg-slate-950 p-8 text-center text-slate-400">
-                Hakuna vifaa vilivyosajiliwa bado.
-            </div>
-        </div>
+        <div class="mb-4 flex justify-between"><h3 class="text-xl font-bold">Vifaa vya Mtandao</h3><button type="button" @click="openDevice()" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm"><i class="fa-solid fa-plus"></i> Kifaa</button></div>
+        <div class="space-y-3"><template x-for="d in devices" :key="d.id"><div class="rounded-xl border border-slate-800 bg-slate-950 p-4"><h4 class="font-bold" x-text="d.name"></h4><p class="text-sm text-slate-400" x-text="d.host"></p></div></template><div x-show="devices.length===0" class="rounded-xl bg-slate-950 p-8 text-center text-slate-400">Hakuna vifaa.</div></div>
     </section>
 
-    <section x-show="currentTab==='payments'" x-cloak>
-        <div class="rounded-2xl border border-slate-800 bg-slate-950 p-6">
-            <i class="fa-solid fa-wallet mb-3 text-3xl text-blue-400"></i>
-            <h3 class="text-xl font-bold">Usimamizi wa Malipo</h3>
-            <p class="mt-2 text-slate-400">
-                Muunganiko wa Mobile Money unahitaji API ya mtoa huduma na backend.
-            </p>
-        </div>
-    </section>
+    <section x-show="currentTab==='payments'" x-cloak><div class="rounded-2xl border border-slate-800 bg-slate-950 p-6"><i class="fa-solid fa-wallet mb-3 text-3xl text-blue-400"></i><h3 class="text-xl font-bold">Malipo</h3><p class="mt-2 text-slate-400">Mobile Money integration inahitaji backend.</p></div></section>
+    </div>
 </main>
 </div>
 
-<!-- MODAL: CLIENT -->
-<div x-show="addClientModal" x-cloak
-    @keydown.escape.window="addClientModal=false"
-    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4">
-    <div @click.outside="addClientModal=false"
-        class="my-auto w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-950 p-6">
-        <div class="mb-5 flex items-center justify-between">
-            <h3 class="text-xl font-bold">Sajili Mteja Mpya</h3>
-            <button type="button" @click="addClientModal=false" class="p-2 text-slate-400">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
+<!-- MODAL CLIENT -->
+<div x-show="addClientModal" x-cloak x-transition.opacity class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4" @keydown.escape.window="addClientModal=false">
+    <div x-show="addClientModal" x-transition.scale class="w-full max-w-lg rounded-[20px] border border-slate-700 bg-slate-950 p-6">
+        <div class="mb-5 flex justify-between"><h3 class="text-xl font-bold">Sajili Mteja Mpya</h3><button type="button" @click="addClientModal=false" class="w-8 h-8 rounded-full bg-slate-800"><i class="fa-solid fa-xmark"></i></button></div>
         <form @submit.prevent="submitClient()" class="space-y-4">
-            <input x-model="newClient.name" required placeholder="Jina kamili"
-                class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3">
-            <input x-model="newClient.phone" required type="tel" placeholder="Namba ya simu"
-                class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3">
-            <input x-model="newClient.username" required placeholder="Username"
-                class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3">
-            <select x-model="newClient.package_name"
-                class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3">
-                <option>Standard 5Mbps</option>
-                <option>Standard 10Mbps</option>
-                <option>Premium 20Mbps</option>
-            </select>
+            <input x-model="newClient.name" required placeholder="Jina kamili" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
+            <input x-model="newClient.phone" required type="tel" placeholder="Namba ya simu" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
+            <input x-model="newClient.username" required placeholder="Username" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
+            <select x-model="newClient.package_name" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5"><option>Standard 5Mbps</option><option>Standard 10Mbps</option><option>Premium 20Mbps</option></select>
             <p x-show="formError" x-text="formError" class="text-sm text-red-400"></p>
-            <div class="flex gap-3">
-                <button type="button" @click="addClientModal=false"
-                    class="flex-1 rounded-xl bg-slate-800 p-3">Ghairi</button>
-                <button type="submit" :disabled="saving"
-                    class="flex-1 rounded-xl bg-blue-600 p-3 font-bold disabled:opacity-50"
-                    x-text="saving?'Inahifadhi...':'Hifadhi Mteja'"></button>
-            </div>
+            <div class="flex gap-3"><button type="button" @click="addClientModal=false" class="flex-1 rounded-xl bg-slate-800 p-3">Ghairi</button><button type="submit" :disabled="saving" class="flex-1 rounded-xl bg-blue-600 p-3 font-bold" x-text="saving?'Inahifadhi...':'Hifadhi Mteja'"></button></div>
         </form>
     </div>
 </div>
 
-<!-- MODAL: DEVICE -->
-<div x-show="addDeviceModal" x-cloak
-    @keydown.escape.window="addDeviceModal=false"
-    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4">
-    <div @click.outside="addDeviceModal=false"
-        class="my-auto w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-950 p-6">
-        <div class="mb-5 flex items-center justify-between">
-            <h3 class="text-xl font-bold">Sajili Kifaa / WISP</h3>
-            <button type="button" @click="addDeviceModal=false" class="p-2 text-slate-400">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
+<!-- MODAL DEVICE -->
+<div x-show="addDeviceModal" x-cloak x-transition.opacity class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4" @keydown.escape.window="addDeviceModal=false">
+    <div x-show="addDeviceModal" x-transition.scale class="w-full max-w-lg rounded-[20px] border border-slate-700 bg-slate-950 p-6">
+        <div class="mb-5 flex justify-between"><h3 class="text-xl font-bold">Sajili Kifaa</h3><button type="button" @click="addDeviceModal=false" class="w-8 h-8 rounded-full bg-slate-800"><i class="fa-solid fa-xmark"></i></button></div>
         <form @submit.prevent="submitDevice()" class="space-y-4">
-            <input x-model="newDevice.name" required placeholder="Jina la kifaa / WISP"
-                class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3">
-            <input x-model="newDevice.host" required placeholder="IP ya MikroTik au hostname"
-                class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3">
-            <input x-model="newDevice.user" required placeholder="Username ya API"
-                class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3">
-            <input x-model="newDevice.password" type="password" placeholder="API password"
-                class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3">
-            <input x-model.number="newDevice.port" required type="number" min="1" max="65535"
-                placeholder="API port"
-                class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3">
+            <input x-model="newDevice.name" required placeholder="Jina la kifaa" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
+            <input x-model="newDevice.host" required placeholder="IP ya MikroTik" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
+            <input x-model="newDevice.user" required placeholder="API Username" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
+            <input x-model="newDevice.password" type="password" placeholder="API password" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
+            <input x-model.number="newDevice.port" required type="number" placeholder="8728" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
             <p x-show="formError" x-text="formError" class="text-sm text-red-400"></p>
-            <div class="flex gap-3">
-                <button type="button" @click="addDeviceModal=false"
-                    class="flex-1 rounded-xl bg-slate-800 p-3">Ghairi</button>
-                <button type="submit" :disabled="saving"
-                    class="flex-1 rounded-xl bg-blue-600 p-3 font-bold disabled:opacity-50"
-                    x-text="saving?'Inasajili...':'Hifadhi Kifaa'"></button>
-            </div>
+            <div class="flex gap-3"><button type="button" @click="addDeviceModal=false" class="flex-1 rounded-xl bg-slate-800 p-3">Ghairi</button><button type="submit" :disabled="saving" class="flex-1 rounded-xl bg-blue-600 p-3 font-bold" x-text="saving?'Inasajili...':'Hifadhi Kifaa'"></button></div>
         </form>
     </div>
 </div>
@@ -229,138 +101,43 @@
 <script>
 document.addEventListener('alpine:init', () => {
     Alpine.data('app', () => ({
-        lang: 'sw',
-        currentTab: 'dashboard',
-        addClientModal: false,
-        addDeviceModal: false,
-        saving: false,
-        formError: '',
+        lang: 'sw', currentTab: 'dashboard', mobileMenu: false,
+        addClientModal: false, addDeviceModal: false, saving: false, formError: '',
         tenantId: 'tenant_01',
-        clients: [],
-        devices: [],
-        newClient: {
-            tenant_id: 'tenant_01',
-            name: '',
-            phone: '',
-            username: '',
-            package_name: 'Standard 10Mbps'
+        clients: JSON.parse(localStorage.getItem('mrhaas_clients')||'[]'),
+        devices: JSON.parse(localStorage.getItem('mrhaas_devices')||'[]'),
+        newClient: { tenant_id: 'tenant_01', name: '', phone: '', username: '', package_name: 'Standard 10Mbps' },
+        newDevice: { tenant_id: 'tenant_01', name: '', host: '', user: 'admin', password: '', port: 8728, type: 'mikrotik' },
+        get navigation(){ return [{id:'dashboard', label:'Dashboard', icon:'fa-solid fa-chart-pie'},{id:'devices', label:'Orodha ya Vifaa', icon:'fa-solid fa-network-wired'},{id:'clients', label:'Orodha ya Wateja', icon:'fa-solid fa-users'},{id:'payments', label:'Malipo', icon:'fa-solid fa-wallet'}]; },
+        get pageTitle(){ const t={dashboard:'Muhtasari', devices:'Vifaa vya Mtandao', clients:'Wateja', payments:'Malipo'}; return t[this.currentTab]; },
+        get stats(){ return [{label:'Wateja Wote', value:this.clients.length, icon:'fa-solid fa-users'},{label:'Vifaa', value:this.devices.length, icon:'fa-solid fa-network-wired'},{label:'Mapato ya Leo', value:'TSh 0', icon:'fa-solid fa-money-bill-wave'},{label:'WISP', value:'1', icon:'fa-solid fa-wifi'}]; },
+        openClient(){ this.formError=''; this.addClientModal=true; },
+        openDevice(){ this.formError=''; this.addDeviceModal=true; },
+        async submitClient(){
+            this.formError=''; this.saving=true;
+            try{
+                try{
+                    const r=await fetch('/api/clients',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(this.newClient)});
+                    const d=await r.json(); if(r.ok && d.success){ await this.fetchClients(); this.addClientModal=false; this.newClient.name=''; this.newClient.phone=''; this.newClient.username=''; this.saving=false; return; }
+                }catch(e){}
+                const entry={id:Date.now(),...this.newClient}; this.clients.push(entry); localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients));
+                this.addClientModal=false; this.newClient.name=''; this.newClient.phone=''; this.newClient.username='';
+            }catch(err){ this.formError=err.message; } finally{ this.saving=false; }
         },
-        newDevice: {
-            tenant_id: 'tenant_01',
-            name: '',
-            host: '',
-            user: 'admin',
-            password: '',
-            port: 8728,
-            type: 'mikrotik'
+        async submitDevice(){
+            this.formError=''; this.saving=true;
+            try{
+                try{
+                    const r=await fetch('/api/devices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(this.newDevice)});
+                    const d=await r.json(); if(r.ok && d.success){ await this.fetchDevices(); this.addDeviceModal=false; this.newDevice.name=''; this.newDevice.host=''; this.saving=false; return; }
+                }catch(e){}
+                const entry={id:Date.now(),...this.newDevice}; this.devices.push(entry); localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices));
+                this.addDeviceModal=false; this.newDevice.name=''; this.newDevice.host='';
+            }catch(err){ this.formError=err.message; } finally{ this.saving=false; }
         },
-        get navigation() {
-            return [
-                {id:'dashboard', label:this.lang==='sw'?'Dashboard':'Dashboard', icon:'fa-solid fa-chart-pie'},
-                {id:'devices', label:this.lang==='sw'?'Vifaa vya Mtandao':'Network Devices', icon:'fa-solid fa-network-wired'},
-                {id:'clients', label:this.lang==='sw'?'Wateja':'Clients', icon:'fa-solid fa-users'},
-                {id:'payments', label:this.lang==='sw'?'Malipo':'Payments', icon:'fa-solid fa-wallet'}
-            ];
-        },
-        get pageTitle() {
-            const titles = {
-                dashboard: this.lang==='sw'?'Muhtasari wa Mfumo':'System Dashboard',
-                devices: this.lang==='sw'?'Vifaa vya Mtandao':'Network Devices',
-                clients: this.lang==='sw'?'Usimamizi wa Wateja':'Client Management',
-                payments: this.lang==='sw'?'Malipo':'Payments'
-            };
-            return titles[this.currentTab];
-        },
-        get stats() {
-            return [
-                {label:this.lang==='sw'?'Wateja Wote':'Total Clients', value:this.clients.length, icon:'fa-solid fa-users'},
-                {label:this.lang==='sw'?'Vifaa':'Devices', value:this.devices.length, icon:'fa-solid fa-network-wired'},
-                {label:this.lang==='sw'?'Mapato ya Leo':'Today Revenue', value:'TSh 0', icon:'fa-solid fa-money-bill-wave'},
-                {label:'WISP', value:'1', icon:'fa-solid fa-wifi'}
-            ];
-        },
-        openClient() {
-            this.formError = '';
-            this.addClientModal = true;
-        },
-        openDevice() {
-            this.formError = '';
-            this.addDeviceModal = true;
-        },
-        async submitClient() {
-            this.formError = '';
-            this.saving = true;
-            try {
-                const response = await fetch('/api/clients', {
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify(this.newClient)
-                });
-                const data = await response.json();
-                if (!response.ok || !data.success) {
-                    throw new Error(data.error || 'Imeshindikana kuhifadhi. Hakikisha backend ipo.');
-                }
-                await this.fetchClients();
-                this.addClientModal = false;
-                this.newClient.name = '';
-                this.newClient.phone = '';
-                this.newClient.username = '';
-                alert('Mteja amesajiliwa kwa mafanikio!');
-            } catch (error) {
-                this.formError = error.message || 'Tatizo la mtandao au API.';
-            } finally {
-                this.saving = false;
-            }
-        },
-        async submitDevice() {
-            this.formError = '';
-            this.saving = true;
-            try {
-                const response = await fetch('/api/devices', {
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify(this.newDevice)
-                });
-                const data = await response.json();
-                if (!response.ok || !data.success) {
-                    throw new Error(data.error || 'Imeshindikana kuhifadhi kifaa. Hakikisha backend ipo.');
-                }
-                await this.fetchDevices();
-                this.addDeviceModal = false;
-                this.newDevice.name = '';
-                this.newDevice.host = '';
-                this.newDevice.password = '';
-                alert('Kifaa kimesajiliwa kwa mafanikio!');
-            } catch (error) {
-                this.formError = error.message || 'Tatizo la mtandao au API.';
-            } finally {
-                this.saving = false;
-            }
-        },
-        async fetchClients() {
-            try {
-                const response = await fetch('/api/clients/' + encodeURIComponent(this.tenantId));
-                if (!response.ok) return;
-                const data = await response.json();
-                if (data.success) this.clients = data.clients || [];
-            } catch (error) {
-                console.warn('Clients API haipatikani:', error);
-            }
-        },
-        async fetchDevices() {
-            try {
-                const response = await fetch('/api/devices/' + encodeURIComponent(this.tenantId));
-                if (!response.ok) return;
-                const data = await response.json();
-                if (data.success) this.devices = data.devices || [];
-            } catch (error) {
-                console.warn('Devices API haipatikani:', error);
-            }
-        },
-        init() {
-            this.fetchClients();
-            this.fetchDevices();
-        }
+        async fetchClients(){ try{ const r=await fetch('/api/clients/'+this.tenantId); if(!r.ok) return; const d=await r.json(); if(d.success && d.clients?.length){ this.clients=d.clients; localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients)); } }catch(e){} },
+        async fetchDevices(){ try{ const r=await fetch('/api/devices/'+this.tenantId); if(!r.ok) return; const d=await r.json(); if(d.success && d.devices?.length){ this.devices=d.devices; localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices)); } }catch(e){} },
+        init(){ this.fetchClients(); this.fetchDevices(); }
     }));
 });
 </script>
