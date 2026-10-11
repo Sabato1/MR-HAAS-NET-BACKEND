@@ -1,6 +1,5 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
-const { RouterOSClient } = require('routeros-client');
 const db = require('./database'); // Uhusiano na database.js
 
 const app = express();
