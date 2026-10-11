@@ -11,9 +11,6 @@ const PORT = process.env.PORT || 3000;
 // ==========================================
 // 1. ROOT & HEALTH CHECK
 // ==========================================
-app.get('/', (req, res) => {
-    res.json({ message: "Karibu kwenye MR-HAAS-NET-BACKEND WISP Billing SaaS Cloud!" });
-});
 
 // ==========================================
 // 2. DEVICE MANAGEMENT APIS
