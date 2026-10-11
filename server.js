@@ -5,19 +5,6 @@ const db = require('./database'); // Uhusiano na database.js
 const app = express();
 app.use(express.json());
 
-// Mfano ndani ya server.js au routes yako
-app.post('/api/devices', (req, res) => {
-    const { name, ip_address, mac_address, location } = req.body;
-    
-    // Hapa unaweka mfumo wa kuhifadhi kwenye SQLite database yako
-    // Mfano wa jibu la mafanikio:
-    res.status(201).json({
-        success: true,
-        message: "Kifaa kimesajiliwa kwa mafanikio!",
-        device: { name, ip_address, mac_address, location }
-    });
-});
-
 const PORT = process.env.PORT || 3000;
 
 // ==========================================
@@ -75,7 +62,6 @@ app.post('/api/mikroTik/test-connection', async (req, res) => {
 // 4. MULTI-TENANT PAYMENT WEBHOOKS (LANGO ZOTE 6)
 // ==========================================
 
-// Kitendakazi kikuu cha kuchakata malipo na kuwasha huduma kwa mteja
 async function processMultiTenantPayment(tenantId, clientUsername, amount, phone, gateway) {
     console.log(`[${gateway}] Malipo ya TZS ${amount} yamethibitishwa kutoka kwa ${phone} (WISP: ${tenantId}, Mteja: ${clientUsername})`);
 
