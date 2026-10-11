@@ -1,40 +1,34 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// Kuhakikisha database inatunzwa kwenye njia sahihi
-const dbPath = path.resolve(__dirname, 'database.sqlite');
-
+// Njia ya kufungua database ndani ya folda ya project
+const dbPath = path.resolve(__dirname, 'wisp.db');
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
-        console.error('Imeshindikana kuunganisha na Database:', err.message);
+        console.error('Hitilafu wakati wa kufungua database:', err.message);
     } else {
-        console.log('Imefanikiwa kuunganisha na SQLite Database kwenye:', dbPath);
+        console.log('Imeunganishwa vizuri na database ya SQLite.');
     }
 });
 
-// Kutengeneza Jedwali la Vifaa (Devices Table)
+// Kutengeneza majedwali ya msingi kama hayapo
 db.serialize(() => {
+    db.run(`CREATE TABLE IF NOT EXISTS tenants (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     db.run(`CREATE TABLE IF NOT EXISTS devices (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id INTEGER NOT NULL,
-        device_name TEXT NOT NULL,
-        device_type TEXT NOT NULL,
-        brand TEXT NOT NULL,
-        ip_address TEXT,
-        api_port INTEGER DEFAULT 8728,
-        username TEXT,
+        tenant_id TEXT,
+        name TEXT,
+        host TEXT,
+        user TEXT,
         password TEXT,
-        cloud_api_url TEXT,
-        status TEXT DEFAULT 'offline',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`, (err) => {
-        if (err) {
-            // Hapa itatoa ujumbe kamili wa kosa lililotokea kwenye Database
-            console.error("Hitilafu kamili katika kutengeneza jedwali la devices:", err.message);
-        } else {
-            console.log("Jedwali la devices limetengenezwa au tayari lipo.");
-        }
-    });
+        port INTEGER,
+        type TEXT
+    )`);
 });
 
 module.exports = db;
