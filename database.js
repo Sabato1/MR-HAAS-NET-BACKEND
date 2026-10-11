@@ -32,3 +32,13 @@ db.serialize(() => {
 });
 
 module.exports = db;
+db.run(`CREATE TABLE IF NOT EXISTS clients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id TEXT,
+    name TEXT,
+    phone TEXT,
+    username TEXT UNIQUE,
+    package_name TEXT,
+    status TEXT DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`);
