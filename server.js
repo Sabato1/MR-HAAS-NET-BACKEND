@@ -135,6 +135,32 @@ app.post('/api/payments/beem/webhook', async (req, res) => {
 // ==========================================
 // 5. ANKISHA SERVER
 // ==========================================
+// 1. Kusajili mteja mpya
+app.post('/api/clients', (req, res) => {
+    const { tenant_id, name, phone, username, package_name } = req.body;
+    if (!tenant_id || !username || !name) {
+        return res.status(400).json({ success: false, error: "Tafadhali jaza taarifa za mteja!" });
+    }
+    const query = `INSERT INTO clients (tenant_id, name, phone, username, package_name) VALUES (?, ?, ?, ?, ?)`;
+    db.run(query, [tenant_id, name, phone, username, package_name], function(err) {
+        if (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+        res.json({ success: true, message: "Mteja amesajiliwa kwa mafanikio!", clientId: this.lastID });
+    });
+});
+
+// 2. Kusoma wateja wote wa Tenant husika
+app.get('/api/clients/:tenant_id', (req, res) => {
+    const { tenant_id } = req.params;
+    db.all(`SELECT * FROM clients WHERE tenant_id = ?`, [tenant_id], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+        res.json({ success: true, clients: rows });
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`Server inaendelea vizuri kwenye bandari (port): ${PORT}`);
 });
