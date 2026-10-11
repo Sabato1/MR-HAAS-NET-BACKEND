@@ -1,6 +1,18 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const db = require('./database'); // Uhusiano na database.js
+// Mfano ndani ya server.js au routes yako
+app.post('/api/devices', (req, res) => {
+    const { name, ip_address, mac_address, location } = req.body;
+    
+    // Hapa unaweka mfumo wa kuhifadhi kwenye SQLite database yako
+    // Mfano wa jibu la mafanikio:
+    res.status(201).json({
+        success: true,
+        message: "Kifaa kimesajiliwa kwa mafanikio!",
+        device: { name, ip_address, mac_address, location }
+    });
+});
 
 const app = express();
 app.use(express.json());
