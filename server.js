@@ -1,6 +1,10 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const db = require('./database'); // Uhusiano na database.js
+
+const app = express();
+app.use(express.json());
+
 // Mfano ndani ya server.js au routes yako
 app.post('/api/devices', (req, res) => {
     const { name, ip_address, mac_address, location } = req.body;
@@ -13,9 +17,6 @@ app.post('/api/devices', (req, res) => {
         device: { name, ip_address, mac_address, location }
     });
 });
-
-const app = express();
-app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
