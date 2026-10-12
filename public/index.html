@@ -58,47 +58,28 @@
     </section>
 
     <section x-show="currentTab==='devices'" x-cloak>
-        <div class="mb-4 flex justify-between items-center"><h3 class="text-xl font-bold">Vifaa vya Mtandao</h3><button type="button" @click="openDevice()" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm"><i class="fa-solid fa-plus"></i> Kifaa</button></div>
+        <div class="mb-4 flex justify-between items-center"><h3 class="text-xl font-bold">Vifaa vya Mtandao</h3><button type="button" @click="openDevice()" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm"><i class="fa-solid fa-plus"></i> Ongeza Kifaa</button></div>
         
-        <!-- MIKROTIK AUTO CONNECT SCRIPT GENERATOR -->
-        <div class="mb-6 rounded-2xl border border-slate-800 bg-slate-950 p-5 shadow-xl">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="rounded-xl bg-blue-600/20 p-3 text-blue-400"><i class="fa-solid fa-terminal text-xl"></i></div>
-                <div>
-                    <h4 class="font-bold text-base text-white">Kuunganisha MikroTik Otomatiki (Auto-Connect Script)</h4>
-                    <p class="text-xs text-slate-400">Chagua modeli ya router yako, kisha copy amri na ui-paste kwenye New Terminal ya WinBox.</p>
+        <!-- ORODHA YA VIFAA PAMOJA NA HALI (ONLINE/OFFLINE) NA KITUFE CHA KUFUTA -->
+        <div class="space-y-3">
+            <template x-for="d in devices" :key="d.id">
+                <div class="rounded-xl border border-slate-800 bg-slate-950 p-4 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-3 h-3 rounded-full" :class="d.status === 'Online' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'"></div>
+                        <div>
+                            <h4 class="font-bold text-sm text-white" x-text="d.name"></h4>
+                            <p class="text-xs text-slate-400" x-text="d.host || d.mac_address || 'Connected'"></p>
+                            <span class="text-[10px] uppercase font-semibold text-blue-400" x-text="d.type"></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="px-2.5 py-1 text-xs rounded-full font-medium" :class="d.status === 'Online' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'" x-text="d.status || 'Offline'"></span>
+                        <button type="button" @click="deleteDevice(d.id)" class="text-slate-500 hover:text-red-400 p-2"><i class="fa-solid fa-trash text-sm"></i></button>
+                    </div>
                 </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4 text-xs">
-                <div>
-                    <label class="block mb-1 text-slate-400 font-medium">1. Chagua Modeli ya MikroTik</label>
-                    <select x-model="selectedModel" class="w-full rounded-xl border border-slate-800 bg-slate-900 p-3 text-white focus:outline-none focus:border-blue-500">
-                        <option value="all">Aina Zote / RouterOS Standard (v6 & v7)</option>
-                        <option value="hex">MikroTik hEX / hEX S (RB750Gr3)</option>
-                        <option value="hap">MikroTik hAP ac² / ac³ / Lite</option>
-                        <option value="ccr">MikroTik Cloud Core Router (CCR)</option>
-                        <option value="netmetal">MikroTik NetMetal / BaseBox / LHG</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block mb-1 text-slate-400 font-medium">2. Jina la Kifaa (Router Name)</label>
-                    <input type="text" x-model="configRouterName" placeholder="Mfano: Singida-Main-Router" class="w-full rounded-xl border border-slate-800 bg-slate-900 p-3 text-white focus:outline-none focus:border-blue-500">
-                </div>
-            </div>
-
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-400 overflow-x-auto">
-                <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-800 text-slate-400">
-                    <span class="text-[11px]"><i class="fa-solid fa-code"></i> WinBox Terminal Command</span>
-                    <button type="button" @click="copyScript()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 active:scale-95 transition">
-                        <i class="fa-solid fa-copy"></i> Copy Command
-                    </button>
-                </div>
-                <pre x-text="generatedScript" class="whitespace-pre-wrap break-all"></pre>
-            </div>
+            </template>
+            <div x-show="devices.length===0" class="rounded-xl bg-slate-950 p-8 text-center text-slate-400">Hakuna vifaa vilivyosajiliwa bado.</div>
         </div>
-
-        <div class="space-y-3"><template x-for="d in devices" :key="d.id"><div class="rounded-xl border border-slate-800 bg-slate-950 p-4 flex justify-between items-center"><div><h4 class="font-bold" x-text="d.name"></h4><p class="text-sm text-slate-400" x-text="d.host"></p></div><span class="px-2.5 py-1 text-xs bg-emerald-500/10 text-emerald-400 rounded-full font-medium">Connected</span></div></template><div x-show="devices.length===0" class="rounded-xl bg-slate-950 p-8 text-center text-slate-400">Hakuna vifaa vilivyosajiliwa bado.</div></div>
     </section>
 
     <section x-show="currentTab==='payments'" x-cloak><div class="rounded-2xl border border-slate-800 bg-slate-950 p-6"><i class="fa-solid fa-wallet mb-3 text-3xl text-blue-400"></i><h3 class="text-xl font-bold">Malipo</h3><p class="mt-2 text-slate-400">Mobile Money integration inahitaji backend.</p></div></section>
@@ -121,19 +102,108 @@
     </div>
 </div>
 
-<!-- MODAL DEVICE -->
+<!-- MODAL DEVICE (MULTIBRAND: MIKROTIK, OMADA, GRANDSTREAM, RUIJIE, CUDY, RADIUS) -->
 <div x-show="addDeviceModal" x-cloak x-transition.opacity class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4" @keydown.escape.window="addDeviceModal=false">
-    <div x-show="addDeviceModal" x-transition.scale class="w-full max-w-lg rounded-[20px] border border-slate-700 bg-slate-950 p-6">
-        <div class="mb-5 flex justify-between"><h3 class="text-xl font-bold">Sajili Kifaa</h3><button type="button" @click="addDeviceModal=false" class="w-8 h-8 rounded-full bg-slate-800"><i class="fa-solid fa-xmark"></i></button></div>
-        <form @submit.prevent="submitDevice()" class="space-y-4">
-            <input x-model="newDevice.name" required placeholder="Jina la kifaa" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
-            <input x-model="newDevice.host" required placeholder="IP ya MikroTik" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
-            <input x-model="newDevice.user" required placeholder="API Username" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
-            <input x-model="newDevice.password" type="password" placeholder="API password" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
-            <input x-model.number="newDevice.port" required type="number" placeholder="8728" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
-            <p x-show="formError" x-text="formError" class="text-sm text-red-400"></p>
-            <div class="flex gap-3"><button type="button" @click="addDeviceModal=false" class="flex-1 rounded-xl bg-slate-800 p-3">Ghairi</button><button type="submit" :disabled="saving" class="flex-1 rounded-xl bg-blue-600 p-3 font-bold" x-text="saving?'Inasajili...':'Hifadhi Kifaa'"></button></div>
-        </form>
+    <div x-show="addDeviceModal" x-transition.scale class="w-full max-w-lg rounded-[20px] border border-slate-700 bg-slate-950 p-6 max-h-[90vh] overflow-y-auto">
+        <div class="mb-5 flex justify-between items-center border-b border-slate-800 pb-3">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-network-wired text-blue-500"></i> Sajili Kifaa / AP Mpya</h3>
+            <button type="button" @click="addDeviceModal=false" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="space-y-4 text-xs">
+            <div>
+                <label class="block mb-1 text-slate-400 font-medium">1. Chagua Chapa ya Kifaa (Device Brand)</label>
+                <select x-model="deviceBrand" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-white focus:outline-none focus:border-blue-500">
+                    <option value="mikrotik">MikroTik RouterOS</option>
+                    <option value="omada">TP-Link Omada EAP (AP Adoption)</option>
+                    <option value="grandstream">Grandstream GWN AP (Adopt by MAC)</option>
+                    <option value="ruijie">Ruijie / Reyee Networks</option>
+                    <option value="cudy">Cudy Networking</option>
+                    <option value="radius">FreeRADIUS / External Server</option>
+                </select>
+            </div>
+
+            <!-- MIKROTIK CONFIG & SCRIPT GENERATOR -->
+            <template x-if="deviceBrand === 'mikrotik'">
+                <div class="space-y-3 p-4 bg-slate-900/60 rounded-xl border border-slate-800">
+                    <div>
+                        <label class="block mb-1 text-slate-300 font-medium">Chagua Modeli ya MikroTik</label>
+                        <select x-model="mikrotikModel" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white">
+                            <option value="hex">MikroTik hEX / hEX S (RB750Gr3)</option>
+                            <option value="hap">MikroTik hAP ac² / ac³ / hAP ax</option>
+                            <option value="ccr">MikroTik Cloud Core Router (CCR)</option>
+                            <option value="netmetal">MikroTik NetMetal / LHG / SXT</option>
+                            <option value="generic">MikroTik Nyingine Yoyote (RouterOS v6 & v7)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-slate-300 font-medium">Chagua Internet / WAN Port Kuu</label>
+                        <select x-model="mikrotikWanPort" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white">
+                            <option value="ether1">ether1 (Standard WAN)</option>
+                            <option value="ether2">ether2</option>
+                            <option value="ether3">ether3</option>
+                            <option value="ether4">ether4</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-slate-300 font-medium">Jina la Router (Identity)</label>
+                        <input type="text" x-model="configRouterName" placeholder="Mfano: Singida-Main-Router" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white">
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-slate-800">
+                        <p class="text-[11px] text-slate-400 mb-1">Copy amri hii na ui-paste kwenye **New Terminal** ya WinBox:</p>
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-[11px] text-emerald-400 overflow-x-auto">
+                            <div class="flex justify-between items-center mb-1 pb-1 border-b border-slate-800 text-slate-400">
+                                <span>Terminal Command</span>
+                                <button type="button" @click="copyScript()" class="bg-blue-600 text-white text-[10px] px-2.5 py-1 rounded-lg">Copy</button>
+                            </div>
+                            <pre x-text="generatedScript" class="whitespace-pre-wrap break-all"></pre>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- OMADA & GRANDSTREAM AP ADOPTION OPTIONS -->
+            <template x-if="deviceBrand === 'omada' || deviceBrand === 'grandstream'">
+                <div class="space-y-3 p-4 bg-slate-900/60 rounded-xl border border-slate-800">
+                    <p class="text-[11px] text-blue-400 font-medium">Weka taarifa za AP kama zinavyoonekana kwenye Controller:</p>
+                    <div>
+                        <label class="block mb-1 text-slate-300 font-medium">Jina la AP (Name)</label>
+                        <input type="text" x-model="apDevice.name" placeholder="Mfano: Office AP / Lobby AP" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-slate-300 font-medium">MAC Address / Device Key</label>
+                        <input type="text" x-model="apDevice.mac_address" placeholder="Mfano: AA:BB:CC:DD:EE:FF" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-slate-300 font-medium">Device Username (Optional)</label>
+                        <input type="text" x-model="apDevice.username" placeholder="admin" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-slate-300 font-medium">Device Password (Standalone password)</label>
+                        <input type="password" x-model="apDevice.password" placeholder="Weka password kama imebadilishwa" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white">
+                    </div>
+                </div>
+            </template>
+
+            <!-- RUIJIE, CUDY & RADIUS -->
+            <template x-if="deviceBrand !== 'mikrotik' && deviceBrand !== 'omada' && deviceBrand !== 'grandstream'">
+                <div class="space-y-3 p-4 bg-slate-900/60 rounded-xl border border-slate-800">
+                    <div>
+                        <label class="block mb-1 text-slate-300 font-medium">Jina la Kifaa / Seva</label>
+                        <input type="text" x-model="apDevice.name" placeholder="Mfano: Ruijie Core Switch" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-slate-300 font-medium">IP Address / Host</label>
+                        <input type="text" x-model="apDevice.host" placeholder="192.168.1.250" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white">
+                    </div>
+                </div>
+            </template>
+
+            <div class="flex gap-3 pt-2">
+                <button type="button" @click="addDeviceModal=false" class="flex-1 rounded-xl bg-slate-800 p-3 text-slate-300">Ghairi</button>
+                <button type="button" @click="saveDeviceEntry()" :disabled="saving" class="flex-1 rounded-xl bg-blue-600 p-3 font-bold text-white" x-text="saving?'Inasajili...':'Kamilisha Usajili'"></button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -143,47 +213,68 @@ document.addEventListener('alpine:init', () => {
         lang: 'sw', currentTab: 'dashboard', mobileMenu: false,
         addClientModal: false, addDeviceModal: false, saving: false, formError: '',
         tenantId: 'tenant_01',
-        selectedModel: 'all', configRouterName: 'MR-HAAS-ROUTER',
+        deviceBrand: 'mikrotik',
+        mikrotikModel: 'hex',
+        mikrotikWanPort: 'ether1',
+        configRouterName: 'MR-HAAS-ROUTER',
+        apDevice: { name: '', mac_address: '', username: '', password: '', host: '' },
         clients: JSON.parse(localStorage.getItem('mrhaas_clients')||'[]'),
         devices: JSON.parse(localStorage.getItem('mrhaas_devices')||'[]'),
         newClient: { tenant_id: 'tenant_01', name: '', phone: '', username: '', package_name: 'Standard 10Mbps' },
-        newDevice: { tenant_id: 'tenant_01', name: '', host: '', user: 'admin', password: '', port: 8728, type: 'mikrotik' },
+        
         get navigation(){ return [{id:'dashboard', label:'Dashboard', icon:'fa-solid fa-chart-pie'},{id:'devices', label:'Orodha ya Vifaa', icon:'fa-solid fa-network-wired'},{id:'clients', label:'Orodha ya Wateja', icon:'fa-solid fa-users'},{id:'payments', label:'Malipo', icon:'fa-solid fa-wallet'}]; },
         get pageTitle(){ const t={dashboard:'Muhtasari', devices:'Vifaa vya Mtandao', clients:'Wateja', payments:'Malipo'}; return t[this.currentTab]; },
         get stats(){ return [{label:'Wateja Wote', value:this.clients.length, icon:'fa-solid fa-users'},{label:'Vifaa', value:this.devices.length, icon:'fa-solid fa-network-wired'},{label:'Mapato ya Leo', value:'TSh 0', icon:'fa-solid fa-money-bill-wave'},{label:'WISP', value:'1', icon:'fa-solid fa-wifi'}]; },
+        
         get generatedScript(){
             const host = window.location.origin;
-            return `# MR HAAS NET - Auto Connect Script (${this.selectedModel.toUpperCase()})\n:local tId "${this.tenantId}";\n:local rName "${this.configRouterName}";\n:local url "${host}/api/mikrotik/register-router";\n/tool fetch url=$url http-method=post http-header-field="Content-Type: application/json" http-data="{\\"tenant_id\\":\\"$tId\\",\\"name\\":\\"$rName\\",\\"model\\":\\"${this.selectedModel}\\"}" keep-result=no;\n:log info "MR HAAS NET: Router Connected Successfully!";`;
+            return `# MR HAAS NET - Auto Setup (${this.mikrotikModel.toUpperCase()})\n:local tId "${this.tenantId}";\n:local rName "${this.configRouterName}";\n:local wanPort "${this.mikrotikWanPort}";\n:local url "${host}/api/mikrotik/register-router";\n/interface list member add interface=$wanPort list=WAN;\n/tool fetch url=$url http-method=post http-header-field="Content-Type: application/json" http-data="{\\"tenant_id\\":\\"$tId\\",\\"name\\":\\"$rName\\",\\"model\\":\\"${this.mikrotikModel}\\",\\"wan_port\\":\\"$wanPort\\"}" keep-result=no;\n:log info "MR HAAS NET: Router Connected Successfully!";`;
         },
         copyScript(){
             navigator.clipboard.writeText(this.generatedScript);
-            alert('Amri ime-copiwa! Nenda ka-paste kwenye Terminal ya MikroTik WinBox.');
+            alert('Amri imekopiwa! Nenda ka-paste kwenye WinBox Terminal.');
         },
+
         openClient(){ this.formError=''; this.addClientModal=true; },
         openDevice(){ this.formError=''; this.addDeviceModal=true; },
+
+        async saveDeviceEntry(){
+            this.saving = true;
+            try {
+                if(this.deviceBrand === 'mikrotik') {
+                    const entry = { id: Date.now(), tenant_id: this.tenantId, name: this.configRouterName, type: `mikrotik-${this.mikrotikModel}`, host: `WAN: ${this.mikrotikWanPort}`, status: 'Online' };
+                    this.devices.push(entry);
+                } else {
+                    const entry = { id: Date.now(), tenant_id: this.tenantId, type: this.deviceBrand, status: 'Online', ...this.apDevice };
+                    this.devices.push(entry);
+                }
+                localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices));
+                alert('Kifaa kimesajiliwa kwa mafanikio!');
+                this.addDeviceModal = false;
+                this.apDevice = { name: '', mac_address: '', username: '', password: '', host: '' };
+            } catch(e) {
+                alert('Hitilafu imetokea.');
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        deleteDevice(id){
+            if(confirm('Una uhakika unataka kuondoa kifaa hiki kwenye mfumo?')) {
+                this.devices = this.devices.filter(d => d.id !== id);
+                localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices));
+            }
+        },
+
         async submitClient(){
             this.formError=''; this.saving=true;
             try{
-                try{
-                    const r=await fetch('/api/clients',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(this.newClient)});
-                    const d=await r.json(); if(r.ok && d.success){ await this.fetchClients(); this.addClientModal=false; this.newClient.name=''; this.newClient.phone=''; this.newClient.username=''; this.saving=false; return; }
-                }catch(e){}
                 const entry={id:Date.now(),...this.newClient}; this.clients.push(entry); localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients));
                 this.addClientModal=false; this.newClient.name=''; this.newClient.phone=''; this.newClient.username='';
             }catch(err){ this.formError=err.message; } finally{ this.saving=false; }
         },
-        async submitDevice(){
-            this.formError=''; this.saving=true;
-            try{
-                try{
-                    const r=await fetch('/api/devices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(this.newDevice)});
-                    const d=await r.json(); if(r.ok && d.success){ await this.fetchDevices(); this.addDeviceModal=false; this.newDevice.name=''; this.newDevice.host=''; this.saving=false; return; }
-                }catch(e){}
-                const entry={id:Date.now(),...this.newDevice}; this.devices.push(entry); localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices));
-                this.addDeviceModal=false; this.newDevice.name=''; this.newDevice.host='';
-            }catch(err){ this.formError=err.message; } finally{ this.saving=false; }
-        },
-        async fetchClients(){ try{ const r=await fetch('/api/clients/'+this.tenantId); if(!r.ok) return; const d=await r.json(); if(d.success && d.clients?.length){ this.clients=d.clients; localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients)); } }catch(e){} },
+
+        async fetchClients(){ try{ const r=__await ? await fetch('/api/clients/'+this.tenantId) : fetch('/api/clients/'+this.tenantId); if(!r.ok) return; const d=await r.json(); if(d.success && d.clients?.length){ this.clients=d.clients; localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients)); } }catch(e){} },
         async fetchDevices(){ try{ const r=await fetch('/api/devices/'+this.tenantId); if(!r.ok) return; const d=await r.json(); if(d.success && d.devices?.length){ this.devices=d.devices; localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices)); } }catch(e){} },
         init(){ this.fetchClients(); this.fetchDevices(); }
     }));
