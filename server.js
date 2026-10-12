@@ -160,6 +160,20 @@ app.get('/api/clients/:tenant_id', (req, res) => {
         res.json({ success: true, clients: rows });
     });
 });
+// Kupokea usajili wa Router kupitia Auto-Config script
+app.post('/api/mikrotik/register-router', (req, res) => {
+    const { tenant_id, name, model, identity } = req.body;
+    
+    const routerName = name || identity || "MikroTik-Router";
+    
+    const query = `INSERT INTO devices (tenant_id, name, host, user, password, port, type) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    db.run(query, [tenant_id || 'tenant_01', routerName, 'Connected via Script', 'admin', '', 8728, model || 'mikrotik'], function(err) {
+        if (err) {
+            return res.status(500).json({ success: false, error: err.message });
+        }
+        res.json({ success: true, message: "Router imesajiliwa kwenye wingu!" });
+    });
+});
 
 app.listen(PORT, () => {
     console.log(`Server inaendelea vizuri kwenye bandari (port): ${PORT}`);
