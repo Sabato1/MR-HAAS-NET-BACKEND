@@ -207,17 +207,19 @@
 </div>
 
 <script>
+const API_BASE = 'https://mr-haas-net-backend.onrender.com';
 document.addEventListener('alpine:init', () => {
     Alpine.data('app', () => ({
         lang: 'sw', currentTab: 'dashboard', mobileMenu: false,
         addClientModal: false, addDeviceModal: false, saving: false, formError: '', checkingAll: false,
-        tenantId: 'tenant_01',
+        tenantId: localStorage.getItem('tenant_id') || 'tenant_01',
+        tenantInfo: JSON.parse(localStorage.getItem('tenant_info')||'{}'),
         deviceBrand: 'mikrotik', deviceStep: 1, mikrotikSearch: '', copied: false,
         mikrotikWanPort: 'ether1', selectedModel: '', configRouterName: 'MR-HAAS-ROUTER',
-        apDevice: { name: '', mac_address: '', username: '', password: '', host: '' },
+        apDevice: { name: '', mac_address: '' },
         clients: JSON.parse(localStorage.getItem('mrhaas_clients')||'[]'),
         devices: JSON.parse(localStorage.getItem('mrhaas_devices_v2')|| localStorage.getItem('mrhaas_devices')||'[]').map(d=>({status:d.status||'Offline', lastSeen:d.lastSeen||null, ...d})),
-        newClient: { tenant_id: 'tenant_01', name: '', phone: '', username: '', package_name: 'Standard 10Mbps' },
+        newClient: { tenant_id: localStorage.getItem('tenant_id') || 'tenant_01', name: '', phone: '', username: '', package_name: 'Standard 10Mbps' },
         vendors: [
             {id:'mikrotik', name:'MikroTik', desc:'60+ Models', icon:'fa-solid fa-network-wired'},
             {id:'omada', name:'Omada EAP', desc:'TP-Link Omada', icon:'fa-solid fa-wifi'},
@@ -357,7 +359,7 @@ document.addEventListener('alpine:init', () => {
             try{
                 let ok=false;
                 try{
-                    const r=await fetch('/api/devices/' + encodeURIComponent(device.id) + '/status');
+                    const r=await fetch(API_BASE + '/api/devices/' + encodeURIComponent(device.id) + '/status', {headers: this.getAuthHeaders()});
                     if(r.ok){ const data=await r.json(); device.status=data.online?'Online':'Offline'; if(data.lastSeen) device.lastSeen=data.lastSeen; else if(data.online) device.lastSeen=new Date().toISOString(); ok=true; }
                 }catch(e){}
                 if(!ok){
@@ -381,7 +383,7 @@ document.addEventListener('alpine:init', () => {
                 this.devices.push(entry);
                 localStorage.setItem('mrhaas_devices_v2', JSON.stringify(this.devices));
                 localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices));
-                try{ await fetch('/api/devices',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(entry)}); }catch(e){}
+                try{ await fetch(API_BASE + '/api/devices',{method:'POST', headers: this.getAuthHeaders(), body:JSON.stringify(entry)}); }catch(e){}
                 this.addDeviceModal=false; this.deviceStep=1;
                 alert('Kifaa kimesajiliwa! Sasa kiko ONLINE.');
             }finally{ this.saving=false; }
@@ -411,16 +413,51 @@ document.addEventListener('alpine:init', () => {
                 this.devices.push(entry);
                 localStorage.setItem('mrhaas_devices_v2', JSON.stringify(this.devices));
                 localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices));
-                try{ await fetch('/api/devices',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(entry)}); }catch(e){}
+                try{ await fetch(API_BASE + '/api/devices',{method:'POST', headers: this.getAuthHeaders(), body:JSON.stringify(entry)}); }catch(e){}
                 this.addDeviceModal=false;
                 this.apDevice={name:'', mac_address:'', username:'', password:'', host:''};
             }finally{ this.saving=false; }
         },
-        deleteDevice(id){ if(confirm('Una uhakika unataka kuondoa kifaa hiki?')){ this.devices=this.devices.filter(d=>d.id!==id); localStorage.setItem('mrhaas_devices_v2', JSON.stringify(this.devices)); localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices)); } },
-        async submitClient(){ this.formError=''; this.saving=true; try{ const entry={id:Date.now(),...this.newClient}; this.clients.push(entry); localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients)); this.addClientModal=false; this.newClient.name=''; this.newClient.phone=''; this.newClient.username=''; try{ await fetch('/api/clients',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)}); }catch(e){} }catch(err){ this.formError=err.message; } finally{ this.saving=false; } },
-        async fetchClients(){ try{ const r=await fetch('/api/clients/'+this.tenantId); if(!r.ok) return; const d=await r.json(); if(d.success && d.clients?.length){ this.clients=d.clients; localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients)); } }catch(e){} },
-        async fetchDevices(){ try{ const r=await fetch('/api/devices/'+this.tenantId); if(!r.ok) return; const d=await r.json(); if(d.success && d.devices?.length){ const mapped=d.devices.map(x=>({status:'Offline', lastSeen:null, ...x})); this.devices=mapped; localStorage.setItem('mrhaas_devices_v2', JSON.stringify(mapped)); } }catch(e){} },
-        init(){ this.fetchClients(); this.fetchDevices(); setTimeout(()=>this.checkAllDevices(),1500); setInterval(()=>this.checkAllDevices(),30000); }
+        deleteDevice(id){ 
+            if(!confirm('Una uhakika unataka kuondoa kifaa hiki?')) return;
+            // Local
+            this.devices=this.devices.filter(d=>d.id!==id); 
+            localStorage.setItem('mrhaas_devices_v2', JSON.stringify(this.devices)); 
+            localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices));
+            // Backend
+            try{ fetch(API_BASE + '/api/devices/' + id, {method:'DELETE', headers: this.getAuthHeaders()}); }catch(e){}
+        } },
+        async submitClient(){ this.formError=''; this.saving=true; try{ const entry={id:Date.now(),...this.newClient}; this.clients.push(entry); localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients)); this.addClientModal=false; this.newClient.name=''; this.newClient.phone=''; this.newClient.username=''; try{ await fetch(API_BASE + '/api/clients',{method:'POST',headers: this.getAuthHeaders(),body:JSON.stringify(entry)}); }catch(e){} }catch(err){ this.formError=err.message; } finally{ this.saving=false; } },
+        async fetchClients(){ try{ const r=await fetch(API_BASE + '/api/clients/'+this.tenantId, {headers: this.getAuthHeaders()}); if(!r.ok) return; const d=await r.json(); if(d.success && d.clients?.length){ this.clients=d.clients; localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients)); } }catch(e){} },
+        async fetchDevices(){ try{ const r=await fetch(API_BASE + '/api/devices/'+this.tenantId, {headers: this.getAuthHeaders()}); if(!r.ok) return; const d=await r.json(); if(d.success && d.devices?.length){ const mapped=d.devices.map(x=>({status:'Offline', lastSeen:null, ...x})); this.devices=mapped; localStorage.setItem('mrhaas_devices_v2', JSON.stringify(mapped)); } }catch(e){} },
+        getAuthHeaders(){
+            const token = localStorage.getItem('token');
+            return {
+                'Authorization': token ? 'Bearer ' + token : '',
+                'X-Tenant-ID': this.tenantId,
+                'Content-Type': 'application/json'
+            };
+        },
+        checkAuth(){
+            const token = localStorage.getItem('token');
+            const tid = localStorage.getItem('tenant_id');
+            if(!token || !tid){
+                // Kama hakuna token, rudi login
+                // window.location.href = 'login.html';
+                console.log('No token - using default tenant_01 for backward compat');
+                // return false;
+            }
+            if(tid) this.tenantId = tid;
+            return true;
+        },
+        logout(){ localStorage.clear(); window.location.href = 'login.html'; },
+        init(){ 
+            this.checkAuth();
+            this.fetchClients(); 
+            this.fetchDevices(); 
+            setTimeout(()=>this.checkAllDevices(),1500); 
+            setInterval(()=>this.checkAllDevices(),30000); 
+        }
     }));
 });
 </script>
