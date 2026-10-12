@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Super Admin - MR HAAS NET</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+<header class="border-b border-slate-800 bg-slate-950 p-4 flex justify-between items-center sticky top-0">
+    <h1 class="font-bold text-blue-400"><i class="fa-solid fa-shield-halved mr-2"></i>SUPER ADMIN - MR HAAS NET</h1>
+    <button onclick="localStorage.clear(); window.location.href='login.html'" class="rounded-lg bg-red-900/50 border border-red-800 px-3 py-1.5 text-xs">Logout</button>
+</header>
+
+<div class="p-4 md:p-6 max-w-7xl mx-auto">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-5"><p class="text-xs text-slate-400">Tenants Wote</p><h3 class="text-2xl font-bold mt-1" id="total">0</h3></div>
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-5"><p class="text-xs text-slate-400">Active</p><h3 class="text-2xl font-bold mt-1 text-emerald-400" id="active">0</h3></div>
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-5"><p class="text-xs text-slate-400">Vifaa Vyote</p><h3 class="text-2xl font-bold mt-1" id="devices">0</h3></div>
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-5"><p class="text-xs text-slate-400">Wateja Wote</p><h3 class="text-2xl font-bold mt-1" id="clients">0</h3></div>
+    </div>
+
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="font-bold text-lg">Orodha ya Tenants (WISP)</h2>
+        <button onclick="loadTenants()" class="rounded-xl bg-slate-800 border border-slate-700 px-4 py-2 text-sm hover:bg-slate-700"><i class="fa-solid fa-rotate mr-1"></i> Refresh</button>
+    </div>
+
+    <div id="loading" class="rounded-xl bg-slate-950 border border-slate-800 p-8 text-center text-slate-400">Inapakia tenants... <i class="fa-solid fa-spinner fa-spin ml-2"></i></div>
+    <div id="error" class="hidden mt-4 rounded-xl bg-red-950/30 border border-red-800 p-4 text-sm text-red-300"></div>
+    <div id="empty" class="hidden rounded-xl bg-slate-950 border border-slate-800 p-8 text-center text-slate-400">Hakuna tenants bado. WISP wakijisajili wataonekana hapa.</div>
+
+    <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-slate-900 text-slate-400"><tr><th class="p-3">Biashara</th><th class="p-3">Mmiliki / Email</th><th class="p-3">Plan</th><th class="p-3">Vifaa</th><th class="p-3">Wateja</th><th class="p-3">Status</th><th class="p-3">Action</th></tr></thead>
+            <tbody id="tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const API = 'https://mr-haas-net-backend.onrender.com';
+
+async function loadTenants(){
+    const token = localStorage.getItem('token');
+    const loading = document.getElementById('loading');
+    const errorDiv = document.getElementById('error');
+    const empty = document.getElementById('empty');
+    const tbody = document.getElementById('tbody');
+    
+    if(!token){
+        errorDiv.textContent = 'Hauja-login. Nenda login.html';
+        errorDiv.classList.remove('hidden');
+        loading.classList.add('hidden');
+        return;
+    }
+    
+    loading.classList.remove('hidden');
+    errorDiv.classList.add('hidden');
+    empty.classList.add('hidden');
+    tbody.innerHTML = '';
+    
+    try{
+        const res = await fetch(API + '/api/super/tenants', {
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        loading.classList.add('hidden');
+        
+        if(!res.ok){
+            throw new Error(data.message || 'Error ' + res.status + ' - Hakikisha umeingia kama admin@mrhaas.net');
+        }
+        
+        const tenants = data.tenants || [];
+        document.getElementById('total').textContent = tenants.length;
+        document.getElementById('active').textContent = tenants.filter(t=>t.status==='active').length;
+        document.getElementById('devices').textContent = tenants.reduce((s,t)=>s+(t.devices_count||0),0);
+        document.getElementById('clients').textContent = tenants.reduce((s,t)=>s+(t.clients_count||0),0);
+        
+        if(tenants.length===0){
+            empty.classList.remove('hidden');
+            return;
+        }
+        
+        tenants.forEach(t=>{
+            const tr = document.createElement('tr');
+            tr.className = 'border-t border-slate-800 hover:bg-slate-900/50';
+            tr.innerHTML = `
+                <td class="p-3"><p class="font-bold">${t.business_name}</p><p class="text-[10px] text-slate-500 font-mono">${t.id}</p><p class="text-[10px] text-slate-500">${t.subdomain||''}.mrhaas.net</p></td>
+                <td class="p-3"><p>${t.owner_name||''}</p><p class="text-xs text-slate-500">${t.email||''}</p><p class="text-xs text-slate-500">${t.phone||''}</p></td>
+                <td class="p-3"><span class="rounded-full px-2.5 py-1 text-xs border font-bold ${t.plan==='premium'?'bg-purple-900/30 border-purple-800 text-purple-300': t.plan==='standard'?'bg-blue-900/30 border-blue-800 text-blue-300':'bg-slate-800 border-slate-700'}">${t.plan}</span></td>
+                <td class="p-3 font-mono">${t.devices_count||0}/${t.max_devices||0}</td>
+                <td class="p-3 font-mono">${t.clients_count||0}/${t.max_clients||0}</td>
+                <td class="p-3"><span class="rounded-full px-2.5 py-1 text-xs font-bold ${t.status==='active'?'bg-emerald-900/30 text-emerald-300 border border-emerald-800':'bg-red-900/30 text-red-300 border border-red-800'}">${t.status}</span></td>
+                <td class="p-3">
+                    <select onchange="updateTenant('${t.id}', this.value, this)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs w-full">
+                        <option disabled selected>Badilisha</option>
+                        <option value="plan_free">Free (2 dev)</option>
+                        <option value="plan_standard">Standard (10 dev)</option>
+                        <option value="plan_premium">Premium (100 dev)</option>
+                        <option value="status_active">Active</option>
+                        <option value="status_suspended">Suspend</option>
+                    </select>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+    }catch(e){
+        loading.classList.add('hidden');
+        errorDiv.textContent = 'Error: ' + e.message;
+        errorDiv.classList.remove('hidden');
+        console.error(e);
+    }
+}
+
+async function updateTenant(id, val, el){
+    const token = localStorage.getItem('token');
+    let payload = {};
+    if(val.startsWith('plan_')){ const plan=val.replace('plan_',''); payload={plan, max_devices: plan==='free'?2:plan==='standard'?10:100, max_clients: plan==='free'?50:plan==='standard'?200:1000}; }
+    if(val.startsWith('status_')){ payload={status: val.replace('status_','')}; }
+    try{
+        await fetch(API + '/api/super/tenant/' + id + '/plan', { method:'PUT', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        loadTenants();
+    }catch(err){ alert(err.message); }
+    if(el) el.selectedIndex = 0;
+}
+
+// Load on start
+loadTenants();
+</script>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
+</html>
