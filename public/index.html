@@ -345,7 +345,7 @@ document.addEventListener('alpine:init', () => {
         formatTime(iso){ if(!iso) return ''; try{ const d=new Date(iso); const diff=Math.floor((Date.now()-d.getTime())/1000); if(diff<60) return 'sasa hivi'; if(diff<3600) return Math.floor(diff/60)+' min iliyopita'; if(diff<86400) return Math.floor(diff/3600)+' saa iliyopita'; return d.toLocaleString('sw-TZ'); }catch(e){ return iso; } },
 
         openClient(){ this.formError=''; this.addClientModal=true; },
-        openDevice(){ this.deviceBrand='mikrotik'; this.selectedModel=''; this.mikrotikWanPort='ether1'; this.deviceStep=1; this.mikrotikSearch=''; this.apDevice={name:'', mac_address:'', username:'', password:'', host:''}; this.addDeviceModal=true; },
+        openDevice(){ this.deviceBrand='mikrotik'; this.selectedModel=''; this.mikrotikWanPort='ether1'; this.deviceStep=1; this.mikrotikSearch=''; this.apDevice={name:'', mac_address:''}; this.addDeviceModal=true; },
         closeDeviceWizard(){ this.addDeviceModal=false; this.deviceStep=1; },
         selectVendor(v){ this.deviceBrand=v.id; },
         selectMikrotikModel(m){ this.selectedModel=m.id; this.configRouterName='MR-HAAS-'+m.id.split(' ')[0].replace(/[^A-Za-z0-9]/g,''); this.deviceStep=3; },
@@ -415,7 +415,7 @@ document.addEventListener('alpine:init', () => {
                 localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices));
                 try{ await fetch(API_BASE + '/api/devices',{method:'POST', headers: this.getAuthHeaders(), body:JSON.stringify(entry)}); }catch(e){}
                 this.addDeviceModal=false;
-                this.apDevice={name:'', mac_address:'', username:'', password:'', host:''};
+                this.apDevice={name:'', mac_address:''};
             }finally{ this.saving=false; }
         },
         deleteDevice(id){ 
@@ -426,7 +426,7 @@ document.addEventListener('alpine:init', () => {
             localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices));
             // Backend
             try{ fetch(API_BASE + '/api/devices/' + id, {method:'DELETE', headers: this.getAuthHeaders()}); }catch(e){}
-        } },
+        },
         async submitClient(){ this.formError=''; this.saving=true; try{ const entry={id:Date.now(),...this.newClient}; this.clients.push(entry); localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients)); this.addClientModal=false; this.newClient.name=''; this.newClient.phone=''; this.newClient.username=''; try{ await fetch(API_BASE + '/api/clients',{method:'POST',headers: this.getAuthHeaders(),body:JSON.stringify(entry)}); }catch(e){} }catch(err){ this.formError=err.message; } finally{ this.saving=false; } },
         async fetchClients(){ try{ const r=await fetch(API_BASE + '/api/clients/'+this.tenantId, {headers: this.getAuthHeaders()}); if(!r.ok) return; const d=await r.json(); if(d.success && d.clients?.length){ this.clients=d.clients; localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients)); } }catch(e){} },
         async fetchDevices(){ try{ const r=await fetch(API_BASE + '/api/devices/'+this.tenantId, {headers: this.getAuthHeaders()}); if(!r.ok) return; const d=await r.json(); if(d.success && d.devices?.length){ const mapped=d.devices.map(x=>({status:'Offline', lastSeen:null, ...x})); this.devices=mapped; localStorage.setItem('mrhaas_devices_v2', JSON.stringify(mapped)); } }catch(e){} },
