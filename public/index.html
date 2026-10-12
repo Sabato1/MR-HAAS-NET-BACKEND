@@ -58,8 +58,47 @@
     </section>
 
     <section x-show="currentTab==='devices'" x-cloak>
-        <div class="mb-4 flex justify-between"><h3 class="text-xl font-bold">Vifaa vya Mtandao</h3><button type="button" @click="openDevice()" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm"><i class="fa-solid fa-plus"></i> Kifaa</button></div>
-        <div class="space-y-3"><template x-for="d in devices" :key="d.id"><div class="rounded-xl border border-slate-800 bg-slate-950 p-4"><h4 class="font-bold" x-text="d.name"></h4><p class="text-sm text-slate-400" x-text="d.host"></p></div></template><div x-show="devices.length===0" class="rounded-xl bg-slate-950 p-8 text-center text-slate-400">Hakuna vifaa.</div></div>
+        <div class="mb-4 flex justify-between items-center"><h3 class="text-xl font-bold">Vifaa vya Mtandao</h3><button type="button" @click="openDevice()" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm"><i class="fa-solid fa-plus"></i> Kifaa</button></div>
+        
+        <!-- MIKROTIK AUTO CONNECT SCRIPT GENERATOR -->
+        <div class="mb-6 rounded-2xl border border-slate-800 bg-slate-950 p-5 shadow-xl">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="rounded-xl bg-blue-600/20 p-3 text-blue-400"><i class="fa-solid fa-terminal text-xl"></i></div>
+                <div>
+                    <h4 class="font-bold text-base text-white">Kuunganisha MikroTik Otomatiki (Auto-Connect Script)</h4>
+                    <p class="text-xs text-slate-400">Chagua modeli ya router yako, kisha copy amri na ui-paste kwenye New Terminal ya WinBox.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4 text-xs">
+                <div>
+                    <label class="block mb-1 text-slate-400 font-medium">1. Chagua Modeli ya MikroTik</label>
+                    <select x-model="selectedModel" class="w-full rounded-xl border border-slate-800 bg-slate-900 p-3 text-white focus:outline-none focus:border-blue-500">
+                        <option value="all">Aina Zote / RouterOS Standard (v6 & v7)</option>
+                        <option value="hex">MikroTik hEX / hEX S (RB750Gr3)</option>
+                        <option value="hap">MikroTik hAP ac² / ac³ / Lite</option>
+                        <option value="ccr">MikroTik Cloud Core Router (CCR)</option>
+                        <option value="netmetal">MikroTik NetMetal / BaseBox / LHG</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block mb-1 text-slate-400 font-medium">2. Jina la Kifaa (Router Name)</label>
+                    <input type="text" x-model="configRouterName" placeholder="Mfano: Singida-Main-Router" class="w-full rounded-xl border border-slate-800 bg-slate-900 p-3 text-white focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-400 overflow-x-auto">
+                <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-800 text-slate-400">
+                    <span class="text-[11px]"><i class="fa-solid fa-code"></i> WinBox Terminal Command</span>
+                    <button type="button" @click="copyScript()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 active:scale-95 transition">
+                        <i class="fa-solid fa-copy"></i> Copy Command
+                    </button>
+                </div>
+                <pre x-text="generatedScript" class="whitespace-pre-wrap break-all"></pre>
+            </div>
+        </div>
+
+        <div class="space-y-3"><template x-for="d in devices" :key="d.id"><div class="rounded-xl border border-slate-800 bg-slate-950 p-4 flex justify-between items-center"><div><h4 class="font-bold" x-text="d.name"></h4><p class="text-sm text-slate-400" x-text="d.host"></p></div><span class="px-2.5 py-1 text-xs bg-emerald-500/10 text-emerald-400 rounded-full font-medium">Connected</span></div></template><div x-show="devices.length===0" class="rounded-xl bg-slate-950 p-8 text-center text-slate-400">Hakuna vifaa vilivyosajiliwa bado.</div></div>
     </section>
 
     <section x-show="currentTab==='payments'" x-cloak><div class="rounded-2xl border border-slate-800 bg-slate-950 p-6"><i class="fa-solid fa-wallet mb-3 text-3xl text-blue-400"></i><h3 class="text-xl font-bold">Malipo</h3><p class="mt-2 text-slate-400">Mobile Money integration inahitaji backend.</p></div></section>
@@ -104,6 +143,7 @@ document.addEventListener('alpine:init', () => {
         lang: 'sw', currentTab: 'dashboard', mobileMenu: false,
         addClientModal: false, addDeviceModal: false, saving: false, formError: '',
         tenantId: 'tenant_01',
+        selectedModel: 'all', configRouterName: 'MR-HAAS-ROUTER',
         clients: JSON.parse(localStorage.getItem('mrhaas_clients')||'[]'),
         devices: JSON.parse(localStorage.getItem('mrhaas_devices')||'[]'),
         newClient: { tenant_id: 'tenant_01', name: '', phone: '', username: '', package_name: 'Standard 10Mbps' },
@@ -111,6 +151,14 @@ document.addEventListener('alpine:init', () => {
         get navigation(){ return [{id:'dashboard', label:'Dashboard', icon:'fa-solid fa-chart-pie'},{id:'devices', label:'Orodha ya Vifaa', icon:'fa-solid fa-network-wired'},{id:'clients', label:'Orodha ya Wateja', icon:'fa-solid fa-users'},{id:'payments', label:'Malipo', icon:'fa-solid fa-wallet'}]; },
         get pageTitle(){ const t={dashboard:'Muhtasari', devices:'Vifaa vya Mtandao', clients:'Wateja', payments:'Malipo'}; return t[this.currentTab]; },
         get stats(){ return [{label:'Wateja Wote', value:this.clients.length, icon:'fa-solid fa-users'},{label:'Vifaa', value:this.devices.length, icon:'fa-solid fa-network-wired'},{label:'Mapato ya Leo', value:'TSh 0', icon:'fa-solid fa-money-bill-wave'},{label:'WISP', value:'1', icon:'fa-solid fa-wifi'}]; },
+        get generatedScript(){
+            const host = window.location.origin;
+            return `# MR HAAS NET - Auto Connect Script (${this.selectedModel.toUpperCase()})\n:local tId "${this.tenantId}";\n:local rName "${this.configRouterName}";\n:local url "${host}/api/mikrotik/register-router";\n/tool fetch url=$url http-method=post http-header-field="Content-Type: application/json" http-data="{\\"tenant_id\\":\\"$tId\\",\\"name\\":\\"$rName\\",\\"model\\":\\"${this.selectedModel}\\"}" keep-result=no;\n:log info "MR HAAS NET: Router Connected Successfully!";`;
+        },
+        copyScript(){
+            navigator.clipboard.writeText(this.generatedScript);
+            alert('Amri ime-copiwa! Nenda ka-paste kwenye Terminal ya MikroTik WinBox.');
+        },
         openClient(){ this.formError=''; this.addClientModal=true; },
         openDevice(){ this.formError=''; this.addDeviceModal=true; },
         async submitClient(){
