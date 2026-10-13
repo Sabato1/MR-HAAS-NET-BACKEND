@@ -97,12 +97,27 @@ function isValidId(value) {
 // HEALTH
 // --------------------------------------------------
 
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'MR HAAS NET API running',
-        version: '3.2-secure',
-        database: 'configured'
-    });
+
+app.get('/api/health', async (req, res) => {
+    try {
+        await db.ready;
+        await db.pool.query('SELECT 1');
+
+        return res.json({
+            success: true,
+            status: 'MR HAAS NET API running',
+            version: '4.0.0',
+            database: 'connected'
+        });
+    } catch (err) {
+        console.error('Health/database check failed:', err.message);
+
+        return res.status(503).json({
+            success: false,
+            status: 'database_unavailable',
+            database: 'disconnected'
+        });
+    }
 });
 
 // --------------------------------------------------
@@ -1664,8 +1679,20 @@ app.use('/api', (req, res) => {
 // START SERVER
 // --------------------------------------------------
 
-app.listen(PORT, () => {
-    console.log(
-        `MR HAAS NET API running on port ${PORT}`
-    );
-});
+
+db.ready
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(
+                `MR HAAS NET API running on port ${PORT}`
+            );
+        });
+    })
+    .catch((err) => {
+        console.error(
+            'Database initialization failed:',
+            err.message
+        );
+        process.exit(1);
+    });
+
