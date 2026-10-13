@@ -33,19 +33,45 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
+
 const allowedOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
-  .map(value => value.trim())
+  .map(value => value.trim().replace(/\/+$/, ''))
   .filter(Boolean);
 
 app.use(cors({
   origin(origin, callback) {
-    if (!IS_PRODUCTION || !origin || allowedOrigins.includes(origin)) {
+    // Ruhusu maombi yasiyotoka kwenye browser, kama maombi ya server.
+    if (!origin) {
       return callback(null, true);
     }
-    return callback(new Error('Origin hii hairuhusiwi.'));
-  }
+
+    // Development pekee: ruhusu origins zote.
+    if (!IS_PRODUCTION) {
+      return callback(null, true);
+    }
+
+    const normalizedOrigin = origin.trim().replace(/\/+$/, '');
+
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+
+    console.error('[CORS BLOCKED] Origin iliyokataliwa:', origin);
+
+    const error = new Error('Origin hii hairuhusiwi.');
+    error.status = 403;
+    return callback(error);
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Mikrotik-Secret'
+  ],
+  optionsSuccessStatus: 204
 }));
+
 
 app.use(express.static(path.join(__dirname, 'public')));
 
