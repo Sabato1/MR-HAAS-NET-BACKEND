@@ -2,255 +2,222 @@
 <!DOCTYPE html>
 <html lang="sw">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0f172a">
-    <title>Ingia - MR HAAS NET</title>
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <style>
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
-        input {
-            color: white;
-        }
-        input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, .15);
-        }
-        button:disabled {
-            opacity: .65;
-            cursor: not-allowed;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080808">
+  <title>Login | MR HAAS NET</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background:
+        radial-gradient(ellipse at top, #30230a 0%, #111 40%, #050505 100%);
+      color: #f8fafc;
+    }
+    .gold { color: #e7bd58; }
+    .gold-bg { background: linear-gradient(135deg,#f5d77e,#b88627); }
+    .panel {
+      background: rgba(17,17,17,.94);
+      border: 1px solid rgba(231,189,88,.3);
+      box-shadow: 0 20px 70px rgba(0,0,0,.45);
+      backdrop-filter: blur(14px);
+    }
+    .field {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 10px;
+      background: #090909;
+      border: 1px solid #383838;
+      color: white;
+      outline: none;
+    }
+    .field:focus {
+      border-color: #e7bd58;
+      box-shadow: 0 0 0 2px rgba(231,189,88,.12);
+    }
+    .btn {
+      width: 100%;
+      border-radius: 10px;
+      padding: 14px;
+      color: #17120a;
+      font-weight: 800;
+      background: linear-gradient(135deg,#f5d77e,#b88627);
+      transition: opacity .2s;
+    }
+    .btn:disabled { opacity: .6; }
+  </style>
 </head>
 
-<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4">
+<body class="flex items-center justify-center p-4">
+  <main class="w-full max-w-md">
+    <header class="text-center mb-7">
+      <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-600/50 bg-black text-3xl gold">
+        <span>MH</span>
+      </div>
+      <h1 class="text-2xl font-extrabold tracking-wide">
+        MR HAAS <span class="gold">NET</span>
+      </h1>
+      <p class="mt-2 text-sm text-gray-400">
+        MULTI-TENANT WISP MANAGEMENT
+      </p>
+    </header>
 
-<div class="w-full max-w-md">
-    <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-blue-400">
-            <i class="fa-solid fa-wifi"></i> MR HAAS NET
-        </h1>
-        <p class="text-slate-400 mt-2">
-            Ingia kwenye dashboard ya WISP yako
-        </p>
-    </div>
+    <section class="panel rounded-2xl p-6 sm:p-8">
+      <h2 class="text-xl font-bold">Karibu tena</h2>
+      <p class="mt-1 mb-6 text-sm text-gray-400">
+        Ingia kwenye akaunti yako ya usimamizi wa WISP.
+      </p>
 
-    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-        <form id="loginForm" class="space-y-4" autocomplete="on">
+      <div id="message" class="hidden mb-4 rounded-lg border p-3 text-sm"
+           role="alert" aria-live="polite"></div>
 
-            <div>
-                <label for="email" class="text-sm text-slate-300">
-                    Email ya Biashara
-                </label>
-                <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autocomplete="username"
-                    required
-                    maxlength="254"
-                    placeholder="mfano@wisp.co.tz"
-                    class="w-full mt-1 rounded-xl border border-slate-700 bg-slate-900 p-3.5"
-                >
-            </div>
+      <form id="loginForm" class="space-y-5">
+        <div>
+          <label for="email" class="mb-2 block text-sm font-semibold">
+            Barua pepe
+          </label>
+          <input
+            id="email"
+            name="email"
+            class="field"
+            type="email"
+            placeholder="jina@example.com"
+            autocomplete="username"
+            required
+          >
+        </div>
 
-            <div>
-                <label for="password" class="text-sm text-slate-300">
-                    Password
-                </label>
-
-                <div class="relative">
-                    <input
-                        id="password"
-                        name="password"
-                        type="password"
-                        autocomplete="current-password"
-                        required
-                        class="w-full mt-1 rounded-xl border border-slate-700 bg-slate-900 p-3.5 pr-12"
-                        placeholder="Password yako"
-                    >
-
-                    <button
-                        type="button"
-                        id="togglePassword"
-                        aria-label="Onyesha au ficha password"
-                        class="absolute right-3 top-4 text-slate-400 p-1"
-                    >
-                        <i id="passwordIcon" class="fa-solid fa-eye"></i>
-                    </button>
-                </div>
-            </div>
-
-            <p id="error"
-               role="alert"
-               aria-live="polite"
-               class="text-sm text-red-400 hidden"></p>
-
-            <p id="notice"
-               role="status"
-               aria-live="polite"
-               class="text-sm text-blue-300 hidden"></p>
-
-            <button
-                type="submit"
-                id="btn"
-                class="w-full rounded-xl bg-blue-600 p-3.5 font-bold text-white hover:bg-blue-500 transition"
-            >
-                <i class="fa-solid fa-right-to-bracket mr-2"></i>
-                Ingia Dashboard
+        <div>
+          <div class="mb-2 flex items-center justify-between">
+            <label for="password" class="text-sm font-semibold">
+              Nenosiri
+            </label>
+            <button type="button" id="togglePassword"
+                    class="text-xs gold">
+              Onyesha nenosiri
             </button>
-        </form>
-
-        <div class="mt-6 text-center text-sm text-slate-400">
-            Huna akaunti?
-            <a href="register.html"
-               class="text-blue-400 font-bold hover:underline">
-                Jisajili hapa
-            </a>
+          </div>
+          <input
+            id="password"
+            name="password"
+            class="field"
+            type="password"
+            placeholder="Ingiza nenosiri"
+            autocomplete="current-password"
+            required
+          >
         </div>
 
-        <div class="mt-5 rounded-xl bg-slate-900 border border-slate-800 p-3 text-xs text-slate-400">
-            <i class="fa-solid fa-shield-halved text-blue-400 mr-1"></i>
-            Tumia taarifa zako halisi za kuingia. Usishiriki password yako.
-        </div>
-    </div>
+        <button id="submitBtn" class="btn" type="submit">
+          INGIA KWENYE MFUMO
+        </button>
+      </form>
 
-    <p class="text-center text-xs text-slate-500 mt-5">
-        MR HAAS NET · WISP Management System
-    </p>
-</div>
+      <div class="my-6 flex items-center gap-3">
+        <div class="h-px flex-1 bg-gray-700"></div>
+        <span class="text-xs text-gray-500">AU</span>
+        <div class="h-px flex-1 bg-gray-700"></div>
+      </div>
 
-<script>
-'use strict';
+      <p class="text-center text-sm text-gray-400">
+        Huna akaunti ya WISP?
+        <a href="/register.html" class="font-bold gold hover:underline">
+          Sajili biashara yako
+        </a>
+      </p>
+    </section>
 
-const API = 'https://mr-haas-net-backend.onrender.com';
+    <footer class="mt-6 text-center text-xs text-gray-500">
+      © <span id="year"></span> MR HAAS NET. Haki zote zimehifadhiwa.
+      <p class="mt-2">Mfumo wa Hotspot, PPPoE na usimamizi wa WISP.</p>
+    </footer>
+  </main>
 
-const form = document.getElementById('loginForm');
-const emailInput = document.getElementById('email');
-const passwordInput = document.getElementById('password');
-const button = document.getElementById('btn');
-const errorBox = document.getElementById('error');
-const noticeBox = document.getElementById('notice');
+  <script>
+    const form = document.getElementById('loginForm');
+    const message = document.getElementById('message');
+    const submitBtn = document.getElementById('submitBtn');
+    const passwordInput = document.getElementById('password');
 
-function showError(message) {
-    errorBox.textContent = message;
-    errorBox.classList.remove('hidden');
-    noticeBox.classList.add('hidden');
-}
+    document.getElementById('year').textContent =
+      new Date().getFullYear();
 
-function showNotice(message) {
-    noticeBox.textContent = message;
-    noticeBox.classList.remove('hidden');
-    errorBox.classList.add('hidden');
-}
+    document.getElementById('togglePassword').addEventListener('click', () => {
+      const showing = passwordInput.type === 'text';
+      passwordInput.type = showing ? 'password' : 'text';
+      document.getElementById('togglePassword').textContent =
+        showing ? 'Onyesha nenosiri' : 'Ficha nenosiri';
+    });
 
-document.getElementById('togglePassword').addEventListener('click', () => {
-    const isHidden = passwordInput.type === 'password';
-    passwordInput.type = isHidden ? 'text' : 'password';
-
-    document.getElementById('passwordIcon').className =
-        isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
-});
-
-form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-
-    errorBox.classList.add('hidden');
-    noticeBox.classList.add('hidden');
-
-    const email = emailInput.value.trim().toLowerCase();
-    const password = passwordInput.value;
-
-    if (!email || !password) {
-        showError('Tafadhali jaza email na password.');
-        return;
+    function showMessage(text, success = false) {
+      message.textContent = text;
+      message.className = 'mb-4 rounded-lg border p-3 text-sm ' +
+        (success
+          ? 'border-green-700 bg-green-950 text-green-300'
+          : 'border-red-700 bg-red-950 text-red-300');
     }
 
-    button.disabled = true;
-    button.textContent = 'Inakagua taarifa...';
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
 
-    try {
-        const response = await fetch(`${API}/api/auth/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ email, password })
+      const email = document.getElementById('email').value.trim();
+      const password = passwordInput.value;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'INAINGIA...';
+      message.className = 'hidden mb-4 rounded-lg border p-3 text-sm';
+
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
         });
 
-        let data;
+        const data = await response.json().catch(() => ({}));
 
-        try {
-            data = await response.json();
-        } catch {
-            throw new Error(
-                'Server imerudisha jibu lisilotambulika. Jaribu tena baadaye.'
-            );
+        if (!response.ok) {
+          throw new Error(data.message || data.error ||
+            'Imeshindikana kuingia. Hakiki barua pepe na nenosiri.');
         }
 
-        if (!response.ok || !data || data.success !== true) {
-            throw new Error(
-                typeof data?.message === 'string'
-                    ? data.message
-                    : 'Imeshindikana kuingia. Hakiki email na password.'
-            );
+        const token = data.token || data.accessToken;
+        const tenant = data.tenant || data.data?.tenant || {};
+        const tenantId = data.tenant_id || data.tenantId ||
+          tenant.id || data.user?.tenant_id;
+        const role = data.role || data.user?.role ||
+          (tenantId === 'tenant_super_admin' ? 'super_admin' : 'tenant');
+
+        if (!token || !tenantId) {
+          throw new Error(
+            'Majibu ya server hayajakamilika. Hakikisha API ya login inarudisha token na tenant ID.'
+          );
         }
 
-        if (
-            typeof data.token !== 'string' ||
-            !data.token ||
-            typeof data.tenant_id !== 'string' ||
-            !data.tenant_id
-        ) {
-            throw new Error(
-                'Jibu la login halina token au tenant ID inayohitajika.'
-            );
-        }
+        localStorage.setItem('mrhaas_token', token);
+        localStorage.setItem('mrhaas_tenant_id', tenantId);
+        localStorage.setItem('mrhaas_tenant', JSON.stringify(tenant));
+        localStorage.setItem('mrhaas_role', role);
 
-        // Hifadhi session inayotumiwa na dashboard.
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('tenant_id', data.tenant_id);
+        showMessage('Umeingia kikamilifu. Tunaelekeza...', true);
 
-        if (data.tenant && typeof data.tenant === 'object') {
-            localStorage.setItem('tenant_info', JSON.stringify(data.tenant));
-        } else {
-            localStorage.removeItem('tenant_info');
-        }
+        setTimeout(() => {
+          if (role === 'super_admin' || tenantId === 'tenant_super_admin') {
+            window.location.href = '/super-admin.html';
+          } else {
+            window.location.href = '/index.html';
+          }
+        }, 400);
 
-        showNotice('Umefanikiwa kuingia. Inafungua dashboard...');
-
-        if (data.tenant_id === 'tenant_super_admin') {
-            window.location.replace('super-admin.html');
-        } else {
-            window.location.replace('dashboard.html');
-        }
-
-    } catch (error) {
-        // Usionyeshe maelezo ya kiufundi au siri za server.
-        if (error instanceof TypeError) {
-            showError(
-                'Imeshindikana kuwasiliana na server. Angalia internet na ujaribu tena.'
-            );
-        } else {
-            showError(
-                error.message || 'Hitilafu imetokea. Tafadhali jaribu tena.'
-            );
-        }
-
-        button.disabled = false;
-        button.innerHTML =
-            '<i class="fa-solid fa-right-to-bracket mr-2"></i> Ingia Dashboard';
-    }
-});
-</script>
-
+      } catch (error) {
+        showMessage(error.message || 'Tatizo la mtandao. Jaribu tena.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'INGIA KWENYE MFUMO';
+      }
+    });
+  </script>
 </body>
 </html>
