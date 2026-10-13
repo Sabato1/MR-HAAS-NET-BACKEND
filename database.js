@@ -18,7 +18,7 @@ const pool = new Pool({
 });
 
 pool.on('error', error => {
-  console.error('PostgreSQL pool error:', error.message);
+  console.error('PostgreSQL pool error:', error);
 });
 
 async function initializeDatabase() {
@@ -47,16 +47,12 @@ async function initializeDatabase() {
         subscription_ends_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
         CONSTRAINT tenants_status_check
           CHECK (status IN ('active', 'suspended', 'inactive')),
-
         CONSTRAINT tenants_subscription_status_check
-          CHECK (
-            subscription_status IN (
-              'trial', 'active', 'expired', 'pending', 'cancelled'
-            )
-          )
+          CHECK (subscription_status IN (
+            'trial', 'active', 'expired', 'pending', 'cancelled'
+          ))
       );
     `);
 
@@ -72,8 +68,7 @@ async function initializeDatabase() {
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS tenant_settings (
-        tenant_id TEXT PRIMARY KEY
-          REFERENCES tenants(id) ON DELETE CASCADE,
+        tenant_id TEXT PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
         portal_title VARCHAR(120),
         primary_color VARCHAR(7) NOT NULL DEFAULT '#111827',
         announcement TEXT NOT NULL DEFAULT '',
@@ -87,8 +82,7 @@ async function initializeDatabase() {
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS payment_settings (
-        tenant_id TEXT PRIMARY KEY
-          REFERENCES tenants(id) ON DELETE CASCADE,
+        tenant_id TEXT PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
         enabled_providers TEXT[] NOT NULL DEFAULT ARRAY['manual']::TEXT[],
         manual_payment_instructions TEXT NOT NULL DEFAULT '',
         payment_phone VARCHAR(40) NOT NULL DEFAULT '',
@@ -100,8 +94,7 @@ async function initializeDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS sites (
         id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL
-          REFERENCES tenants(id) ON DELETE CASCADE,
+        tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
         name VARCHAR(150) NOT NULL,
         location VARCHAR(250) NOT NULL DEFAULT '',
         description TEXT NOT NULL DEFAULT '',
@@ -118,10 +111,8 @@ async function initializeDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS devices (
         id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL
-          REFERENCES tenants(id) ON DELETE CASCADE,
-        site_id TEXT
-          REFERENCES sites(id) ON DELETE SET NULL,
+        tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        site_id TEXT REFERENCES sites(id) ON DELETE SET NULL,
         name VARCHAR(150) NOT NULL,
         vendor VARCHAR(80) NOT NULL,
         device_type VARCHAR(40) NOT NULL DEFAULT 'router',
@@ -154,8 +145,7 @@ async function initializeDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS packages (
         id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL
-          REFERENCES tenants(id) ON DELETE CASCADE,
+        tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
         name VARCHAR(150) NOT NULL,
         price NUMERIC(14,2) NOT NULL DEFAULT 0,
         duration_value INTEGER NOT NULL DEFAULT 1,
@@ -166,7 +156,6 @@ async function initializeDatabase() {
         description TEXT NOT NULL DEFAULT '',
         status VARCHAR(20) NOT NULL DEFAULT 'active',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
         CONSTRAINT packages_price_check CHECK (price >= 0),
         CONSTRAINT packages_duration_check CHECK (duration_value >= 1),
         CONSTRAINT packages_connection_type_check
@@ -184,10 +173,8 @@ async function initializeDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS clients (
         id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL
-          REFERENCES tenants(id) ON DELETE CASCADE,
-        site_id TEXT
-          REFERENCES sites(id) ON DELETE SET NULL,
+        tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        site_id TEXT REFERENCES sites(id) ON DELETE SET NULL,
         name VARCHAR(200) NOT NULL,
         phone VARCHAR(40),
         username VARCHAR(150),
@@ -195,7 +182,6 @@ async function initializeDatabase() {
         connection_type VARCHAR(20) NOT NULL DEFAULT 'hotspot',
         status VARCHAR(20) NOT NULL DEFAULT 'active',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
         CONSTRAINT clients_connection_type_check
           CHECK (connection_type IN ('hotspot', 'pppoe')),
         CONSTRAINT clients_status_check
@@ -217,16 +203,13 @@ async function initializeDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS vouchers (
         id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL
-          REFERENCES tenants(id) ON DELETE CASCADE,
-        package_id TEXT
-          REFERENCES packages(id) ON DELETE SET NULL,
+        tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        package_id TEXT REFERENCES packages(id) ON DELETE SET NULL,
         code VARCHAR(40) NOT NULL,
         status VARCHAR(20) NOT NULL DEFAULT 'unused',
         expires_at TIMESTAMPTZ,
         used_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
         CONSTRAINT vouchers_status_check
           CHECK (status IN ('unused', 'used', 'blocked'))
       );
@@ -245,10 +228,8 @@ async function initializeDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS payments (
         id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL
-          REFERENCES tenants(id) ON DELETE CASCADE,
-        client_id TEXT
-          REFERENCES clients(id) ON DELETE SET NULL,
+        tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        client_id TEXT,
         provider VARCHAR(40) NOT NULL DEFAULT 'manual',
         reference VARCHAR(180),
         amount NUMERIC(14,2) NOT NULL,
@@ -258,14 +239,11 @@ async function initializeDatabase() {
         provider_transaction_id VARCHAR(200),
         verified_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
         CONSTRAINT payments_amount_check CHECK (amount > 0),
         CONSTRAINT payments_status_check
-          CHECK (
-            status IN (
-              'pending', 'paid', 'rejected', 'failed', 'refunded'
-            )
-          )
+          CHECK (status IN (
+            'pending', 'paid', 'rejected', 'failed', 'refunded'
+          ))
       );
     `);
 
@@ -277,12 +255,6 @@ async function initializeDatabase() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_payments_tenant_status
       ON payments (tenant_id, status);
-    `);
-
-    await client.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_provider_transaction
-      ON payments (provider, provider_transaction_id)
-      WHERE provider_transaction_id IS NOT NULL;
     `);
 
     await client.query(`
@@ -303,7 +275,7 @@ async function initializeDatabase() {
       ON audit_logs (tenant_id, created_at DESC);
     `);
 
-    // Compatibility columns for databases created by earlier versions.
+    // Migrations for databases created by earlier versions.
     await client.query(`
       ALTER TABLE tenants
         ADD COLUMN IF NOT EXISTS role VARCHAR(30) NOT NULL DEFAULT 'tenant',
@@ -334,11 +306,36 @@ async function initializeDatabase() {
         ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active';
     `);
 
+    // Ensure payment columns exist BEFORE creating their index.
     await client.query(`
       ALTER TABLE payments
         ADD COLUMN IF NOT EXISTS client_id TEXT,
         ADD COLUMN IF NOT EXISTS provider_transaction_id VARCHAR(200),
         ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
+    `);
+
+    // Add the client foreign key safely for older databases.
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conname = 'payments_client_id_fkey'
+            AND conrelid = 'payments'::regclass
+        ) THEN
+          ALTER TABLE payments
+            ADD CONSTRAINT payments_client_id_fkey
+            FOREIGN KEY (client_id) REFERENCES clients(id)
+            ON DELETE SET NULL;
+        END IF;
+      END $$;
+    `);
+
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_provider_transaction
+      ON payments (provider, provider_transaction_id)
+      WHERE provider_transaction_id IS NOT NULL;
     `);
 
     await client.query(`
@@ -352,7 +349,7 @@ async function initializeDatabase() {
     console.log('MR HAAS WISP database schema iko tayari.');
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
-    console.error('Database initialization failed:', error.message);
+    console.error('Database initialization failed:', error);
     throw error;
   } finally {
     client.release();
