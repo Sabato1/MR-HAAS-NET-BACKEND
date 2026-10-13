@@ -1,83 +1,304 @@
+
 <!DOCTYPE html>
 <html lang="sw">
-<head><style>
-@font-face {
-  font-family: "Optimistic";
-  font-style: normal;
-  font-weight: 400 600;
-  font-display: swap;
-  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Optimistic Mono";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
-}
-:where(html) {
-  font-family: "Optimistic", system-ui, sans-serif;
-}
-:where(code, pre, kbd, samp) {
-  font-family: "Optimistic Mono", ui-monospace, monospace;
-}
-</style>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jisajili - MR HAAS NET</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4">
-<div class="w-full max-w-lg">
-    <div class="text-center mb-8"><h1 class="text-3xl font-bold text-blue-400"><i class="fa-solid fa-wifi"></i> MR HAAS NET</h1><p class="text-slate-400 mt-2">Sajili WISP yako na uanze leo - BURE!</p></div>
-    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-        <form id="regForm" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label class="text-sm text-slate-400">Jina la Biashara <span class="text-red-400">*</span></label><input id="business_name" required placeholder="MR HAAS NET Singida" class="w-full mt-1 rounded-xl border border-slate-700 bg-slate-900 p-3.5 outline-none focus:border-blue-500"></div>
-                <div><label class="text-sm text-slate-400">Jina la Mmiliki <span class="text-red-400">*</span></label><input id="owner_name" required placeholder="Sabato Mashenene" class="w-full mt-1 rounded-xl border border-slate-700 bg-slate-900 p-3.5 outline-none focus:border-blue-500"></div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label class="text-sm text-slate-400">Namba ya Simu <span class="text-red-400">*</span></label><input id="phone" required type="tel" placeholder="2557XXXXXXXX" class="w-full mt-1 rounded-xl border border-slate-700 bg-slate-900 p-3.5 outline-none focus:border-blue-500"></div>
-                <div><label class="text-sm text-slate-400">Email <span class="text-red-400">*</span></label><input id="email" required type="email" placeholder="wisp@mfano.co.tz" class="w-full mt-1 rounded-xl border border-slate-700 bg-slate-900 p-3.5 outline-none focus:border-blue-500"></div>
-            </div>
-            <div><label class="text-sm text-slate-400">Password <span class="text-red-400">*</span></label><input id="password" required type="password" placeholder="Chagua password imara" class="w-full mt-1 rounded-xl border border-slate-700 bg-slate-900 p-3.5 outline-none focus:border-blue-500"></div>
-            <div class="rounded-xl bg-blue-950/30 border border-blue-900 p-3 text-xs text-blue-300"><i class="fa-solid fa-gift mr-1"></i> <b>Free Plan:</b> Vifaa 2 na Wateja 50 bure - Boresha baadaye ukikua!</div>
-            <p id="error" class="text-sm text-red-400 hidden"></p>
-            <button type="submit" id="btn" class="w-full rounded-xl bg-blue-600 p-3.5 font-bold hover:bg-blue-500">Tengeneza Akaunti Yangu</button>
-        </form>
-        <div class="mt-6 text-center text-sm text-slate-400">Tayari una akaunti? <a href="login.html" class="text-blue-400 font-bold hover:underline">Ingia hapa</a></div>
-    </div>
-</div>
-<script>
-const API = 'https://mr-haas-net-backend.onrender.com';
-document.getElementById('regForm').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const btn=document.getElementById('btn'); const err=document.getElementById('error');
-    btn.textContent='Inatengeneza...'; btn.disabled=true; err.classList.add('hidden');
-    try{
-        const res = await fetch(API + '/api/auth/register', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({
-                business_name: document.getElementById('business_name').value,
-                owner_name: document.getElementById('owner_name').value,
-                phone: document.getElementById('phone').value,
-                email: document.getElementById('email').value,
-                password: document.getElementById('password').value
-            })
-        });
-        const data = await res.json();
-        if(!data.success) throw new Error(data.message);
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('tenant_id', data.tenant_id);
-        localStorage.setItem('tenant_info', JSON.stringify(data.tenant));
-        alert('Hongera! Akaunti imetengenezwa. Sasa unaingia kwenye dashboard yako.');
-        window.location.href='dashboard.html';
-    }catch(ex){
-        err.textContent=ex.message; err.classList.remove('hidden');
-        btn.textContent='Tengeneza Akaunti Yangu'; btn.disabled=false;
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080b12">
+  <title>Jisajili | MR HAAS NET</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background:
+        radial-gradient(circle at top right, rgba(212,175,55,.13), transparent 35%),
+        #080b12;
+      color: #f8fafc;
+      font-family: Arial, sans-serif;
     }
-});
-</script>
-<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
+    .panel {
+      background: rgba(17, 24, 39, .94);
+      border: 1px solid rgba(212, 175, 55, .25);
+      box-shadow: 0 20px 70px rgba(0,0,0,.35);
+    }
+    .field {
+      width: 100%;
+      background: #080d17;
+      border: 1px solid #30394a;
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: white;
+      outline: none;
+    }
+    .field:focus {
+      border-color: #d4af37;
+      box-shadow: 0 0 0 2px rgba(212,175,55,.12);
+    }
+    .gold {
+      background: linear-gradient(135deg,#f7dc83,#c49a25);
+      color: #111827;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <main class="w-full max-w-2xl">
+    <div class="text-center mb-7">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl border border-yellow-500/40 bg-yellow-500/10 mb-3">
+        <span class="text-3xl">📡</span>
+      </div>
+      <h1 class="text-3xl font-extrabold tracking-wide">
+        <span class="text-yellow-400">MR HAAS</span> NET
+      </h1>
+      <p class="text-gray-400 mt-2">Multi-Tenant WISP Management System</p>
+      <p class="text-gray-500 text-sm mt-1">Sajili biashara yako ya Wi-Fi</p>
+    </div>
+
+    <section class="panel rounded-2xl p-5 sm:p-8">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold">Fungua akaunti ya WISP</h2>
+        <p class="text-sm text-gray-400 mt-2">
+          Anza kusimamia wateja, Hotspot, PPPoE, vifaa na malipo yako sehemu moja.
+        </p>
+      </div>
+
+      <div id="message" class="hidden rounded-lg p-3 mb-4 text-sm" role="alert"></div>
+
+      <form id="registerForm" class="space-y-5">
+        <div>
+          <label for="businessName" class="block text-sm text-gray-300 mb-2">
+            Jina la biashara / WISP
+          </label>
+          <input
+            id="businessName"
+            name="businessName"
+            class="field"
+            type="text"
+            placeholder="Mfano: MR HAAS NET"
+            minlength="2"
+            maxlength="100"
+            autocomplete="organization"
+            required
+          >
+        </div>
+
+        <div>
+          <label for="email" class="block text-sm text-gray-300 mb-2">
+            Barua pepe ya msimamizi
+          </label>
+          <input
+            id="email"
+            name="email"
+            class="field"
+            type="email"
+            placeholder="jina@example.com"
+            maxlength="254"
+            autocomplete="email"
+            required
+          >
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label for="password" class="block text-sm text-gray-300 mb-2">
+              Nenosiri
+            </label>
+            <input
+              id="password"
+              name="password"
+              class="field"
+              type="password"
+              placeholder="Angalau herufi 8"
+              minlength="8"
+              maxlength="128"
+              autocomplete="new-password"
+              required
+            >
+          </div>
+
+          <div>
+            <label for="confirmPassword" class="block text-sm text-gray-300 mb-2">
+              Rudia nenosiri
+            </label>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              class="field"
+              type="password"
+              placeholder="Rudia nenosiri"
+              minlength="8"
+              maxlength="128"
+              autocomplete="new-password"
+              required
+            >
+          </div>
+        </div>
+
+        <div>
+          <label for="plan" class="block text-sm text-gray-300 mb-2">
+            Chagua mpango wako
+          </label>
+          <select id="plan" name="plan" class="field" required>
+            <option value="START">START — TSh 10,000/mwezi</option>
+            <option value="DIAMOND">DIAMOND — TSh 15,000/mwezi</option>
+            <option value="PREMIUM">PREMIUM — TSh 20,000/mwezi</option>
+            <option value="REVENUE_SHARE">REVENUE SHARE — TSh 20,000 usajili + 3% ya mapato ya mwezi</option>
+          </select>
+          <p class="text-xs text-gray-500 mt-2">
+            Mpango uliochagua utawekwa kwenye akaunti yako. Malipo yatahitaji kuthibitishwa na mfumo wa backend.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4">
+          <div class="flex items-start gap-3">
+            <span class="text-xl">🎁</span>
+            <div>
+              <p class="font-semibold text-yellow-300">Jaribio la siku 4</p>
+              <p class="text-sm text-gray-400 mt-1">
+                Kila WISP mpya anastahili kipindi cha majaribio cha siku 4 baada ya usajili kufanikiwa. Baada ya hapo, akaunti itahitaji usajili halali ili kuendelea kutumia huduma zinazolipiwa.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <label class="flex items-start gap-3 text-sm text-gray-400">
+          <input id="terms" type="checkbox" class="mt-1 accent-yellow-500" required>
+          <span>
+            Nakubali kutumia mfumo kwa taarifa sahihi na kulinda taarifa za akaunti yangu.
+          </span>
+        </label>
+
+        <button
+          id="submitButton"
+          type="submit"
+          class="gold w-full rounded-xl py-3 font-bold hover:brightness-110 transition"
+        >
+          Fungua Akaunti
+        </button>
+      </form>
+
+      <div class="text-center mt-6 text-sm text-gray-400">
+        Tayari una akaunti?
+        <a href="/login.html" class="text-yellow-400 hover:underline font-semibold">
+          Ingia hapa
+        </a>
+      </div>
+    </section>
+
+    <p class="text-center text-xs text-gray-600 mt-5">
+      © <span id="year"></span> MR HAAS NET. Haki zote zimehifadhiwa.
+    </p>
+  </main>
+
+  <script>
+    const form = document.getElementById('registerForm');
+    const message = document.getElementById('message');
+    const submitButton = document.getElementById('submitButton');
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    function showMessage(text, success = false) {
+      message.textContent = text;
+      message.className =
+        'rounded-lg p-3 mb-4 text-sm ' +
+        (success
+          ? 'bg-green-500/10 border border-green-500/30 text-green-300'
+          : 'bg-red-500/10 border border-red-500/30 text-red-300');
+      message.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+
+      const businessName = document.getElementById('businessName').value.trim();
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const plan = document.getElementById('plan').value;
+
+      if (businessName.length < 2) {
+        showMessage('Tafadhali ingiza jina sahihi la biashara.');
+        return;
+      }
+
+      if (password.length < 8) {
+        showMessage('Nenosiri lazima liwe na angalau herufi 8.');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showMessage('Nenosiri na rudia nenosiri havifanani.');
+        return;
+      }
+
+      if (!document.getElementById('terms').checked) {
+        showMessage('Tafadhali kubali masharti ya matumizi.');
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = 'Inasajili akaunti...';
+
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: businessName,
+            business_name: businessName,
+            email,
+            password,
+            plan
+          })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || data.success === false || data.error) {
+          throw new Error(
+            data.message ||
+            data.error ||
+            'Usajili haukufanikiwa. Tafadhali jaribu tena.'
+          );
+        }
+
+        showMessage(
+          'Usajili umekamilika. Unaelekezwa kwenye ukurasa wa kuingia...',
+          true
+        );
+
+        if (data.token) {
+          localStorage.setItem('mrhaas_token', data.token);
+
+          const tenant = data.tenant || {};
+          const tenantId = tenant.id || data.tenant_id;
+
+          if (tenantId) {
+            localStorage.setItem('mrhaas_tenant_id', tenantId);
+          }
+
+          localStorage.setItem('mrhaas_tenant', JSON.stringify(tenant));
+
+          if (data.role) {
+            localStorage.setItem('mrhaas_role', data.role);
+          }
+        }
+
+        setTimeout(() => {
+          window.location.href = '/login.html';
+        }, 1500);
+
+      } catch (error) {
+        showMessage(
+          error.message ||
+          'Imeshindikana kuwasiliana na server. Hakikisha backend inafanya kazi.'
+        );
+        submitButton.disabled = false;
+        submitButton.textContent = 'Fungua Akaunti';
+      }
+    });
+  </script>
+</body>
 </html>
