@@ -468,7 +468,7 @@ app.post('/api/devices', authMiddleware, (req, res) => {
         omada: 'TP-Link Omada',
         cudy: 'Cudy',
         ruijie: 'Ruijie',
-        rey ee: 'Ruijie',
+        reyee: 'Ruijie',
         reyee: 'Ruijie',
         grandstream: 'Grandstream'
     };
