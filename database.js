@@ -2,300 +2,367 @@
 'use strict';
 
 const { Pool } = require('pg');
-const bcrypt = require('bcryptjs');
 
-const connectionString = process.env.DATABASE_URL;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-if (!connectionString) {
-  throw new Error(
-    'DATABASE_URL haijawekwa kwenye Render Environment.'
-  );
+if (IS_PRODUCTION && !process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL inahitajika kwenye production.');
 }
 
 const pool = new Pool({
-  connectionString,
-  ssl: { rejectUnauthorized: false },
-  max: 5,
-  connectionTimeoutMillis: 15000,
-  idleTimeoutMillis: 30000
+  connectionString: process.env.DATABASE_URL,
+  ssl: IS_PRODUCTION ? { rejectUnauthorized: false } : false,
+  max: Number(process.env.DB_POOL_MAX || 10),
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000
 });
 
-pool.on('error', (err) => {
-  console.error('PostgreSQL pool error:', err.message);
+pool.on('error', error => {
+  console.error('PostgreSQL pool error:', error.message);
 });
 
-function convertSql(sql) {
-  let query = sql.trim();
+async function initializeDatabase() {
+  const client = await pool.connect();
 
-  query = query.replace(
-    /^\s*INSERT\s+OR\s+IGNORE\s+INTO/i,
-    'INSERT INTO'
-  );
+  try {
+    await client.query('BEGIN');
 
-  query = query.replace(
-    /datetime\s*\(\s*'now'\s*\)/gi,
-    'CURRENT_TIMESTAMP'
-  );
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tenants (
+        id TEXT PRIMARY KEY,
+        business_name VARCHAR(200) NOT NULL,
+        owner_name VARCHAR(200) NOT NULL,
+        phone VARCHAR(40) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        subdomain VARCHAR(150) NOT NULL UNIQUE,
+        plan VARCHAR(40) NOT NULL DEFAULT 'START',
+        max_devices INTEGER DEFAULT 2,
+        max_clients INTEGER DEFAULT 50,
+        status VARCHAR(20) NOT NULL DEFAULT 'active',
+        role VARCHAR(30) NOT NULL DEFAULT 'tenant',
+        trial_started_at TIMESTAMPTZ,
+        trial_ends_at TIMESTAMPTZ,
+        subscription_status VARCHAR(30) NOT NULL DEFAULT 'trial',
+        subscription_ends_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  let index = 0;
-  query = query.replace(/\?/g, () => `$${++index}`);
+        CONSTRAINT tenants_status_check
+          CHECK (status IN ('active', 'suspended', 'inactive')),
 
-  if (/^INSERT\s+INTO/i.test(query) &&
-      !/\bRETURNING\b/i.test(query)) {
-    query += ' RETURNING id';
-  }
-
-  if (/^INSERT\s+INTO/i.test(query) &&
-      !/RETURNING/i.test(query) &&
-      /INSERT INTO/i.test(query)) {
-    // INSERT OR IGNORE hutumia ON CONFLICT.
-    // Ongeza ON CONFLICT kabla ya RETURNING.
-    query = query.replace(
-      /\s+RETURNING\s+id$/i,
-      ' ON CONFLICT DO NOTHING RETURNING id'
-    );
-  } else if (/^INSERT\s+INTO/i.test(query) &&
-             /ON CONFLICT DO NOTHING RETURNING id$/i.test(query)) {
-    // Tayari imeandaliwa.
-  }
-
-  return query;
-}
-
-function run(sql, params = [], callback = () => {}) {
-  const query = convertSql(sql);
-
-  pool.query(query, params)
-    .then((result) => {
-      const context = {
-        lastID: result.rows?.[0]?.id ?? undefined,
-        changes: result.rowCount ?? 0
-      };
-
-      callback.call(context, null);
-    })
-    .catch((err) => {
-      callback.call(
-        { lastID: undefined, changes: 0 },
-        err
+        CONSTRAINT tenants_subscription_status_check
+          CHECK (
+            subscription_status IN (
+              'trial', 'active', 'expired', 'pending', 'cancelled'
+            )
+          )
       );
-    });
-}
+    `);
 
-function get(sql, params = [], callback = () => {}) {
-  pool.query(convertSql(sql), params)
-    .then((result) => callback(null, result.rows[0]))
-    .catch((err) => callback(err));
-}
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_tenants_email_lower
+      ON tenants (LOWER(email));
+    `);
 
-function all(sql, params = [], callback = () => {}) {
-  pool.query(convertSql(sql), params)
-    .then((result) => callback(null, result.rows))
-    .catch((err) => callback(err));
-}
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_tenants_status
+      ON tenants (status);
+    `);
 
-const db = { run, get, all };
-
-const schema = [
-  `CREATE TABLE IF NOT EXISTS tenants (
-    id TEXT PRIMARY KEY,
-    business_name TEXT NOT NULL,
-    owner_name TEXT NOT NULL,
-    phone TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    subdomain TEXT UNIQUE,
-    plan TEXT NOT NULL DEFAULT 'start',
-    status TEXT NOT NULL DEFAULT 'active',
-    max_devices INTEGER NOT NULL DEFAULT 2,
-    max_clients INTEGER NOT NULL DEFAULT 50,
-    trial_started_at TIMESTAMPTZ,
-    trial_ends_at TIMESTAMPTZ,
-    subscription_status TEXT DEFAULT 'trial',
-    subscription_started_at TIMESTAMPTZ,
-    subscription_ends_at TIMESTAMPTZ,
-    revenue_share_rate NUMERIC(8,2) DEFAULT 3.0,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-  )`,
-
-  `CREATE TABLE IF NOT EXISTS devices (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id TEXT NOT NULL REFERENCES tenants(id),
-    name TEXT NOT NULL,
-    host TEXT,
-    mac_address TEXT,
-    vendor TEXT DEFAULT 'mikrotik',
-    type TEXT DEFAULT 'mikrotik',
-    model TEXT,
-    wan_port TEXT DEFAULT 'ether1',
-    "user" TEXT DEFAULT 'admin',
-    password TEXT DEFAULT '',
-    port INTEGER DEFAULT 8728,
-    status TEXT DEFAULT 'Offline',
-    last_seen TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-  )`,
-
-  `CREATE TABLE IF NOT EXISTS clients (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id TEXT NOT NULL REFERENCES tenants(id),
-    name TEXT NOT NULL,
-    phone TEXT,
-    username TEXT NOT NULL,
-    package_name TEXT DEFAULT 'Standard 10Mbps',
-    status TEXT DEFAULT 'active',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-  )`,
-
-  `CREATE TABLE IF NOT EXISTS payments (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id TEXT NOT NULL REFERENCES tenants(id),
-    client_id BIGINT,
-    client_username TEXT,
-    amount NUMERIC(14,2) NOT NULL,
-    phone TEXT,
-    gateway TEXT,
-    transaction_id TEXT,
-    status TEXT DEFAULT 'completed',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-  )`,
-
-  `CREATE TABLE IF NOT EXISTS subscription_payments (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id TEXT NOT NULL REFERENCES tenants(id),
-    plan TEXT NOT NULL,
-    amount NUMERIC(14,2) NOT NULL,
-    currency TEXT NOT NULL DEFAULT 'TZS',
-    payment_type TEXT NOT NULL,
-    period_start TIMESTAMPTZ,
-    period_end TIMESTAMPTZ,
-    gateway TEXT,
-    transaction_id TEXT UNIQUE,
-    status TEXT NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-  )`,
-
-  `CREATE TABLE IF NOT EXISTS revenue_reports (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id TEXT NOT NULL REFERENCES tenants(id),
-    period TEXT NOT NULL,
-    gross_revenue NUMERIC(14,2) NOT NULL,
-    fee_rate NUMERIC(8,2) NOT NULL DEFAULT 3.0,
-    fee_due NUMERIC(14,2) NOT NULL DEFAULT 0,
-    status TEXT NOT NULL DEFAULT 'submitted',
-    notes TEXT,
-    submitted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    reviewed_at TIMESTAMPTZ,
-    UNIQUE (tenant_id, period)
-  )`,
-
-  `CREATE INDEX IF NOT EXISTS idx_devices_tenant
-    ON devices(tenant_id)`,
-
-  `CREATE INDEX IF NOT EXISTS idx_devices_mac
-    ON devices(mac_address)`,
-
-  `CREATE INDEX IF NOT EXISTS idx_clients_tenant
-    ON clients(tenant_id)`,
-
-  `CREATE INDEX IF NOT EXISTS idx_tenants_trial_end
-    ON tenants(trial_ends_at)`,
-
-  `CREATE INDEX IF NOT EXISTS idx_subscription_payments_tenant
-    ON subscription_payments(tenant_id)`,
-
-  `CREATE INDEX IF NOT EXISTS idx_revenue_reports_tenant_period
-    ON revenue_reports(tenant_id, period)`
-];
-
-const ready = (async () => {
-  for (const statement of schema) {
-    await pool.query(statement);
-  }
-
-  await pool.query(`
-    UPDATE tenants
-    SET plan = 'start', max_devices = 2, max_clients = 50
-    WHERE plan = 'free' AND id <> 'tenant_super_admin'
-  `);
-
-  await pool.query(`
-    UPDATE tenants
-    SET plan = 'diamond', max_devices = 7, max_clients = 500
-    WHERE plan IN ('basic', 'standard')
-      AND id <> 'tenant_super_admin'
-  `);
-
-  await pool.query(`
-    UPDATE tenants
-    SET max_devices = 2, max_clients = 50
-    WHERE plan = 'start' AND id <> 'tenant_super_admin'
-  `);
-
-  await pool.query(`
-    UPDATE tenants
-    SET max_devices = 7, max_clients = 500
-    WHERE plan = 'diamond' AND id <> 'tenant_super_admin'
-  `);
-
-  await pool.query(`
-    UPDATE tenants
-    SET max_devices = -1, max_clients = 5000
-    WHERE plan = 'premium' AND id <> 'tenant_super_admin'
-  `);
-
-  const adminPassword = process.env.SUPER_ADMIN_PASSWORD;
-  const adminEmail =
-    process.env.SUPER_ADMIN_EMAIL || 'admin@mrhaas.net';
-
-  if (adminPassword) {
-    if (adminPassword.length < 12) {
-      throw new Error(
-        'SUPER_ADMIN_PASSWORD lazima iwe na angalau herufi 12.'
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tenant_settings (
+        tenant_id TEXT PRIMARY KEY
+          REFERENCES tenants(id) ON DELETE CASCADE,
+        portal_title VARCHAR(120),
+        primary_color VARCHAR(7) NOT NULL DEFAULT '#111827',
+        announcement TEXT NOT NULL DEFAULT '',
+        contact_phone VARCHAR(40),
+        logo_url TEXT NOT NULL DEFAULT '',
+        currency VARCHAR(10) NOT NULL DEFAULT 'TZS',
+        language VARCHAR(10) NOT NULL DEFAULT 'sw',
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
-    }
+    `);
 
-    const hash = await bcrypt.hash(adminPassword, 12);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS payment_settings (
+        tenant_id TEXT PRIMARY KEY
+          REFERENCES tenants(id) ON DELETE CASCADE,
+        enabled_providers TEXT[] NOT NULL DEFAULT ARRAY['manual']::TEXT[],
+        manual_payment_instructions TEXT NOT NULL DEFAULT '',
+        payment_phone VARCHAR(40) NOT NULL DEFAULT '',
+        payment_account_name VARCHAR(120) NOT NULL DEFAULT '',
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
 
-    await pool.query(
-      `INSERT INTO tenants (
-        id, business_name, owner_name, phone, email,
-        password_hash, subdomain, plan, max_devices,
-        max_clients, status, subscription_status
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
-      )
-      ON CONFLICT (id) DO UPDATE SET
-        password_hash = EXCLUDED.password_hash,
-        email = EXCLUDED.email`,
-      [
-        'tenant_super_admin',
-        'MR HAAS Super Admin',
-        'Super Admin',
-        '255000000000',
-        adminEmail,
-        hash,
-        'admin',
-        'premium',
-        -1,
-        -1,
-        'active',
-        'active'
-      ]
-    );
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS sites (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL
+          REFERENCES tenants(id) ON DELETE CASCADE,
+        name VARCHAR(150) NOT NULL,
+        location VARCHAR(250) NOT NULL DEFAULT '',
+        description TEXT NOT NULL DEFAULT '',
+        status VARCHAR(20) NOT NULL DEFAULT 'active',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
 
-    console.log('Super Admin credentials configured.');
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_sites_tenant
+      ON sites (tenant_id);
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS devices (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL
+          REFERENCES tenants(id) ON DELETE CASCADE,
+        site_id TEXT
+          REFERENCES sites(id) ON DELETE SET NULL,
+        name VARCHAR(150) NOT NULL,
+        vendor VARCHAR(80) NOT NULL,
+        device_type VARCHAR(40) NOT NULL DEFAULT 'router',
+        model VARCHAR(120) NOT NULL DEFAULT '',
+        mac_address VARCHAR(30),
+        ip_address VARCHAR(100),
+        wan_port VARCHAR(50),
+        connection_type VARCHAR(30) NOT NULL DEFAULT 'api',
+        last_seen TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_devices_tenant
+      ON devices (tenant_id);
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_devices_last_seen
+      ON devices (last_seen);
+    `);
+
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_tenant_mac
+      ON devices (tenant_id, mac_address)
+      WHERE mac_address IS NOT NULL;
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS packages (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL
+          REFERENCES tenants(id) ON DELETE CASCADE,
+        name VARCHAR(150) NOT NULL,
+        price NUMERIC(14,2) NOT NULL DEFAULT 0,
+        duration_value INTEGER NOT NULL DEFAULT 1,
+        duration_unit VARCHAR(20) NOT NULL DEFAULT 'days',
+        speed_down NUMERIC(12,2) NOT NULL DEFAULT 0,
+        speed_up NUMERIC(12,2) NOT NULL DEFAULT 0,
+        connection_type VARCHAR(20) NOT NULL DEFAULT 'hotspot',
+        description TEXT NOT NULL DEFAULT '',
+        status VARCHAR(20) NOT NULL DEFAULT 'active',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+        CONSTRAINT packages_price_check CHECK (price >= 0),
+        CONSTRAINT packages_duration_check CHECK (duration_value >= 1),
+        CONSTRAINT packages_connection_type_check
+          CHECK (connection_type IN ('hotspot', 'pppoe')),
+        CONSTRAINT packages_status_check
+          CHECK (status IN ('active', 'inactive'))
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_packages_tenant
+      ON packages (tenant_id);
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL
+          REFERENCES tenants(id) ON DELETE CASCADE,
+        site_id TEXT
+          REFERENCES sites(id) ON DELETE SET NULL,
+        name VARCHAR(200) NOT NULL,
+        phone VARCHAR(40),
+        username VARCHAR(150),
+        package_name VARCHAR(150),
+        connection_type VARCHAR(20) NOT NULL DEFAULT 'hotspot',
+        status VARCHAR(20) NOT NULL DEFAULT 'active',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+        CONSTRAINT clients_connection_type_check
+          CHECK (connection_type IN ('hotspot', 'pppoe')),
+        CONSTRAINT clients_status_check
+          CHECK (status IN ('active', 'suspended', 'inactive'))
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_clients_tenant
+      ON clients (tenant_id);
+    `);
+
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_tenant_username
+      ON clients (tenant_id, username)
+      WHERE username IS NOT NULL AND username <> '';
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS vouchers (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL
+          REFERENCES tenants(id) ON DELETE CASCADE,
+        package_id TEXT
+          REFERENCES packages(id) ON DELETE SET NULL,
+        code VARCHAR(40) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'unused',
+        expires_at TIMESTAMPTZ,
+        used_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+        CONSTRAINT vouchers_status_check
+          CHECK (status IN ('unused', 'used', 'blocked'))
+      );
+    `);
+
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_vouchers_tenant_code
+      ON vouchers (tenant_id, code);
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_vouchers_tenant_status
+      ON vouchers (tenant_id, status);
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL
+          REFERENCES tenants(id) ON DELETE CASCADE,
+        client_id TEXT
+          REFERENCES clients(id) ON DELETE SET NULL,
+        provider VARCHAR(40) NOT NULL DEFAULT 'manual',
+        reference VARCHAR(180),
+        amount NUMERIC(14,2) NOT NULL,
+        currency VARCHAR(10) NOT NULL DEFAULT 'TZS',
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        description TEXT NOT NULL DEFAULT '',
+        provider_transaction_id VARCHAR(200),
+        verified_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+        CONSTRAINT payments_amount_check CHECK (amount > 0),
+        CONSTRAINT payments_status_check
+          CHECK (
+            status IN (
+              'pending', 'paid', 'rejected', 'failed', 'refunded'
+            )
+          )
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_payments_tenant
+      ON payments (tenant_id);
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_payments_tenant_status
+      ON payments (tenant_id, status);
+    `);
+
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_provider_transaction
+      ON payments (provider, provider_transaction_id)
+      WHERE provider_transaction_id IS NOT NULL;
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id BIGSERIAL PRIMARY KEY,
+        tenant_id TEXT REFERENCES tenants(id) ON DELETE SET NULL,
+        actor_email VARCHAR(255),
+        action VARCHAR(120) NOT NULL,
+        entity_type VARCHAR(80),
+        entity_id TEXT,
+        details JSONB NOT NULL DEFAULT '{}'::JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant
+      ON audit_logs (tenant_id, created_at DESC);
+    `);
+
+    // Compatibility columns for databases created by earlier versions.
+    await client.query(`
+      ALTER TABLE tenants
+        ADD COLUMN IF NOT EXISTS role VARCHAR(30) NOT NULL DEFAULT 'tenant',
+        ADD COLUMN IF NOT EXISTS trial_started_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(30) NOT NULL DEFAULT 'trial',
+        ADD COLUMN IF NOT EXISTS subscription_ends_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    `);
+
+    await client.query(`
+      ALTER TABLE devices
+        ADD COLUMN IF NOT EXISTS site_id TEXT,
+        ADD COLUMN IF NOT EXISTS device_type VARCHAR(40) NOT NULL DEFAULT 'router',
+        ADD COLUMN IF NOT EXISTS model VARCHAR(120) NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS ip_address VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS wan_port VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS connection_type VARCHAR(30) NOT NULL DEFAULT 'api',
+        ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ;
+    `);
+
+    await client.query(`
+      ALTER TABLE clients
+        ADD COLUMN IF NOT EXISTS site_id TEXT,
+        ADD COLUMN IF NOT EXISTS phone VARCHAR(40),
+        ADD COLUMN IF NOT EXISTS package_name VARCHAR(150),
+        ADD COLUMN IF NOT EXISTS connection_type VARCHAR(20) NOT NULL DEFAULT 'hotspot',
+        ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active';
+    `);
+
+    await client.query(`
+      ALTER TABLE payments
+        ADD COLUMN IF NOT EXISTS client_id TEXT,
+        ADD COLUMN IF NOT EXISTS provider_transaction_id VARCHAR(200),
+        ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
+    `);
+
+    await client.query(`
+      ALTER TABLE tenant_settings
+        ADD COLUMN IF NOT EXISTS logo_url TEXT NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS language VARCHAR(10) NOT NULL DEFAULT 'sw';
+    `);
+
+    await client.query('COMMIT');
+
+    console.log('MR HAAS WISP database schema iko tayari.');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Database initialization failed:', error.message);
+    throw error;
+  } finally {
+    client.release();
   }
+}
 
-  console.log('MR HAAS NET PostgreSQL connected; schema ready.');
-})();
+const ready = initializeDatabase();
 
-db.ready = ready;
-db.pool = pool;
-db.serialize = (callback) => {
-  ready.then(callback).catch((err) => {
-    console.error('Database initialization failed:', err.message);
-  });
+module.exports = {
+  pool,
+  ready,
+  initializeDatabase
 };
-
-module.exports = db;
