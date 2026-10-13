@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#080b12">
   <title>Jisajili | MR HAAS NET</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
     body {
       background:
@@ -15,11 +16,13 @@
       color: #f8fafc;
       font-family: Arial, sans-serif;
     }
+
     .panel {
       background: rgba(17, 24, 39, .94);
       border: 1px solid rgba(212, 175, 55, .25);
       box-shadow: 0 20px 70px rgba(0,0,0,.35);
     }
+
     .field {
       width: 100%;
       background: #080d17;
@@ -29,13 +32,20 @@
       color: white;
       outline: none;
     }
+
     .field:focus {
       border-color: #d4af37;
       box-shadow: 0 0 0 2px rgba(212,175,55,.12);
     }
+
     .gold {
       background: linear-gradient(135deg,#f7dc83,#c49a25);
       color: #111827;
+    }
+
+    .gold:disabled {
+      opacity: .6;
+      cursor: not-allowed;
     }
   </style>
 </head>
@@ -43,35 +53,53 @@
 <body class="min-h-screen flex items-center justify-center p-4">
 
   <main class="w-full max-w-2xl">
+
     <div class="text-center mb-7">
       <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl border border-yellow-500/40 bg-yellow-500/10 mb-3">
         <span class="text-3xl">📡</span>
       </div>
+
       <h1 class="text-3xl font-extrabold tracking-wide">
         <span class="text-yellow-400">MR HAAS</span> NET
       </h1>
-      <p class="text-gray-400 mt-2">Multi-Tenant WISP Management System</p>
-      <p class="text-gray-500 text-sm mt-1">Sajili biashara yako ya Wi-Fi</p>
+
+      <p class="text-gray-400 mt-2">
+        Multi-Tenant WISP Management System
+      </p>
+
+      <p class="text-gray-500 text-sm mt-1">
+        Sajili biashara yako ya Wi-Fi
+      </p>
     </div>
 
     <section class="panel rounded-2xl p-5 sm:p-8">
+
       <div class="mb-6">
         <h2 class="text-2xl font-bold">Fungua akaunti ya WISP</h2>
+
         <p class="text-sm text-gray-400 mt-2">
           Anza kusimamia wateja, Hotspot, PPPoE, vifaa na malipo yako sehemu moja.
         </p>
       </div>
 
-      <div id="message" class="hidden rounded-lg p-3 mb-4 text-sm" role="alert"></div>
+      <div
+        id="message"
+        class="hidden rounded-lg p-3 mb-4 text-sm"
+        role="alert"
+        aria-live="polite"
+      ></div>
 
       <form id="registerForm" class="space-y-5">
+
+        <!-- JINA LA BIASHARA -->
         <div>
           <label for="businessName" class="block text-sm text-gray-300 mb-2">
             Jina la biashara / WISP
           </label>
+
           <input
             id="businessName"
-            name="businessName"
+            name="business_name"
             class="field"
             type="text"
             placeholder="Mfano: MR HAAS NET"
@@ -82,10 +110,55 @@
           >
         </div>
 
+        <!-- JINA LA MMILIKI -->
+        <div>
+          <label for="ownerName" class="block text-sm text-gray-300 mb-2">
+            Jina kamili la mmiliki
+          </label>
+
+          <input
+            id="ownerName"
+            name="owner_name"
+            class="field"
+            type="text"
+            placeholder="Ingiza jina kamili la mmiliki"
+            minlength="2"
+            maxlength="100"
+            autocomplete="name"
+            required
+          >
+        </div>
+
+        <!-- NAMBA YA SIMU -->
+        <div>
+          <label for="phone" class="block text-sm text-gray-300 mb-2">
+            Namba ya simu
+          </label>
+
+          <input
+            id="phone"
+            name="phone"
+            class="field"
+            type="tel"
+            placeholder="Mfano: 0712345678"
+            minlength="9"
+            maxlength="20"
+            autocomplete="tel"
+            inputmode="tel"
+            required
+          >
+
+          <p class="text-xs text-gray-500 mt-2">
+            Tumia namba ya simu unayoweza kupatikana nayo.
+          </p>
+        </div>
+
+        <!-- BARUA PEPE -->
         <div>
           <label for="email" class="block text-sm text-gray-300 mb-2">
             Barua pepe ya msimamizi
           </label>
+
           <input
             id="email"
             name="email"
@@ -98,11 +171,14 @@
           >
         </div>
 
+        <!-- NENOSIRI -->
         <div class="grid sm:grid-cols-2 gap-4">
+
           <div>
             <label for="password" class="block text-sm text-gray-300 mb-2">
               Nenosiri
             </label>
+
             <input
               id="password"
               name="password"
@@ -120,6 +196,7 @@
             <label for="confirmPassword" class="block text-sm text-gray-300 mb-2">
               Rudia nenosiri
             </label>
+
             <input
               id="confirmPassword"
               name="confirmPassword"
@@ -132,46 +209,65 @@
               required
             >
           </div>
-          
-        </div>
-        div>
-          <label for="businessName" class="block text-sm text-gray-300 mb-2">
-            Jina la biashara / WISP
 
+        </div>
+
+        <!-- MPANGO -->
         <div>
           <label for="plan" class="block text-sm text-gray-300 mb-2">
             Chagua mpango wako
           </label>
+
           <select id="plan" name="plan" class="field" required>
             <option value="START">START — TSh 10,000/mwezi</option>
             <option value="DIAMOND">DIAMOND — TSh 15,000/mwezi</option>
             <option value="PREMIUM">PREMIUM — TSh 20,000/mwezi</option>
-            <option value="REVENUE_SHARE">REVENUE SHARE — TSh 20,000 usajili + 3% ya mapato ya mwezi</option>
+            <option value="REVENUE_SHARE">
+              REVENUE SHARE — TSh 20,000 usajili + 3% ya mapato ya mwezi
+            </option>
           </select>
+
           <p class="text-xs text-gray-500 mt-2">
-            Mpango uliochagua utawekwa kwenye akaunti yako. Malipo yatahitaji kuthibitishwa na mfumo wa backend.
+            Mpango uliochagua utawekwa kwenye akaunti yako.
+            Malipo yatahitaji kuthibitishwa na mfumo wa backend.
           </p>
         </div>
 
+        <!-- MAJARIBIO -->
         <div class="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4">
           <div class="flex items-start gap-3">
             <span class="text-xl">🎁</span>
+
             <div>
-              <p class="font-semibold text-yellow-300">Jaribio la siku 4</p>
+              <p class="font-semibold text-yellow-300">
+                Jaribio la siku 4
+              </p>
+
               <p class="text-sm text-gray-400 mt-1">
-                Kila WISP mpya anastahili kipindi cha majaribio cha siku 4 baada ya usajili kufanikiwa. Baada ya hapo, akaunti itahitaji usajili halali ili kuendelea kutumia huduma zinazolipiwa.
+                Kila WISP mpya anastahili kipindi cha majaribio cha siku 4
+                baada ya usajili kufanikiwa. Upatikanaji halisi wa kipindi
+                hicho unategemea mipangilio ya backend.
               </p>
             </div>
           </div>
         </div>
 
+        <!-- MASHARTI -->
         <label class="flex items-start gap-3 text-sm text-gray-400">
-          <input id="terms" type="checkbox" class="mt-1 accent-yellow-500" required>
+          <input
+            id="terms"
+            name="terms"
+            type="checkbox"
+            class="mt-1 accent-yellow-500"
+            required
+          >
+
           <span>
             Nakubali kutumia mfumo kwa taarifa sahihi na kulinda taarifa za akaunti yangu.
           </span>
         </label>
 
+        <!-- KITufe CHA USAJILI -->
         <button
           id="submitButton"
           type="submit"
@@ -179,50 +275,83 @@
         >
           Fungua Akaunti
         </button>
+
       </form>
 
       <div class="text-center mt-6 text-sm text-gray-400">
         Tayari una akaunti?
-        <a href="/login.html" class="text-yellow-400 hover:underline font-semibold">
+
+        <a
+          href="/login.html"
+          class="text-yellow-400 hover:underline font-semibold"
+        >
           Ingia hapa
         </a>
       </div>
+
     </section>
 
     <p class="text-center text-xs text-gray-600 mt-5">
       © <span id="year"></span> MR HAAS NET. Haki zote zimehifadhiwa.
     </p>
+
   </main>
 
   <script>
+    'use strict';
+
     const form = document.getElementById('registerForm');
     const message = document.getElementById('message');
     const submitButton = document.getElementById('submitButton');
 
-    document.getElementById('year').textContent = new Date().getFullYear();
+    document.getElementById('year').textContent =
+      new Date().getFullYear();
 
     function showMessage(text, success = false) {
       message.textContent = text;
+
       message.className =
         'rounded-lg p-3 mb-4 text-sm ' +
         (success
           ? 'bg-green-500/10 border border-green-500/30 text-green-300'
           : 'bg-red-500/10 border border-red-500/30 text-red-300');
-      message.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      message.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      });
     }
 
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
 
-      
-const businessName = document.getElementById('businessName').value.trim();
-const ownerName = document.getElementById('ownerName').value.trim();
-const phone = document.getElementById('phone').value.trim();
-const email = document.getElementById('email').value.trim().toLowerCase();
-const password = document.getElementById('password').value;
-const confirmPassword = document.getElementById('confirmPassword').value;
-const plan = document.getElementById('plan').value;
+      const businessName =
+        document.getElementById('businessName').value.trim();
 
+      const ownerName =
+        document.getElementById('ownerName').value.trim();
+
+      const phone =
+        document.getElementById('phone').value.trim();
+
+      const email =
+        document.getElementById('email').value.trim().toLowerCase();
+
+      const password =
+        document.getElementById('password').value;
+
+      const confirmPassword =
+        document.getElementById('confirmPassword').value;
+
+      const plan =
+        document.getElementById('plan').value;
+
+      if (!businessName || !ownerName || !phone || !email || !password) {
+        showMessage(
+          'Jaza jina la biashara, jina la mmiliki, simu, barua pepe na nenosiri.'
+        );
+        return;
+      }
 
       if (password.length < 8) {
         showMessage('Nenosiri lazima liwe na angalau herufi 8.');
@@ -249,17 +378,22 @@ const plan = document.getElementById('plan').value;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            name: businessName,
             business_name: businessName,
-            email,
-            password,
-            plan
+            owner_name: ownerName,
+            phone: phone,
+            email: email,
+            password: password,
+            plan: plan
           })
         });
 
         const data = await response.json().catch(() => ({}));
 
-        if (!response.ok || data.success === false || data.error) {
+        if (
+          !response.ok ||
+          data.success === false ||
+          data.error
+        ) {
           throw new Error(
             data.message ||
             data.error ||
@@ -279,17 +413,23 @@ const plan = document.getElementById('plan').value;
           const tenantId = tenant.id || data.tenant_id;
 
           if (tenantId) {
-            localStorage.setItem('mrhaas_tenant_id', tenantId);
+            localStorage.setItem(
+              'mrhaas_tenant_id',
+              String(tenantId)
+            );
           }
 
-          localStorage.setItem('mrhaas_tenant', JSON.stringify(tenant));
+          localStorage.setItem(
+            'mrhaas_tenant',
+            JSON.stringify(tenant)
+          );
 
           if (data.role) {
             localStorage.setItem('mrhaas_role', data.role);
           }
         }
 
-        setTimeout(() => {
+        setTimeout(function () {
           window.location.href = '/login.html';
         }, 1500);
 
@@ -298,10 +438,12 @@ const plan = document.getElementById('plan').value;
           error.message ||
           'Imeshindikana kuwasiliana na server. Hakikisha backend inafanya kazi.'
         );
+
         submitButton.disabled = false;
         submitButton.textContent = 'Fungua Akaunti';
       }
     });
   </script>
+
 </body>
 </html>
