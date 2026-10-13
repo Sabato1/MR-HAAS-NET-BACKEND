@@ -132,7 +132,11 @@
               required
             >
           </div>
+          
         </div>
+        div>
+          <label for="businessName" class="block text-sm text-gray-300 mb-2">
+            Jina la biashara / WISP
 
         <div>
           <label for="plan" class="block text-sm text-gray-300 mb-2">
@@ -210,16 +214,15 @@
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
 
-      const businessName = document.getElementById('businessName').value.trim();
-      const email = document.getElementById('email').value.trim().toLowerCase();
-      const password = document.getElementById('password').value;
-      const confirmPassword = document.getElementById('confirmPassword').value;
-      const plan = document.getElementById('plan').value;
+      
+const businessName = document.getElementById('businessName').value.trim();
+const ownerName = document.getElementById('ownerName').value.trim();
+const phone = document.getElementById('phone').value.trim();
+const email = document.getElementById('email').value.trim().toLowerCase();
+const password = document.getElementById('password').value;
+const confirmPassword = document.getElementById('confirmPassword').value;
+const plan = document.getElementById('plan').value;
 
-      if (businessName.length < 2) {
-        showMessage('Tafadhali ingiza jina sahihi la biashara.');
-        return;
-      }
 
       if (password.length < 8) {
         showMessage('Nenosiri lazima liwe na angalau herufi 8.');
