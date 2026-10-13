@@ -46,13 +46,7 @@ async function initializeDatabase() {
         subscription_status VARCHAR(30) NOT NULL DEFAULT 'trial',
         subscription_ends_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        CONSTRAINT tenants_status_check
-          CHECK (status IN ('active', 'suspended', 'inactive')),
-        CONSTRAINT tenants_subscription_status_check
-          CHECK (subscription_status IN (
-            'trial', 'active', 'expired', 'pending', 'cancelled'
-          ))
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
 
@@ -155,13 +149,7 @@ async function initializeDatabase() {
         connection_type VARCHAR(20) NOT NULL DEFAULT 'hotspot',
         description TEXT NOT NULL DEFAULT '',
         status VARCHAR(20) NOT NULL DEFAULT 'active',
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        CONSTRAINT packages_price_check CHECK (price >= 0),
-        CONSTRAINT packages_duration_check CHECK (duration_value >= 1),
-        CONSTRAINT packages_connection_type_check
-          CHECK (connection_type IN ('hotspot', 'pppoe')),
-        CONSTRAINT packages_status_check
-          CHECK (status IN ('active', 'inactive'))
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
 
@@ -181,11 +169,7 @@ async function initializeDatabase() {
         package_name VARCHAR(150),
         connection_type VARCHAR(20) NOT NULL DEFAULT 'hotspot',
         status VARCHAR(20) NOT NULL DEFAULT 'active',
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        CONSTRAINT clients_connection_type_check
-          CHECK (connection_type IN ('hotspot', 'pppoe')),
-        CONSTRAINT clients_status_check
-          CHECK (status IN ('active', 'suspended', 'inactive'))
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
 
@@ -209,9 +193,7 @@ async function initializeDatabase() {
         status VARCHAR(20) NOT NULL DEFAULT 'unused',
         expires_at TIMESTAMPTZ,
         used_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        CONSTRAINT vouchers_status_check
-          CHECK (status IN ('unused', 'used', 'blocked'))
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
 
@@ -225,6 +207,7 @@ async function initializeDatabase() {
       ON vouchers (tenant_id, status);
     `);
 
+    // Create payments table for new installations.
     await client.query(`
       CREATE TABLE IF NOT EXISTS payments (
         id TEXT PRIMARY KEY,
@@ -232,19 +215,29 @@ async function initializeDatabase() {
         client_id TEXT,
         provider VARCHAR(40) NOT NULL DEFAULT 'manual',
         reference VARCHAR(180),
-        amount NUMERIC(14,2) NOT NULL,
+        amount NUMERIC(14,2) NOT NULL DEFAULT 0,
         currency VARCHAR(10) NOT NULL DEFAULT 'TZS',
         status VARCHAR(20) NOT NULL DEFAULT 'pending',
         description TEXT NOT NULL DEFAULT '',
         provider_transaction_id VARCHAR(200),
         verified_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        CONSTRAINT payments_amount_check CHECK (amount > 0),
-        CONSTRAINT payments_status_check
-          CHECK (status IN (
-            'pending', 'paid', 'rejected', 'failed', 'refunded'
-          ))
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+    `);
+
+    // Upgrade existing payments tables before creating indexes.
+    await client.query(`
+      ALTER TABLE payments
+        ADD COLUMN IF NOT EXISTS client_id TEXT,
+        ADD COLUMN IF NOT EXISTS provider VARCHAR(40) NOT NULL DEFAULT 'manual',
+        ADD COLUMN IF NOT EXISTS reference VARCHAR(180),
+        ADD COLUMN IF NOT EXISTS amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'TZS',
+        ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS provider_transaction_id VARCHAR(200),
+        ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
     `);
 
     await client.query(`
@@ -255,6 +248,12 @@ async function initializeDatabase() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_payments_tenant_status
       ON payments (tenant_id, status);
+    `);
+
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_provider_transaction
+      ON payments (provider, provider_transaction_id)
+      WHERE provider_transaction_id IS NOT NULL;
     `);
 
     await client.query(`
@@ -275,7 +274,7 @@ async function initializeDatabase() {
       ON audit_logs (tenant_id, created_at DESC);
     `);
 
-    // Migrations for databases created by earlier versions.
+    // Compatibility migrations.
     await client.query(`
       ALTER TABLE tenants
         ADD COLUMN IF NOT EXISTS role VARCHAR(30) NOT NULL DEFAULT 'tenant',
@@ -306,15 +305,13 @@ async function initializeDatabase() {
         ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active';
     `);
 
-    // Ensure payment columns exist BEFORE creating their index.
     await client.query(`
-      ALTER TABLE payments
-        ADD COLUMN IF NOT EXISTS client_id TEXT,
-        ADD COLUMN IF NOT EXISTS provider_transaction_id VARCHAR(200),
-        ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
+      ALTER TABLE tenant_settings
+        ADD COLUMN IF NOT EXISTS logo_url TEXT NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS language VARCHAR(10) NOT NULL DEFAULT 'sw';
     `);
 
-    // Add the client foreign key safely for older databases.
+    // Add payments -> clients foreign key if missing.
     await client.query(`
       DO $$
       BEGIN
@@ -330,18 +327,6 @@ async function initializeDatabase() {
             ON DELETE SET NULL;
         END IF;
       END $$;
-    `);
-
-    await client.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_provider_transaction
-      ON payments (provider, provider_transaction_id)
-      WHERE provider_transaction_id IS NOT NULL;
-    `);
-
-    await client.query(`
-      ALTER TABLE tenant_settings
-        ADD COLUMN IF NOT EXISTS logo_url TEXT NOT NULL DEFAULT '',
-        ADD COLUMN IF NOT EXISTS language VARCHAR(10) NOT NULL DEFAULT 'sw';
     `);
 
     await client.query('COMMIT');
