@@ -1,465 +1,684 @@
+
 <!DOCTYPE html>
-<html lang="sw" x-data="app()" :dir="lang === 'ar'? 'rtl' : 'ltr'">
-<head><style>
-@font-face {
-  font-family: "Optimistic";
-  font-style: normal;
-  font-weight: 400 600;
-  font-display: swap;
-  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Optimistic Mono";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
-}
-:where(html) {
-  font-family: "Optimistic", system-ui, sans-serif;
-}
-:where(code, pre, kbd, samp) {
-  font-family: "Optimistic Mono", ui-monospace, monospace;
-}
-</style>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MR HAAS NET | WISP Management</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>[x-cloak]{display:none!important}</style>
+<html lang="sw">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080b12">
+  <title>Dashboard | MR HAAS NET</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak]{display:none!important}
+    body{background:#080b12;color:#f3f4f6;font-family:Arial,sans-serif}
+    .sidebar{background:#0d111b;border-right:1px solid #222938}
+    .panel{background:#111722;border:1px solid #252d3b;border-radius:16px}
+    .navitem{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:10px;color:#aab3c2;text-align:left}
+    .navitem:hover,.navactive{background:rgba(212,175,55,.12);color:#f3cf61}
+    .gold{color:#f3cf61}
+    .field{width:100%;background:#080d17;border:1px solid #30394a;border-radius:9px;padding:10px 12px;color:white;outline:none}
+    .field:focus{border-color:#d4af37}
+    .btn{background:linear-gradient(135deg,#f7dc83,#c49a25);color:#111827;font-weight:bold;padding:10px 15px;border-radius:9px}
+    .btn:disabled{opacity:.5}
+    .muted{color:#8994a6}
+  </style>
 </head>
-<body class="bg-slate-900 text-slate-100 antialiased">
-<div class="flex min-h-screen">
 
-<!-- DESKTOP SIDEBAR -->
-<aside class="w-64 shrink-0 bg-slate-950 p-5 hidden md:flex md:flex-col">
-    <h1 class="text-xl font-bold text-blue-400 mb-8"><i class="fa-solid fa-wifi"></i> MR HAAS NET</h1>
-    <nav class="space-y-2 flex-1">
-        <template x-for="item in navigation" :key="item.id">
-            <button type="button" @click="currentTab=item.id" :class="currentTab===item.id?'bg-blue-600 text-white':'text-slate-400 hover:bg-slate-800'" class="w-full rounded-xl p-3 text-left"><i :class="item.icon" class="mr-2 w-5"></i><span x-text="item.label"></span></button>
-        </template>
+<body x-data="dashboardApp()" x-init="init()" x-cloak>
+
+<div class="min-h-screen flex">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar fixed inset-y-0 left-0 z-40 w-72 p-5 overflow-y-auto transition-transform duration-200"
+         :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
+
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-11 h-11 rounded-xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center text-2xl">📡</div>
+      <div>
+        <div class="font-extrabold"><span class="gold">MR HAAS</span> NET</div>
+        <div class="text-xs muted">WISP MANAGEMENT</div>
+      </div>
+      <button class="ml-auto lg:hidden text-gray-400" @click="sidebarOpen=false">✕</button>
+    </div>
+
+    <div class="rounded-xl bg-white/5 p-3 mb-5">
+      <div class="text-xs muted">BIASHARA YAKO</div>
+      <div class="font-semibold mt-1 break-words" x-text="tenant.name || tenant.business_name || 'WISP Account'"></div>
+      <div class="text-xs gold mt-1" x-text="(tenant.plan || 'START') + ' PLAN'"></div>
+    </div>
+
+    <div class="text-xs muted uppercase tracking-wider mb-2">Menyu Kuu</div>
+    <nav class="space-y-1">
+      <template x-for="item in menu" :key="item.id">
+        <button class="navitem" :class="page===item.id?'navactive':''" @click="go(item.id)">
+          <span class="text-lg w-6" x-text="item.icon"></span>
+          <span x-text="item.label"></span>
+        </button>
+      </template>
     </nav>
-    <div class="mt-auto space-y-3">
-        <div class="rounded-xl bg-slate-900 border border-slate-800 p-3">
-            <p class="text-xs text-slate-400">Vifaa Online</p>
-            <p class="text-lg font-bold text-emerald-400" x-text="onlineCount + ' / ' + devices.length"></p>
-            <div class="mt-2 h-1.5 w-full bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 transition-all" :style="'width:' + (devices.length? (onlineCount/devices.length*100):0) + '%'"></div></div>
-        </div>
-        <div class="rounded-xl bg-emerald-950/50 border border-emerald-900 p-3 text-sm text-emerald-400"><i class="fa-solid fa-circle-check"></i> System Online</div>
-    </div>
-</aside>
 
-<!-- MOBILE DRAWER -->
-<div x-show="mobileMenu" x-cloak class="fixed inset-0 z-[60] md:hidden" x-transition.opacity>
-    <div @click="mobileMenu=false" class="absolute inset-0 bg-black/70"></div>
-    <div class="relative w-[85%] max-w-[300px] h-full bg-slate-950 p-5 flex flex-col" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full">
-        <div class="flex items-center justify-between mb-8"><h1 class="text-xl font-bold text-blue-400"><i class="fa-solid fa-wifi"></i> MR HAAS NET</h1><button @click="mobileMenu=false" class="w-8 h-8 rounded-full bg-slate-800"><i class="fa-solid fa-xmark"></i></button></div>
-        <nav class="space-y-2 flex-1"><template x-for="item in navigation" :key="item.id"><button type="button" @click="currentTab=item.id; mobileMenu=false" :class="currentTab===item.id?'bg-blue-600 text-white':'text-slate-400'" class="w-full rounded-xl p-3.5 text-left"><i :class="item.icon" class="mr-3 w-5"></i><span x-text="item.label"></span></button></template></nav>
-        <div class="rounded-xl bg-slate-900 border border-slate-800 p-3"><p class="text-xs text-slate-400" x-text="onlineCount + ' Online • ' + offlineCount + ' Offline'"></p></div>
+    <div class="border-t border-white/10 mt-6 pt-4 space-y-1">
+      <button class="navitem" @click="go('subscription')"><span>💳</span> Subscription & Malipo</button>
+      <button class="navitem" @click="go('settings')"><span>⚙️</span> Mipangilio</button>
+      <button class="navitem text-red-300" @click="logout()"><span>↪</span> Toka kwenye akaunti</button>
     </div>
-</div>
 
-<main class="min-w-0 flex-1">
-    <header class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur border-b border-slate-800 p-4 md:p-8">
-        <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-                <button type="button" @click="mobileMenu=true" class="md:hidden w-10 h-10 rounded-xl bg-slate-800 border border-slate-700"><i class="fa-solid fa-bars"></i></button>
-                <div><h2 class="text-lg md:text-2xl font-bold" x-text="pageTitle"></h2><p class="text-xs text-slate-400 hidden md:block" x-text="onlineCount + ' Online • ' + offlineCount + ' Offline'"></p></div>
-            </div>
-            <div class="flex items-center gap-2">
-                <button type="button" @click="checkAllDevices()" :disabled="checkingAll" class="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-xs hover:bg-slate-700 disabled:opacity-50"><i class="fa-solid fa-rotate" :class="checkingAll?'fa-spin':''"></i> <span class="hidden sm:inline" x-text="checkingAll?'Inaangalia...':'Check'"></span></button>
-                <button type="button" @click="lang=lang==='sw'?'en':'sw'" class="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm"><i class="fa-solid fa-language"></i> <span x-text="lang.toUpperCase()"></span></button>
-                <button type="button" @click="openClient()" class="rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-sm">Ongeza Mteja</button>
-            </div>
-        </div>
+    <div class="text-xs muted mt-8">© MR HAAS NET</div>
+  </aside>
+
+  <!-- MOBILE OVERLAY -->
+  <div x-show="sidebarOpen" @click="sidebarOpen=false"
+       class="fixed inset-0 bg-black/60 z-30 lg:hidden"></div>
+
+  <!-- MAIN -->
+  <main class="flex-1 min-w-0 lg:ml-72">
+
+    <header class="sticky top-0 z-20 bg-[#080b12]/95 backdrop-blur border-b border-white/10 px-4 sm:px-7 py-4 flex items-center gap-4">
+      <button class="text-2xl" @click="sidebarOpen=!sidebarOpen">☰</button>
+      <div class="min-w-0 flex-1">
+        <h1 class="font-bold text-lg sm:text-xl" x-text="pageTitle()"></h1>
+        <p class="text-xs muted hidden sm:block">Simamia mtandao wako kutoka sehemu moja.</p>
+      </div>
+      <div class="hidden sm:block text-right">
+        <div class="text-sm font-semibold" x-text="tenant.name || tenant.business_name || 'WISP Account'"></div>
+        <div class="text-xs muted" x-text="tenant.email || ''"></div>
+      </div>
+      <button class="btn text-sm" @click="loadAll()" :disabled="loading">↻ Refresh</button>
     </header>
 
-    <div class="p-4 md:p-8">
-    <section x-show="currentTab==='dashboard'" x-cloak>
-        <div class="grid grid-cols-2 gap-3 xl:grid-cols-4"><template x-for="stat in stats" :key="stat.label"><div class="rounded-2xl border border-slate-800 bg-slate-950 p-5"><i :class="stat.icon" class="mb-3 text-2xl text-blue-400"></i><p class="text-sm text-slate-400" x-text="stat.label"></p><h3 class="mt-2 text-2xl font-bold" x-text="stat.value"></h3></div></template></div>
-        <div class="mt-6 rounded-2xl border border-slate-800 bg-slate-950 p-5"><h3 class="mb-4 font-bold">Quick Actions</h3><div class="grid grid-cols-1 gap-3 sm:grid-cols-3"><button type="button" @click="openClient()" class="rounded-xl bg-blue-600 p-4 hover:bg-blue-500 text-left"><i class="fa-solid fa-user-plus mr-2"></i> Ongeza Mteja</button><button type="button" @click="openDevice()" class="rounded-xl bg-slate-800 p-4 hover:bg-slate-700 text-left"><i class="fa-solid fa-network-wired mr-2"></i> Ongeza Kifaa</button><button type="button" @click="currentTab='payments'" class="rounded-xl bg-slate-800 p-4 hover:bg-slate-700 text-left"><i class="fa-solid fa-wallet mr-2"></i> Malipo</button></div></div>
-    </section>
+    <div class="p-4 sm:p-7 space-y-6">
 
-    <section x-show="currentTab==='clients'" x-cloak>
-        <div class="mb-4 flex justify-between"><h3 class="text-xl font-bold">Orodha ya Wateja</h3><button type="button" @click="openClient()" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm"><i class="fa-solid fa-plus"></i> Ongeza</button></div>
-        <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950"><table class="w-full text-left text-sm"><thead class="bg-slate-900 text-slate-400"><tr><th class="p-3">Jina</th><th class="p-3">Simu</th><th class="p-3">Username</th><th class="p-3">Kifurushi</th></tr></thead><tbody><template x-for="c in clients" :key="c.id"><tr class="border-t border-slate-800"><td class="p-3" x-text="c.name"></td><td class="p-3" x-text="c.phone"></td><td class="p-3" x-text="c.username"></td><td class="p-3" x-text="c.package_name"></td></tr></template><tr x-show="clients.length===0"><td colspan="4" class="p-8 text-center text-slate-400">Hakuna wateja bado.</td></tr></tbody></table></div>
-    </section>
+      <div x-show="notice" class="rounded-xl border p-3 text-sm"
+           :class="noticeType==='error'?'border-red-500/30 bg-red-500/10 text-red-300':'border-green-500/30 bg-green-500/10 text-green-300'"
+           x-text="notice"></div>
 
-    <section x-show="currentTab==='devices'" x-cloak>
-        <div class="mb-4 flex justify-between items-center">
-            <h3 class="text-xl font-bold">Vifaa vya Mtandao</h3>
-            <div class="flex gap-2"><button type="button" @click="checkAllDevices()" class="rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-xs"><i class="fa-solid fa-signal mr-1"></i> Check All</button><button type="button" @click="openDevice()" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold"><i class="fa-solid fa-plus"></i> Ongeza Kifaa</button></div>
+      <!-- DASHBOARD HOME -->
+      <section x-show="page==='home'" class="space-y-6">
+        <div class="panel p-5 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <p class="muted text-sm">KARIBU KWENYE MR HAAS NET</p>
+            <h2 class="text-2xl sm:text-3xl font-extrabold mt-2">
+              Habari, <span class="gold" x-text="tenant.name || tenant.business_name || 'Msimamizi'"></span>
+            </h2>
+            <p class="muted mt-2 text-sm">Hali ya huduma, wateja na biashara yako kwa muhtasari.</p>
+          </div>
+          <div class="rounded-xl bg-yellow-500/10 border border-yellow-500/20 p-4 min-w-40">
+            <div class="text-xs muted">HALI YA AKAUNTI</div>
+            <div class="font-bold gold mt-1" x-text="tenant.status || 'Inakaguliwa'"></div>
+            <div class="text-xs muted mt-2" x-show="tenant.trial_ends_at">
+              Trial inaisha:
+              <span x-text="formatDate(tenant.trial_ends_at)"></span>
+            </div>
+          </div>
         </div>
-        <!-- ORODHA NA ONLINE/OFFLINE + DELETE -->
-        <div class="space-y-3">
-            <template x-for="d in devices" :key="d.id">
-                <div class="rounded-xl border bg-slate-950 p-4 flex justify-between items-center" :class="d.status === 'Online' || d.status==='online' ? 'border-emerald-900/50' : 'border-slate-800'">
-                    <div class="flex items-center gap-3">
-                        <div class="w-3 h-3 rounded-full shrink-0" :class="(d.status === 'Online' || d.status==='online') ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'"></div>
-                        <div>
-                            <h4 class="font-bold text-sm text-white flex items-center gap-2"><span x-text="d.name"></span><span x-show="d.status==='checking'" class="text-[10px]"><i class="fa-solid fa-spinner fa-spin"></i></span></h4>
-                            <p class="text-xs text-slate-400 font-mono" x-text="d.mac_address || d.host || (d.model + ' • ' + (d.wan_port||d.wanPort||''))"></p>
-                            <div class="flex gap-2 mt-1"><span class="text-[10px] uppercase font-semibold text-blue-400" x-text="d.type || d.vendor"></span><span class="text-[10px] text-slate-500" x-show="d.lastSeen" x-text="'• ' + formatTime(d.lastSeen)"></span></div>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="px-2.5 py-1 text-xs rounded-full font-medium" :class="(d.status === 'Online' || d.status==='online') ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'" x-text="(d.status === 'online' ? 'Online' : d.status === 'offline' ? 'Offline' : d.status) || 'Offline'"></span>
-                        <button type="button" @click="checkOneDevice(d)" class="text-slate-500 hover:text-blue-400 p-2"><i class="fa-solid fa-rotate text-xs"></i></button>
-                        <button type="button" @click="deleteDevice(d.id)" class="text-slate-500 hover:text-red-400 p-2"><i class="fa-solid fa-trash text-sm"></i></button>
-                    </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <template x-for="stat in stats" :key="stat.label">
+            <div class="panel p-5">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="text-sm muted" x-text="stat.label"></p>
+                  <p class="text-3xl font-extrabold mt-3" x-text="stat.value"></p>
                 </div>
-            </template>
-            <div x-show="devices.length===0" class="rounded-xl bg-slate-950 p-8 text-center text-slate-400">Hakuna vifaa vilivyosajiliwa bado.</div>
+                <div class="w-11 h-11 rounded-xl bg-yellow-500/10 flex items-center justify-center text-xl" x-text="stat.icon"></div>
+              </div>
+              <p class="text-xs muted mt-3" x-text="stat.description"></p>
+            </div>
+          </template>
         </div>
-    </section>
 
-    <section x-show="currentTab==='payments'" x-cloak><div class="rounded-2xl border border-slate-800 bg-slate-950 p-6"><i class="fa-solid fa-wallet mb-3 text-3xl text-blue-400"></i><h3 class="text-xl font-bold">Malipo</h3><p class="mt-2 text-slate-400">Mobile Money integration inahitaji backend.</p></div></section>
-    </div>
-</main>
-</div>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          <div class="panel p-5">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-bold text-lg">Wateja wa Hivi Karibuni</h3>
+              <button class="text-sm gold" @click="go('clients')">Ona wote →</button>
+            </div>
+            <div x-show="clients.length===0" class="muted text-sm py-8 text-center">
+              Hakuna taarifa za wateja zilizopatikana.
+            </div>
+            <div class="overflow-x-auto" x-show="clients.length>0">
+              <table class="w-full text-sm">
+                <thead class="muted border-b border-white/10">
+                  <tr><th class="text-left py-3">Jina</th><th class="text-left py-3">Huduma</th><th class="text-left py-3">Hali</th></tr>
+                </thead>
+                <tbody>
+                  <template x-for="c in clients.slice(0,5)" :key="c.id">
+                    <tr class="border-b border-white/5">
+                      <td class="py-3" x-text="c.name || c.full_name || c.username || '—'"></td>
+                      <td class="py-3" x-text="c.service_type || c.connection_type || 'Hotspot'"></td>
+                      <td class="py-3 gold" x-text="c.status || '—'"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-<!-- MODAL CLIENT -->
-<div x-show="addClientModal" x-cloak x-transition.opacity class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4" @keydown.escape.window="addClientModal=false">
-    <div x-show="addClientModal" x-transition.scale class="w-full max-w-lg rounded-[20px] border border-slate-700 bg-slate-950 p-6">
-        <div class="mb-5 flex justify-between"><h3 class="text-xl font-bold">Sajili Mteja Mpya</h3><button type="button" @click="addClientModal=false" class="w-8 h-8 rounded-full bg-slate-800"><i class="fa-solid fa-xmark"></i></button></div>
-        <form @submit.prevent="submitClient()" class="space-y-4">
-            <input x-model="newClient.name" required placeholder="Jina kamili" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
-            <input x-model="newClient.phone" required type="tel" placeholder="Namba ya simu" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
-            <input x-model="newClient.username" required placeholder="Username" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5">
-            <select x-model="newClient.package_name" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5"><option>Standard 5Mbps</option><option>Standard 10Mbps</option><option>Premium 20Mbps</option></select>
-            <p x-show="formError" x-text="formError" class="text-sm text-red-400"></p>
-            <div class="flex gap-3"><button type="button" @click="addClientModal=false" class="flex-1 rounded-xl bg-slate-800 p-3">Ghairi</button><button type="submit" :disabled="saving" class="flex-1 rounded-xl bg-blue-600 p-3 font-bold" x-text="saving?'Inahifadhi...':'Hifadhi Mteja'"></button></div>
+          <div class="panel p-5">
+            <h3 class="font-bold text-lg mb-4">Muhtasari wa Akaunti</h3>
+            <div class="space-y-4">
+              <div class="flex justify-between gap-3 border-b border-white/10 pb-3">
+                <span class="muted">Mpango</span>
+                <span class="font-semibold gold" x-text="tenant.plan || 'START'"></span>
+              </div>
+              <div class="flex justify-between gap-3 border-b border-white/10 pb-3">
+                <span class="muted">Hali ya usajili</span>
+                <span x-text="tenant.subscription_status || tenant.status || 'Haijathibitishwa'"></span>
+              </div>
+              <div class="flex justify-between gap-3 border-b border-white/10 pb-3">
+                <span class="muted">Tarehe ya mwisho wa trial</span>
+                <span x-text="formatDate(tenant.trial_ends_at || tenant.trial_end || tenant.trial_expires_at)"></span>
+              </div>
+              <button class="btn w-full" @click="go('subscription')">Simamia Subscription</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CLIENTS -->
+      <section x-show="page==='clients'" class="space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 class="text-xl font-bold">Wateja</h2><p class="muted text-sm">Simamia akaunti za Hotspot na PPPoE.</p></div>
+          <button class="btn" @click="clientForm=!clientForm">+ Ongeza Mteja</button>
+        </div>
+
+        <form x-show="clientForm" @submit.prevent="createClient()" class="panel p-5 grid sm:grid-cols-2 gap-4">
+          <div><label class="text-sm muted">Jina la mteja</label><input class="field mt-2" x-model="clientFormData.name" required></div>
+          <div><label class="text-sm muted">Simu</label><input class="field mt-2" x-model="clientFormData.phone" placeholder="07XXXXXXXX" required></div>
+          <div><label class="text-sm muted">Aina ya huduma</label><select class="field mt-2" x-model="clientFormData.service_type"><option value="hotspot">Hotspot</option><option value="pppoe">PPPoE</option></select></div>
+          <div><label class="text-sm muted">Package</label><select class="field mt-2" x-model="clientFormData.package_id"><option value="">Chagua package</option><template x-for="p in packages" :key="p.id"><option :value="p.id" x-text="p.name"></option></template></select></div>
+          <div class="sm:col-span-2 flex gap-3"><button class="btn" :disabled="loading">Hifadhi Mteja</button><button type="button" class="border border-white/20 rounded-lg px-4" @click="clientForm=false">Ghairi</button></div>
         </form>
-    </div>
-</div>
 
-<!-- MODAL DEVICE WIZARD - FULL VERSION 60+ MODELS + ONLINE/OFFLINE -->
-<div x-show="addDeviceModal" x-cloak class="fixed inset-0 z-[100] flex items-start md:items-center justify-center bg-black/85 p-0 md:p-4 overflow-y-auto backdrop-blur-sm" x-transition.opacity @keydown.escape.window="closeDeviceWizard()">
-    <div class="my-0 md:my-auto w-full md:max-w-2xl min-h-screen md:min-h-0 bg-slate-950 md:rounded-[24px] border-0 md:border border-slate-700 shadow-2xl flex flex-col">
-        <div class="sticky top-0 z-10 bg-slate-950 p-5 md:p-6 border-b border-slate-800 flex items-center justify-between">
-            <div><h3 class="text-xl font-bold">Ongeza Kifaa / WISP</h3><div class="mt-2 flex items-center gap-2"><template x-for="s in 4" :key="s"><div :class="deviceStep>=s?'bg-blue-600':'bg-slate-800'" class="h-1.5 w-8 rounded-full transition"></div></template><span class="ml-2 text-xs text-slate-400" x-text="'Hatua ' + deviceStep + '/4'"></span></div></div>
-            <button type="button" @click="closeDeviceWizard()" class="w-9 h-9 rounded-full bg-slate-800"><i class="fa-solid fa-xmark"></i></button>
+        <div class="panel p-4 overflow-x-auto">
+          <table class="w-full text-sm min-w-[650px]">
+            <thead class="muted border-b border-white/10"><tr><th class="text-left p-3">Jina</th><th class="text-left p-3">Simu</th><th class="text-left p-3">Huduma</th><th class="text-left p-3">Hali</th></tr></thead>
+            <tbody><template x-for="c in clients" :key="c.id"><tr class="border-b border-white/5"><td class="p-3" x-text="c.name || c.full_name || c.username || '—'"></td><td class="p-3" x-text="c.phone || '—'"></td><td class="p-3" x-text="c.service_type || c.connection_type || 'Hotspot'"></td><td class="p-3 gold" x-text="c.status || '—'"></td></tr></template></tbody>
+          </table>
+          <p x-show="clients.length===0" class="muted text-center py-8">Hakuna wateja bado.</p>
         </div>
-        <div class="p-5 md:p-6 flex-1 overflow-y-auto">
-            <!-- STEP 1: BRAND -->
-            <div x-show="deviceStep===1" x-cloak>
-                <h4 class="font-bold mb-1">1. Chagua Chapa ya Kifaa</h4><p class="text-sm text-slate-400 mb-4">Mikrotik, Omada, Ruijie, Cudy, Grandstream, Radius</p>
-                <div class="grid grid-cols-2 gap-3">
-                    <template x-for="v in vendors" :key="v.id">
-                        <button type="button" @click="selectVendor(v)" :class="deviceBrand===v.id?'border-blue-500 bg-blue-950/40 ring-1 ring-blue-500':'border-slate-700 bg-slate-900 hover:border-slate-600'" class="rounded-2xl border p-4 text-left">
-                            <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="deviceBrand===v.id?'bg-blue-600':'bg-slate-800'"><i :class="v.icon"></i></div><div><p class="font-bold text-[14px]" x-text="v.name"></p><p class="text-[11px] text-slate-400" x-text="v.desc"></p></div></div>
-                        </button>
-                    </template>
-                </div>
-            </div>
-            <!-- STEP 2: MIKROTIK FULL LIST -->
-            <div x-show="deviceStep===2 && deviceBrand==='mikrotik'" x-cloak>
-                <button type="button" @click="deviceStep=1" class="mb-4 text-sm text-slate-400"><i class="fa-solid fa-arrow-left mr-1"></i> Rudi</button>
-                <h4 class="font-bold mb-1">2. Chagua Model ya MikroTik - Aina Zote 60+</h4>
-                <input x-model="mikrotikSearch" placeholder="Tafuta... RB750, hAP ac2, CCR1009, Chateau" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5 mb-3 outline-none focus:border-blue-500">
-                <div class="max-h-[55vh] overflow-y-auto space-y-2 pr-1">
-                    <template x-for="group in filteredMikrotikGroups" :key="group.cat">
-                        <div><p class="text-[11px] font-bold text-slate-500 uppercase mt-4 mb-2 tracking-wider" x-text="group.cat"></p><div class="grid gap-2"><template x-for="m in group.models" :key="m.id"><button type="button" @click="selectMikrotikModel(m)" :class="selectedModel===m.id?'bg-blue-600 text-white border-blue-500':'bg-slate-900 border border-slate-800 hover:bg-slate-800'" class="w-full rounded-xl border p-3 flex justify-between items-center text-left"><div><p class="font-semibold text-sm" x-text="m.id"></p><p class="text-[11px] opacity-60" x-text="m.ports + ' • ' + m.cpu"></p></div><i x-show="selectedModel===m.id" class="fa-solid fa-check"></i></button></template></div></div>
-                    </template>
-                </div>
-            </div>
-            <!-- STEP 2: OTHER BRANDS -->
-            <div x-show="deviceStep===2 && deviceBrand!=='mikrotik'" x-cloak>
-                <button type="button" @click="deviceStep=1" class="mb-4 text-sm text-slate-400"><i class="fa-solid fa-arrow-left mr-1"></i> Rudi</button>
-                <h4 class="font-bold mb-1" x-text="'2. Sanidi ' + deviceBrand"></h4>
-                <div class="space-y-3 mt-3 p-4 bg-slate-900/60 rounded-xl border border-slate-800">
-                    <div><label class="block mb-1 text-xs text-slate-400">Jina la Kifaa <span class="text-red-400">*</span></label><input x-model="apDevice.name" required placeholder="Mfano: Office AP / Lobby AP (Required)" class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3.5"></div>
-                    <div>
-                        <label class="block mb-1 text-xs text-slate-400">MAC Address ya AP <span class="text-red-400">*</span> <span class="text-blue-400">(Pekee)</span></label>
-                        <input x-model="apDevice.mac_address" required placeholder="AA:BB:CC:DD:EE:FF" class="w-full rounded-xl border border-blue-500/50 bg-slate-900 p-3.5 focus:border-blue-500 font-mono uppercase">
-                        <p class="text-[11px] text-emerald-400 mt-2"><i class="fa-solid fa-check-circle mr-1"></i> MAC Address pekee inatosha - mfumo uta-adopt AP automatiki kwa MAC</p>
-                    </div>
-                    <div class="rounded-xl bg-slate-950 border border-slate-800 p-3 flex gap-2">
-                        <i class="fa-solid fa-lightbulb text-amber-400 mt-0.5"></i>
-                        <p class="text-[11px] text-slate-400">Angalia MAC kwenye sticker ya nyuma ya AP au kwenye Omada Controller / Ruijie Cloud / Cudy App / Grandstream GWN.Cloud</p>
-                    </div>
-                </div>
-                <button type="button" @click="saveOtherDevice()" :disabled="saving" class="mt-6 w-full rounded-xl bg-blue-600 p-3.5 font-bold" x-text="saving?'Inasajili...':'Kamilisha Usajili'"></button>
-            </div>
-            <!-- STEP 3: WAN PORT -->
-            <div x-show="deviceStep===3" x-cloak>
-                <button type="button" @click="deviceStep=2" class="mb-4 text-sm text-slate-400"><i class="fa-solid fa-arrow-left mr-1"></i> Rudi</button>
-                <h4 class="font-bold mb-1">3. Chagua Port ya Internet (WAN)</h4><p class="text-sm text-slate-400 mb-4">Cable ya ISP imechomekwa wapi kwenye <span class="text-white font-bold" x-text="selectedModel"></span>?</p>
-                <div class="grid grid-cols-2 gap-3"><template x-for="p in availablePorts" :key="p"><button type="button" @click="selectWanPort(p)" :class="mikrotikWanPort===p?'bg-blue-600 border-blue-500 text-white':'bg-slate-900 border border-slate-700'" class="rounded-xl border p-4 text-left"><p class="font-bold"><i class="fa-solid fa-ethernet mr-2"></i><span x-text="p"></span></p></button></template></div>
-                <div class="mt-4 p-3 rounded-xl bg-amber-950/20 border border-amber-900/50 text-xs text-amber-300">Kawaida ni ether1. Kama Fiber, chagua SFP1 / SFP+1.</div>
-            </div>
-            <!-- STEP 4: SCRIPT -->
-            <div x-show="deviceStep===4" x-cloak>
-                <button type="button" @click="deviceStep=3" class="mb-4 text-sm text-slate-400"><i class="fa-solid fa-arrow-left mr-1"></i> Rudi</button>
-                <div class="text-center mb-4"><div class="mx-auto w-14 h-14 rounded-2xl bg-emerald-600 flex items-center justify-center text-2xl mb-3"><i class="fa-solid fa-code"></i></div><h4 class="font-bold text-lg">Script Tayari!</h4><p class="text-sm text-slate-400">Copy na paste kwenye New Terminal</p></div>
-                <div class="rounded-xl bg-slate-900 border border-slate-700 overflow-hidden">
-                    <div class="flex items-center justify-between p-3 bg-slate-800/50 border-b border-slate-700"><span class="text-xs font-bold">RouterOS Script v6/v7</span><button type="button" @click="copyScript()" class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold hover:bg-blue-500"><i class="fa-solid fa-copy mr-1"></i><span x-text="copied?'Copied!':'Copy'"></span></button></div>
-                    <pre class="p-4 text-[11px] leading-4 overflow-x-auto whitespace-pre-wrap text-emerald-300 max-h-[45vh] overflow-y-auto" x-text="generatedScript"></pre>
-                </div>
-                <div class="mt-3 p-3 rounded-xl bg-blue-950/30 border border-blue-900/50 text-xs text-blue-300"><p class="font-bold mb-1">Jinsi ya kutumia:</p><ol class="list-decimal ml-4 space-y-1 text-slate-300"><li>Ingia WinBox kwenye <span x-text="selectedModel"></span></li><li>Fungua New Terminal</li><li>Paste script yote Enter</li><li>Router itaunganishwa automatiki - itasoma ONLINE</li></ol></div>
-                <button type="button" @click="saveMikrotikDevice()" class="mt-4 w-full rounded-xl bg-emerald-600 p-4 font-bold hover:bg-emerald-500"><i class="fa-solid fa-check mr-2"></i>Nimepaste - Hifadhi Kifaa</button>
-            </div>
+      </section>
+
+      <!-- DEVICES -->
+      <section x-show="page==='devices'" class="space-y-5">
+        <div class="flex flex-wrap justify-between items-center gap-3">
+          <div><h2 class="text-xl font-bold">Vifaa vya Mtandao</h2><p class="muted text-sm">MikroTik, Omada, Ruijie, Cudy na vifaa vingine.</p></div>
+          <button class="btn" @click="deviceForm=!deviceForm">+ Sajili Kifaa</button>
         </div>
-        <div x-show="deviceStep===1" class="p-5 border-t border-slate-800"><button type="button" :disabled="!deviceBrand" @click="deviceStep=2" class="w-full rounded-xl bg-blue-600 p-3.5 font-bold disabled:opacity-40">Endelea <i class="fa-solid fa-arrow-right ml-2"></i></button></div>
+        <form x-show="deviceForm" @submit.prevent="createDevice()" class="panel p-5 grid sm:grid-cols-2 gap-4">
+          <div><label class="text-sm muted">Jina la kifaa</label><input class="field mt-2" x-model="deviceFormData.name" required></div>
+          <div><label class="text-sm muted">Aina ya kifaa</label><select class="field mt-2" x-model="deviceFormData.vendor"><option>MikroTik</option><option>TP-Link Omada</option><option>Ruijie/Reyee</option><option>Cudy</option><option>Grandstream</option><option>Cambium</option><option>RADIUS AP/Server</option></select></div>
+          <div><label class="text-sm muted">IP address</label><input class="field mt-2" x-model="deviceFormData.ip_address" placeholder="192.168.88.1" required></div>
+          <div><label class="text-sm muted">Site / eneo</label><select class="field mt-2" x-model="deviceFormData.site_id"><option value="">Chagua eneo</option><template x-for="s in sites" :key="s.id"><option :value="s.id" x-text="s.name"></option></template></select></div>
+          <div class="sm:col-span-2"><button class="btn" :disabled="loading">Hifadhi Kifaa</button></div>
+        </form>
+        <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <template x-for="d in devices" :key="d.id">
+            <div class="panel p-5">
+              <div class="flex justify-between"><span class="text-2xl">📡</span><span class="text-xs gold" x-text="d.status || 'Haijajaribiwa'"></span></div>
+              <h3 class="font-bold mt-3" x-text="d.name"></h3>
+              <p class="muted text-sm mt-1" x-text="d.vendor || d.type || 'Kifaa cha mtandao'"></p>
+              <p class="text-sm mt-3" x-text="d.ip_address || d.ip || 'IP haijawekwa'"></p>
+              <button class="text-sm text-red-300 mt-4" @click="deleteItem('devices',d.id)">Futa kifaa</button>
+            </div>
+          </template>
+        </div>
+        <p x-show="devices.length===0" class="panel p-8 muted text-center">Hakuna vifaa vilivyosajiliwa.</p>
+      </section>
+
+      <!-- SITES -->
+      <section x-show="page==='sites'" class="space-y-5">
+        <div class="flex justify-between items-center gap-3 flex-wrap">
+          <div><h2 class="text-xl font-bold">Sites / Maeneo</h2><p class="muted text-sm">Panga minara na maeneo yako ya huduma.</p></div>
+          <button class="btn" @click="siteForm=!siteForm">+ Ongeza Site</button>
+        </div>
+        <form x-show="siteForm" @submit.prevent="createSite()" class="panel p-5 grid sm:grid-cols-2 gap-4">
+          <div><label class="text-sm muted">Jina la site</label><input class="field mt-2" x-model="siteFormData.name" required></div>
+          <div><label class="text-sm muted">Mahali</label><input class="field mt-2" x-model="siteFormData.location" placeholder="Mfano: Mwanza"></div>
+          <div class="sm:col-span-2"><button class="btn" :disabled="loading">Hifadhi Site</button></div>
+        </form>
+        <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <template x-for="s in sites" :key="s.id"><div class="panel p-5"><div class="text-2xl">📍</div><h3 class="font-bold mt-3" x-text="s.name"></h3><p class="muted text-sm mt-2" x-text="s.location || 'Mahali hapajawekwa'"></p><button class="text-sm text-red-300 mt-4" @click="deleteItem('sites',s.id)">Futa site</button></div></template>
+        </div>
+        <p x-show="sites.length===0" class="panel p-8 muted text-center">Hakuna site zilizoongezwa.</p>
+      </section>
+
+      <!-- PACKAGES -->
+      <section x-show="page==='packages'" class="space-y-5">
+        <div class="flex justify-between items-center gap-3 flex-wrap">
+          <div><h2 class="text-xl font-bold">Packages za Internet</h2><p class="muted text-sm">Unda vifurushi vya Hotspot na PPPoE.</p></div>
+          <button class="btn" @click="packageForm=!packageForm">+ Package Mpya</button>
+        </div>
+        <form x-show="packageForm" @submit.prevent="createPackage()" class="panel p-5 grid sm:grid-cols-2 gap-4">
+          <div><label class="text-sm muted">Jina la package</label><input class="field mt-2" x-model="packageFormData.name" required></div>
+          <div><label class="text-sm muted">Bei (TSh)</label><input class="field mt-2" type="number" min="0" x-model.number="packageFormData.price" required></div>
+          <div><label class="text-sm muted">Muda</label><select class="field mt-2" x-model="packageFormData.duration"><option value="1 day">Siku 1</option><option value="7 days">Siku 7</option><option value="30 days">Siku 30</option><option value="1 hour">Saa 1</option></select></div>
+          <div><label class="text-sm muted">Aina ya huduma</label><select class="field mt-2" x-model="packageFormData.service_type"><option value="hotspot">Hotspot</option><option value="pppoe">PPPoE</option></select></div>
+          <div class="sm:col-span-2"><button class="btn" :disabled="loading">Hifadhi Package</button></div>
+        </form>
+        <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <template x-for="p in packages" :key="p.id"><div class="panel p-5"><div class="gold text-sm" x-text="p.service_type || 'Hotspot'"></div><h3 class="text-lg font-bold mt-2" x-text="p.name"></h3><p class="text-2xl font-extrabold mt-3" x-text="money(p.price)"></p><p class="muted text-sm mt-2" x-text="p.duration || 'Muda haujawekwa'"></p></div></template>
+        </div>
+        <p x-show="packages.length===0" class="panel p-8 muted text-center">Hakuna packages bado.</p>
+      </section>
+
+      <!-- VOUCHERS -->
+      <section x-show="page==='vouchers'" class="space-y-5">
+        <div class="flex justify-between items-center gap-3 flex-wrap">
+          <div><h2 class="text-xl font-bold">Vocha za Hotspot</h2><p class="muted text-sm">Tengeneza vocha kupitia backend iliyounganishwa.</p></div>
+          <button class="btn" @click="voucherForm=!voucherForm">+ Tengeneza Vocha</button>
+        </div>
+        <form x-show="voucherForm" @submit.prevent="createVoucher()" class="panel p-5 grid sm:grid-cols-2 gap-4">
+          <div><label class="text-sm muted">Package</label><select class="field mt-2" x-model="voucherFormData.package_id" required><option value="">Chagua package</option><template x-for="p in packages.filter(x=>!x.service_type || x.service_type.toLowerCase()==='hotspot')" :key="p.id"><option :value="p.id" x-text="p.name+' — '+money(p.price)"></option></template></select></div>
+          <div><label class="text-sm muted">Idadi ya vocha</label><input class="field mt-2" type="number" min="1" max="500" x-model.number="voucherFormData.quantity" required></div>
+          <div class="sm:col-span-2"><button class="btn" :disabled="loading">Tengeneza Vocha</button></div>
+        </form>
+        <div class="panel p-4 overflow-x-auto">
+          <table class="w-full text-sm min-w-[550px]"><thead class="muted border-b border-white/10"><tr><th class="text-left p-3">Vocha</th><th class="text-left p-3">Package</th><th class="text-left p-3">Hali</th></tr></thead><tbody><template x-for="v in vouchers" :key="v.id"><tr class="border-b border-white/5"><td class="p-3 font-mono gold" x-text="v.code || v.username || '—'"></td><td class="p-3" x-text="v.package_name || v.package_id || '—'"></td><td class="p-3" x-text="v.status || 'Haijatumika'"></td></tr></template></tbody></table>
+          <p x-show="vouchers.length===0" class="muted text-center py-8">Hakuna vocha zilizopatikana.</p>
+        </div>
+      </section>
+
+      <!-- PAYMENTS -->
+      <section x-show="page==='payments'" class="space-y-5">
+        <div><h2 class="text-xl font-bold">Malipo</h2><p class="muted text-sm">Angalia na sajili malipo yaliyopokelewa.</p></div>
+        <form @submit.prevent="createPayment()" class="panel p-5 grid sm:grid-cols-2 gap-4">
+          <div><label class="text-sm muted">Jina la mteja</label><input class="field mt-2" x-model="paymentFormData.customer_name" required></div>
+          <div><label class="text-sm muted">Kiasi (TSh)</label><input class="field mt-2" type="number" min="1" x-model.number="paymentFormData.amount" required></div>
+          <div><label class="text-sm muted">Njia ya malipo</label><select class="field mt-2" x-model="paymentFormData.method"><option value="cash">Cash</option><option value="mobile_money">Mobile Money</option><option value="bank">Benki</option></select></div>
+          <div><label class="text-sm muted">Namba ya kumbukumbu</label><input class="field mt-2" x-model="paymentFormData.reference" placeholder="Transaction ID"></div>
+          <div class="sm:col-span-2"><button class="btn" :disabled="loading">Hifadhi Malipo</button></div>
+        </form>
+        <div class="panel p-4 overflow-x-auto"><table class="w-full text-sm min-w-[550px]"><thead class="muted border-b border-white/10"><tr><th class="text-left p-3">Mteja</th><th class="text-left p-3">Kiasi</th><th class="text-left p-3">Njia</th><th class="text-left p-3">Tarehe</th></tr></thead><tbody><template x-for="p in payments" :key="p.id"><tr class="border-b border-white/5"><td class="p-3" x-text="p.customer_name || p.client_name || '—'"></td><td class="p-3 gold" x-text="money(p.amount)"></td><td class="p-3" x-text="p.method || '—'"></td><td class="p-3" x-text="formatDate(p.created_at)"></td></tr></template></tbody></table><p x-show="payments.length===0" class="muted text-center py-8">Hakuna malipo yaliyoonyeshwa.</p></div>
+      </section>
+
+      <!-- SUBSCRIPTION -->
+      <section x-show="page==='subscription'" class="space-y-5">
+        <div><h2 class="text-xl font-bold">Subscription & Mpango</h2><p class="muted text-sm">Mipango ya matumizi ya MR HAAS NET.</p></div>
+        <div class="panel p-5">
+          <p class="muted text-sm">Mpango wa sasa</p>
+          <h3 class="text-2xl font-extrabold gold mt-2" x-text="tenant.plan || 'START'"></h3>
+          <p class="muted mt-2">Hali: <span class="text-white" x-text="tenant.subscription_status || tenant.status || 'Haijathibitishwa'"></span></p>
+          <p class="muted mt-2">Mwisho wa trial: <span class="text-white" x-text="formatDate(tenant.trial_ends_at || tenant.trial_end || tenant.trial_expires_at)"></span></p>
+        </div>
+        <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <template x-for="p in planOptions" :key="p.code">
+            <div class="panel p-5 flex flex-col">
+              <h3 class="font-extrabold text-lg gold" x-text="p.name"></h3>
+              <p class="text-2xl font-extrabold mt-3" x-text="p.price"></p>
+              <p class="muted text-sm mt-3 flex-1" x-text="p.description"></p>
+              <button class="mt-5 border border-yellow-500/40 rounded-lg p-2 text-sm gold" @click="requestPlan(p.code)">Omba mpango</button>
+            </div>
+          </template>
+        </div>
+        <div class="panel p-5"><h3 class="font-bold">Malipo ya Subscription</h3><p class="muted text-sm mt-2">AzamPay imechaguliwa kama njia inayopendekezwa kwa ujumuishaji wa malipo. Malipo ya moja kwa moja yatafanya kazi baada ya backend na credentials zake kusanidiwa.</p><button class="btn mt-4" @click="go('payment-settings')">Mipangilio ya Malipo</button></div>
+      </section>
+
+      <!-- PAYMENT SETTINGS -->
+      <section x-show="page==='payment-settings'" class="space-y-5">
+        <div><h2 class="text-xl font-bold">Mipangilio ya Malipo</h2><p class="muted text-sm">Chagua njia unayotaka kuunganisha na biashara yako.</p></div>
+        <form @submit.prevent="savePaymentSettings()" class="panel p-5 space-y-4">
+          <div><label class="text-sm muted">Payment provider</label><select class="field mt-2" x-model="paymentSettings.provider"><option value="azampay">AzamPay</option><option value="clickpesa">ClickPesa</option><option value="selcom">Selcom</option><option value="pesapal">Pesapal</option><option value="palm pesa">PalmPesa</option><option value="beem">Beem</option><option value="manual">Malipo ya mikono</option></select></div>
+          <div><label class="text-sm muted">Namba ya biashara / Till</label><input class="field mt-2" x-model="paymentSettings.business_number" placeholder="Ingiza namba ikiwa inahitajika"></div>
+          <div><label class="text-sm muted">Maelekezo kwa wateja</label><textarea class="field mt-2" rows="3" x-model="paymentSettings.instructions" placeholder="Maelekezo ya malipo"></textarea></div>
+          <button class="btn" :disabled="loading">Hifadhi Mipangilio</button>
+        </form>
+        <p class="muted text-xs">Usiweke API secret au password ya gateway kwenye HTML. Taarifa nyeti zihifadhiwe kwenye mazingira salama ya backend.</p>
+      </section>
+
+      <!-- PORTAL -->
+      <section x-show="page==='portal'" class="space-y-5">
+        <div><h2 class="text-xl font-bold">Captive Portal</h2><p class="muted text-sm">Badilisha utambulisho unaoonekana kwenye ukurasa wa kuingiza vocha.</p></div>
+        <form @submit.prevent="savePortal()" class="panel p-5 grid sm:grid-cols-2 gap-4">
+          <div><label class="text-sm muted">Jina linaloonekana</label><input class="field mt-2" x-model="portal.name" required></div>
+          <div><label class="text-sm muted">Namba ya mawasiliano</label><input class="field mt-2" x-model="portal.contact"></div>
+          <div><label class="text-sm muted">Rangi kuu</label><input class="field mt-2" type="color" x-model="portal.primary_color"></div>
+          <div><label class="text-sm muted">Tangazo</label><input class="field mt-2" x-model="portal.announcement" placeholder="Tangazo kwa wateja"></div>
+          <div class="sm:col-span-2"><button class="btn" :disabled="loading">Hifadhi Portal</button></div>
+        </form>
+        <div class="panel p-5 max-w-md mx-auto" :style="'border-color:'+(portal.primary_color||'#d4af37')">
+          <div class="text-center">
+            <div class="text-2xl font-extrabold" :style="'color:'+(portal.primary_color||'#d4af37')" x-text="portal.name || tenant.name || 'Wi-Fi Hotspot'"></div>
+            <p class="muted text-sm mt-2" x-text="portal.announcement || 'Karibu kwenye huduma yetu ya Wi-Fi'"></p>
+          </div>
+          <div class="mt-6"><label class="text-sm muted">Ingiza vocha yako</label><input class="field mt-2" placeholder="CODE YA VOCHA" disabled></div>
+          <button class="btn w-full mt-3" disabled>UNGANISHA</button>
+          <p class="muted text-xs text-center mt-4">Muonekano wa mfano tu. Uunganisho halisi unahitaji captive portal na MikroTik/API kusanidiwa.</p>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section x-show="page==='settings'" class="space-y-5">
+        <div><h2 class="text-xl font-bold">Mipangilio ya Akaunti</h2><p class="muted text-sm">Taarifa za biashara yako.</p></div>
+        <div class="panel p-5 space-y-4">
+          <div class="flex justify-between gap-4 border-b border-white/10 pb-3"><span class="muted">Jina la biashara</span><span class="text-right" x-text="tenant.name || tenant.business_name || '—'"></span></div>
+          <div class="flex justify-between gap-4 border-b border-white/10 pb-3"><span class="muted">Barua pepe</span><span class="text-right break-all" x-text="tenant.email || '—'"></span></div>
+          <div class="flex justify-between gap-4 border-b border-white/10 pb-3"><span class="muted">Tenant ID</span><span class="text-right break-all text-xs" x-text="tenant.id || tenant.tenant_id || tenantId || '—'"></span></div>
+          <div class="flex justify-between gap-4"><span class="muted">Mpango</span><span class="gold" x-text="tenant.plan || 'START'"></span></div>
+        </div>
+        <p class="muted text-sm">Mabadiliko ya akaunti na nenosiri yanapaswa kutekelezwa kupitia endpoints salama za backend.</p>
+      </section>
+
     </div>
+  </main>
 </div>
 
 <script>
-const API_BASE = 'https://mr-haas-net-backend.onrender.com';
-document.addEventListener('alpine:init', () => {
-    Alpine.data('app', () => ({
-        lang: 'sw', currentTab: 'dashboard', mobileMenu: false,
-        addClientModal: false, addDeviceModal: false, saving: false, formError: '', checkingAll: false,
-        tenantId: localStorage.getItem('tenant_id') || 'tenant_01',
-        tenantInfo: JSON.parse(localStorage.getItem('tenant_info')||'{}'),
-        deviceBrand: 'mikrotik', deviceStep: 1, mikrotikSearch: '', copied: false,
-        mikrotikWanPort: 'ether1', selectedModel: '', configRouterName: 'MR-HAAS-ROUTER',
-        apDevice: { name: '', mac_address: '' },
-        clients: JSON.parse(localStorage.getItem('mrhaas_clients')||'[]'),
-        devices: JSON.parse(localStorage.getItem('mrhaas_devices_v2')|| localStorage.getItem('mrhaas_devices')||'[]').map(d=>({status:d.status||'Offline', lastSeen:d.lastSeen||null, ...d})),
-        newClient: { tenant_id: localStorage.getItem('tenant_id') || 'tenant_01', name: '', phone: '', username: '', package_name: 'Standard 10Mbps' },
-        vendors: [
-            {id:'mikrotik', name:'MikroTik', desc:'60+ Models', icon:'fa-solid fa-network-wired'},
-            {id:'omada', name:'Omada EAP', desc:'TP-Link Omada', icon:'fa-solid fa-wifi'},
-            {id:'ruijie', name:'Ruijie', desc:'Reyee / RG', icon:'fa-solid fa-tower-broadcast'},
-            {id:'cudy', name:'Cudy', desc:'AP / Router', icon:'fa-solid fa-router'},
-            {id:'grandstream', name:'Grandstream', desc:'GWN AP', icon:'fa-solid fa-satellite-dish'},
-            {id:'radius', name:'RADIUS SERVER', desc:'FreeRADIUS', icon:'fa-solid fa-server'}
-        ],
-        mikrotikGroups: [
-            {cat:'hAP Series - Home & Small Office', models:[
-                {id:'hAP lite (RB941-2nD)', ports:'4x FE + WiFi', cpu:'QCA9533 650MHz'},
-                {id:'hAP mini (RB931-2nD)', ports:'3x FE + WiFi', cpu:'650MHz'},
-                {id:'hAP (RB951Ui-2nD)', ports:'5x FE', cpu:'QCA9533'},
-                {id:'hAP ac lite (RB952Ui-5ac2nD)', ports:'5x FE Dual', cpu:'QCA9533'},
-                {id:'hAP ac lite TC', ports:'5x FE Tower', cpu:'QCA9533'},
-                {id:'hAP ac (RB962UiGS-5HacT2HnT)', ports:'5x GE + SFP', cpu:'720MHz'},
-                {id:'hAP ac² (RBD52G-5HacD2HnD)', ports:'5x GE Dual', cpu:'Quad 716MHz'},
-                {id:'hAP ac³ (RBD53iG-5HacD2HnD)', ports:'5x GE', cpu:'Quad 1.4GHz'},
-                {id:'hAP ax² (C52iG-5HaxD2HaxD)', ports:'5x GE WiFi6', cpu:'IPQ-6010'},
-                {id:'hAP ax³ (C53UiG+5HPaxD2HPaxD)', ports:'5x GE + 2.5G WiFi6', cpu:'IPQ-6010'},
-                {id:'hAP ax lite (L41G-2axD)', ports:'4x GE WiFi6', cpu:'IPQ-5010'},
-                {id:'hAP ax lite LTE6', ports:'4x GE + LTE6', cpu:'IPQ-5010'},
-            ]},
-            {cat:'hEX Series - WISP Gateway', models:[
-                {id:'hEX lite (RB750r2)', ports:'5x FE', cpu:'850MHz'},
-                {id:'hEX (RB750Gr3)', ports:'5x GE', cpu:'Dual 880MHz'},
-                {id:'hEX S (RB760iGS)', ports:'5x GE + SFP', cpu:'Dual 880MHz'},
-                {id:'hEX PoE (RB960PGS)', ports:'5x GE PoE', cpu:'800MHz'},
-                {id:'hEX PoE lite (RB750UPr2)', ports:'5x FE PoE', cpu:'650MHz'},
-                {id:'hEX Refresh (E50UG)', ports:'5x GE', cpu:'ARM'},
-                {id:'hEX S Refresh (E50GS)', ports:'5x GE + SFP', cpu:'ARM'},
-            ]},
-            {cat:'RB Series - 10-13 Ports', models:[
-                {id:'RB450Gx4', ports:'5x GE', cpu:'Quad 716MHz'},
-                {id:'RB3011UiAS-RM', ports:'10x GE + SFP', cpu:'Dual 1.4GHz'},
-                {id:'RB4011iGS+RM', ports:'10x GE + SFP+', cpu:'Quad 1.4GHz'},
-                {id:'RB4011iGS+5HacQ2HnD-IN', ports:'10x GE WiFi', cpu:'Quad 1.4GHz'},
-                {id:'RB5009UG+S+IN', ports:'7x GE + 2.5G + SFP+', cpu:'Quad 1.4GHz'},
-                {id:'RB5009UPr+S+OUT', ports:'7x GE PoE + SFP+', cpu:'Quad 1.4GHz'},
-                {id:'RB1100AHx4', ports:'13x GE', cpu:'Quad 1.4GHz'},
-                {id:'RB1100AHx4 Dude Edition', ports:'13x GE + 60GB', cpu:'Quad 1.4GHz'},
-            ]},
-            {cat:'CCR Series - Cloud Core Router', models:[
-                {id:'CCR1009-7G-1C-1S+', ports:'7x GE + SFP+', cpu:'9 Core 1GHz'},
-                {id:'CCR1016-12G', ports:'12x GE', cpu:'16 Core 1.2GHz'},
-                {id:'CCR1016-12S-1S+', ports:'12x SFP + SFP+', cpu:'16 Core'},
-                {id:'CCR1036-8G-2S+', ports:'8x GE + 2x SFP+', cpu:'36 Core'},
-                {id:'CCR1036-12G-4S', ports:'12x GE + 4x SFP', cpu:'36 Core'},
-                {id:'CCR1072-1G-8S+', ports:'8x SFP+', cpu:'72 Core'},
-                {id:'CCR2004-1G-12S+2XS', ports:'12x SFP+ + 2x 25G', cpu:'Quad 1.7GHz'},
-                {id:'CCR2004-16G-2S+', ports:'16x GE + 2x SFP+', cpu:'Quad 1.7GHz'},
-                {id:'CCR2116-12G-4S+', ports:'12x GE + 4x SFP+', cpu:'16 Core 2GHz'},
-                {id:'CCR2216-1G-12XS-2XQ', ports:'12x 25G + 2x 100G', cpu:'16 Core'},
-            ]},
-            {cat:'CRS Series - Switch + Router', models:[
-                {id:'CRS112-8G-4S-IN', ports:'8x GE + 4x SFP', cpu:'400MHz'},
-                {id:'CRS125-24G-1S-RM', ports:'24x GE + SFP', cpu:'600MHz'},
-                {id:'CRS326-24G-2S+RM', ports:'24x GE + 2x SFP+', cpu:'800MHz'},
-                {id:'CRS328-24P-4S+RM', ports:'24x GE PoE + 4x SFP+', cpu:'800MHz'},
-                {id:'CRS309-1G-8S+IN', ports:'8x SFP+', cpu:'Dual 800MHz'},
-                {id:'CRS317-1G-16S+RM', ports:'16x SFP+', cpu:'Dual 800MHz'},
-            ]},
-            {cat:'Chateau / LTE / 5G / Outdoor', models:[
-                {id:'Chateau LTE12 (RBD53G-5HacD2HnD)', ports:'5x GE + LTE12', cpu:'Quad 716MHz'},
-                {id:'Chateau LTE18 ax', ports:'5x GE + LTE18 WiFi6', cpu:'ARM'},
-                {id:'Chateau 5G', ports:'5x GE + 5G', cpu:'Quad 1.8GHz'},
-                {id:'Chateau 5G ax', ports:'5x GE + 5G WiFi6', cpu:'ARM'},
-                {id:'Audience (RBD25G-5HPacQD2HPnD)', ports:'Tri-Band WiFi', cpu:'Quad 1.4GHz'},
-                {id:'cAP ac (RBcAPGi-5acD2nD)', ports:'2x GE Dual', cpu:'716MHz'},
-                {id:'cAP ax (cAPGi-5HaxD2HaxD)', ports:'2x GE WiFi6', cpu:'IPQ-5010'},
-                {id:'wAP ac (RBwAPG-5HacT2HnD)', ports:'2x GE Dual', cpu:'720MHz'},
-                {id:'wAP ax', ports:'2x GE WiFi6', cpu:'IPQ-5010'},
-                {id:'LHG LTE18 kit', ports:'Outdoor LTE18', cpu:'1.2GHz'},
-                {id:'SXT LTE6 kit', ports:'Outdoor LTE6', cpu:'650MHz'},
-                {id:'LDF 5 ac / DISC / SXTsq', ports:'Outdoor CPE', cpu:'CPE'},
-            ]},
-        ],
-        get filteredMikrotikGroups(){ if(!this.mikrotikSearch) return this.mikrotikGroups; const q=this.mikrotikSearch.toLowerCase(); return this.mikrotikGroups.map(g=>({cat:g.cat, models:g.models.filter(m=>m.id.toLowerCase().includes(q))})).filter(g=>g.models.length>0); },
-        get availablePorts(){ if(this.selectedModel.includes('4011')) return ['ether1','ether2','ether3','ether4','ether5','ether6','ether7','ether8','ether9','ether10','SFP+1']; if(this.selectedModel.includes('5009')) return ['ether1','ether2','ether3','ether4','ether5','ether6','ether7','ether8','SFP+']; if(this.selectedModel.includes('CCR')) return ['ether1','SFP1','SFP2','SFP+1','combo1']; return ['ether1','ether2','ether3','ether4','SFP1']; },
-        get navigation(){ return [{id:'dashboard', label:'Dashboard', icon:'fa-solid fa-chart-pie'},{id:'devices', label:'Orodha ya Vifaa', icon:'fa-solid fa-network-wired'},{id:'clients', label:'Orodha ya Wateja', icon:'fa-solid fa-users'},{id:'payments', label:'Malipo', icon:'fa-solid fa-wallet'}]; },
-        get pageTitle(){ const t={dashboard:'Muhtasari', devices:'Vifaa vya Mtandao', clients:'Wateja', payments:'Malipo'}; return t[this.currentTab]; },
-        get onlineCount(){ return this.devices.filter(d=> (d.status==='Online' || d.status==='online')).length; },
-        get offlineCount(){ return this.devices.filter(d=> !(d.status==='Online' || d.status==='online')).length; },
-        get stats(){ return [{label:'Wateja Wote', value:this.clients.length, icon:'fa-solid fa-users'},{label:'Vifaa Online', value:this.onlineCount + '/' + this.devices.length, icon:'fa-solid fa-network-wired'},{label:'Offline', value:this.offlineCount, icon:'fa-solid fa-triangle-exclamation'},{label:'Mapato ya Leo', value:'TSh 0', icon:'fa-solid fa-money-bill-wave'}]; },
-        get generatedScript(){
-            const host = window.location.origin;
-            const wan = this.mikrotikWanPort;
-            const model = this.selectedModel;
-            const rName = this.configRouterName || 'MR-HAAS-ROUTER';
-            // HAKUNA PASSWORD YA MIKROTIK - script inafanya kazi bila password
-            return `# MR HAAS NET - ${model} | WAN: ${wan} | ${new Date().toLocaleString()}
-# Auto Provision - HAKUNA PASSWORD INAYOHITAJIKA
-:local tenant "${this.tenantId}"
-:local rName "${rName}"
-:local wanPort "${wan}"
-/system identity set name=$rName
-# Tengeneza user wa API bila password (au na password ya default ya mfumo)
-/user remove [find name=mrhaas_api]
-/user add name=mrhaas_api group=full comment="MR HAAS NET API" disabled=no
-/ip service enable api
-/ip service set api port=8728 address=0.0.0.0/0
-/ip service set www port=80 disabled=no
-/ip service set winbox port=8291 disabled=no
-/interface list add name=WAN comment="MRHAAS WAN" 2>/dev/null
-/interface list add name=LAN comment="MRHAAS LAN" 2>/dev/null
-/interface list member remove [find where list=WAN]
-/interface list member add list=WAN interface=$wanPort
-/ip dhcp-client remove [find where interface=$wanPort]
-/ip dhcp-client add interface=$wanPort disabled=no use-peer-dns=yes add-default-route=yes comment="MRHAAS WAN"
-/ip firewall nat add chain=srcnat out-interface-list=WAN action=masquerade comment="MRHAAS NAT" 2>/dev/null
-/ip dns set servers=8.8.8.8,1.1.1.1 allow-remote-requests=yes
-/ip pool add name=MRHAAS-POOL ranges=10.10.10.10-10.10.20.254 comment="MRHAAS" 2>/dev/null
-/ppp profile add name=MRHAAS-PROFILE local-address=10.10.10.1 remote-address=MRHAAS-POOL dns-server=8.8.8.8,1.1.1.1 2>/dev/null
-/tool fetch url="${host}/api/mikrotik/register-router" http-method=post http-header-field="Content-Type: application/json" http-data="{\\"tenant_id\\":\\"$tenant\\",\\"name\\":\\"$rName\\",\\"model\\":\\"${model}\\",\\"wan_port\\":\\"$wanPort\\",\\"status\\":\\"Online\\"}" keep-result=no 2>/dev/null
-:put "=============================="
-:put " MR HAAS NET - IMEMALIZIKA "
-:put " Model: ${model} - WAN: ${wan}"
-:put " API User: mrhaas_api (Hakuna password)"
-:put "=============================="
-:log info "MR HAAS NET: Router Connected Successfully!"`;
-        },
+function dashboardApp(){
+  return {
+    sidebarOpen: false,
+    page: 'home',
+    loading: false,
+    notice: '',
+    noticeType: 'success',
+    token: '',
+    tenantId: '',
+    tenant: {},
+    clients: [],
+    devices: [],
+    sites: [],
+    packages: [],
+    vouchers: [],
+    payments: [],
+    clientForm: false,
+    deviceForm: false,
+    siteForm: false,
+    packageForm: false,
+    voucherForm: false,
 
-        formatTime(iso){ if(!iso) return ''; try{ const d=new Date(iso); const diff=Math.floor((Date.now()-d.getTime())/1000); if(diff<60) return 'sasa hivi'; if(diff<3600) return Math.floor(diff/60)+' min iliyopita'; if(diff<86400) return Math.floor(diff/3600)+' saa iliyopita'; return d.toLocaleString('sw-TZ'); }catch(e){ return iso; } },
+    menu: [
+      {id:'home',label:'Dashboard',icon:'▦'},
+      {id:'clients',label:'Wateja',icon:'👥'},
+      {id:'devices',label:'Vifaa vya Mtandao',icon:'📡'},
+      {id:'sites',label:'Sites / Maeneo',icon:'📍'},
+      {id:'packages',label:'Packages',icon:'📦'},
+      {id:'vouchers',label:'Vocha za Hotspot',icon:'🎟️'},
+      {id:'payments',label:'Malipo',icon:'💰'},
+      {id:'subscription',label:'Subscription',icon:'💳'},
+      {id:'payment-settings',label:'Mipangilio ya Malipo',icon:'⚙️'},
+      {id:'portal',label:'Captive Portal',icon:'🌐'},
+      {id:'settings',label:'Akaunti',icon:'👤'}
+    ],
 
-        openClient(){ this.formError=''; this.addClientModal=true; },
-        openDevice(){ this.deviceBrand='mikrotik'; this.selectedModel=''; this.mikrotikWanPort='ether1'; this.deviceStep=1; this.mikrotikSearch=''; this.apDevice={name:'', mac_address:''}; this.addDeviceModal=true; },
-        closeDeviceWizard(){ this.addDeviceModal=false; this.deviceStep=1; },
-        selectVendor(v){ this.deviceBrand=v.id; },
-        selectMikrotikModel(m){ this.selectedModel=m.id; this.configRouterName='MR-HAAS-'+m.id.split(' ')[0].replace(/[^A-Za-z0-9]/g,''); this.deviceStep=3; },
-        selectWanPort(p){ this.mikrotikWanPort=p; this.deviceStep=4; },
-        copyScript(){ navigator.clipboard.writeText(this.generatedScript); alert('Amri imekopiwa! Paste kwenye WinBox Terminal.'); },
+    stats: [
+      {label:'Jumla ya Wateja',value:'—',icon:'👥',description:'Taarifa kutoka backend'},
+      {label:'Vifaa vya Mtandao',value:'—',icon:'📡',description:'Vifaa vilivyosajiliwa'},
+      {label:'Mapato (TSh)',value:'—',icon:'💰',description:'Taarifa za malipo'},
+      {label:'Sites / Maeneo',value:'—',icon:'📍',description:'Maeneo ya huduma'}
+    ],
 
-        // ONLINE / OFFLINE LOGIC
-        async checkOneDevice(device){
-            const prev = device.status;
-            device.status='checking';
-            try{
-                let ok=false;
-                try{
-                    const r=await fetch(API_BASE + '/api/devices/' + encodeURIComponent(device.id) + '/status', {headers: this.getAuthHeaders()});
-                    if(r.ok){ const data=await r.json(); device.status=data.online?'Online':'Offline'; if(data.lastSeen) device.lastSeen=data.lastSeen; else if(data.online) device.lastSeen=new Date().toISOString(); ok=true; }
-                }catch(e){}
-                if(!ok){
-                    const age=Date.now()-(device.id||0);
-                    if(age < 5*60*1000){ device.status='Online'; device.lastSeen=new Date().toISOString(); }
-                    else{
-                        if(device.lastSeen){ const diff=(Date.now()-new Date(device.lastSeen).getTime())/60000; device.status=diff<10?'Online':'Offline'; }
-                        else{ device.status= device.status==='Online'?'Online':'Offline'; }
-                    }
-                }
-            }catch{ device.status='Offline'; }
-            localStorage.setItem('mrhaas_devices_v2', JSON.stringify(this.devices));
-        },
-        async checkAllDevices(){ this.checkingAll=true; for(const d of this.devices){ await this.checkOneDevice(d); await new Promise(r=>setTimeout(r,300)); } this.checkingAll=false; },
+    clientFormData:{name:'',phone:'',service_type:'hotspot',package_id:''},
+    deviceFormData:{name:'',vendor:'MikroTik',ip_address:'',site_id:''},
+    siteFormData:{name:'',location:''},
+    packageFormData:{name:'',price:0,duration:'30 days',service_type:'hotspot'},
+    voucherFormData:{package_id:'',quantity:1},
+    paymentFormData:{customer_name:'',amount:0,method:'mobile_money',reference:''},
+    paymentSettings:{provider:'azampay',business_number:'',instructions:''},
+    portal:{name:'',contact:'',primary_color:'#d4af37',announcement:''},
 
-        async saveMikrotikDevice(){
-            this.saving=true;
-            try{
-                const now=new Date().toISOString();
-                const entry={ id: Date.now(), tenant_id:this.tenantId, name:this.configRouterName, type:`mikrotik-${this.selectedModel}`, model:this.selectedModel, host:`WAN: ${this.mikrotikWanPort}`, wan_port:this.mikrotikWanPort, wanPort:this.mikrotikWanPort, status:'Online', lastSeen:now, vendor:'mikrotik' };
-                this.devices.push(entry);
-                localStorage.setItem('mrhaas_devices_v2', JSON.stringify(this.devices));
-                localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices));
-                try{ await fetch(API_BASE + '/api/devices',{method:'POST', headers: this.getAuthHeaders(), body:JSON.stringify(entry)}); }catch(e){}
-                this.addDeviceModal=false; this.deviceStep=1;
-                alert('Kifaa kimesajiliwa! Sasa kiko ONLINE.');
-            }finally{ this.saving=false; }
-        },
-        async saveOtherDevice(){
-            this.saving=true;
-            try{
-                if(!this.apDevice.name || !this.apDevice.mac_address){
-                    alert('Tafadhali weka Jina la AP na MAC Address');
-                    this.saving=false;
-                    return;
-                }
-                // MAC pekee - ondoa IP
-                const mac = this.apDevice.mac_address.toUpperCase().trim();
-                const now=new Date().toISOString();
-                const entry={ 
-                    id: Date.now(), 
-                    tenant_id:this.tenantId, 
-                    type:this.deviceBrand, 
-                    vendor:this.deviceBrand, 
-                    name: this.apDevice.name,
-                    mac_address: mac,
-                    host: mac, // tunahifadhi MAC kama host kwa ajili ya backend compatibility
-                    status:'Online', 
-                    lastSeen:now
-                };
-                this.devices.push(entry);
-                localStorage.setItem('mrhaas_devices_v2', JSON.stringify(this.devices));
-                localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices));
-                try{ await fetch(API_BASE + '/api/devices',{method:'POST', headers: this.getAuthHeaders(), body:JSON.stringify(entry)}); }catch(e){}
-                this.addDeviceModal=false;
-                this.apDevice={name:'', mac_address:''};
-            }finally{ this.saving=false; }
-        },
-        deleteDevice(id){ 
-            if(!confirm('Una uhakika unataka kuondoa kifaa hiki?')) return;
-            // Local
-            this.devices=this.devices.filter(d=>d.id!==id); 
-            localStorage.setItem('mrhaas_devices_v2', JSON.stringify(this.devices)); 
-            localStorage.setItem('mrhaas_devices', JSON.stringify(this.devices));
-            // Backend
-            try{ fetch(API_BASE + '/api/devices/' + id, {method:'DELETE', headers: this.getAuthHeaders()}); }catch(e){}
-        },
-        async submitClient(){ this.formError=''; this.saving=true; try{ const entry={id:Date.now(),...this.newClient}; this.clients.push(entry); localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients)); this.addClientModal=false; this.newClient.name=''; this.newClient.phone=''; this.newClient.username=''; try{ await fetch(API_BASE + '/api/clients',{method:'POST',headers: this.getAuthHeaders(),body:JSON.stringify(entry)}); }catch(e){} }catch(err){ this.formError=err.message; } finally{ this.saving=false; } },
-        async fetchClients(){ try{ const r=await fetch(API_BASE + '/api/clients/'+this.tenantId, {headers: this.getAuthHeaders()}); if(!r.ok) return; const d=await r.json(); if(d.success && d.clients?.length){ this.clients=d.clients; localStorage.setItem('mrhaas_clients', JSON.stringify(this.clients)); } }catch(e){} },
-        async fetchDevices(){ try{ const r=await fetch(API_BASE + '/api/devices/'+this.tenantId, {headers: this.getAuthHeaders()}); if(!r.ok) return; const d=await r.json(); if(d.success && d.devices?.length){ const mapped=d.devices.map(x=>({status:'Offline', lastSeen:null, ...x})); this.devices=mapped; localStorage.setItem('mrhaas_devices_v2', JSON.stringify(mapped)); } }catch(e){} },
-        getAuthHeaders(){
-            const token = localStorage.getItem('token');
-            return {
-                'Authorization': token ? 'Bearer ' + token : '',
-                'X-Tenant-ID': this.tenantId,
-                'Content-Type': 'application/json'
-            };
-        },
-        checkAuth(){
-            const token = localStorage.getItem('token');
-            const tid = localStorage.getItem('tenant_id');
-            if(!token || !tid){
-                // Kama hakuna token, rudi login
-                // window.location.href = 'login.html';
-                console.log('No token - using default tenant_01 for backward compat');
-                // return false;
-            }
-            if(tid) this.tenantId = tid;
-            return true;
-        },
-        logout(){ localStorage.clear(); window.location.href = 'login.html'; },
-        init(){ 
-            this.checkAuth();
-            this.fetchClients(); 
-            this.fetchDevices(); 
-            setTimeout(()=>this.checkAllDevices(),1500); 
-            setInterval(()=>this.checkAllDevices(),30000); 
+    planOptions:[
+      {code:'START',name:'START',price:'TSh 10,000/mwezi',description:'Hadi vifaa 2 na wateja 50.'},
+      {code:'DIAMOND',name:'DIAMOND',price:'TSh 15,000/mwezi',description:'Hadi vifaa 7 na wateja 500.'},
+      {code:'PREMIUM',name:'PREMIUM',price:'TSh 20,000/mwezi',description:'Vifaa visivyo na kikomo na wateja 5,000.'},
+      {code:'REVENUE_SHARE',name:'REVENUE SHARE',price:'TSh 20,000 usajili + 3%',description:'Vifaa na wateja bila kikomo, pamoja na 3% ya mapato ya mwezi.'}
+    ],
+
+    init(){
+      this.token = localStorage.getItem('mrhaas_token') || '';
+      this.tenantId = localStorage.getItem('mrhaas_tenant_id') || '';
+      try { this.tenant = JSON.parse(localStorage.getItem('mrhaas_tenant') || '{}'); } catch(e) {}
+      const role = localStorage.getItem('mrhaas_role') || '';
+
+      if(!this.token || !this.tenantId){
+        window.location.href='/login.html';
+        return;
+      }
+      if(role==='super_admin' || this.tenantId==='tenant_super_admin'){
+        window.location.href='/super-admin.html';
+        return;
+      }
+      this.loadAll();
+    },
+
+    async request(path, options={}){
+      const response = await fetch(path,{
+        ...options,
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+this.token,
+          'X-Tenant-ID':this.tenantId,
+          ...(options.headers||{})
         }
-    }));
-});
+      });
+      const data = await response.json().catch(()=>({}));
+      if(response.status===401 || response.status===403){
+        this.logout();
+        throw new Error(data.message || 'Akaunti hairuhusiwi. Ingia tena au wasiliana na msimamizi.');
+      }
+      if(!response.ok) throw new Error(data.message || data.error || 'Ombi halikufanikiwa.');
+      return data;
+    },
+
+    async safeGet(path){
+      try {
+        const data=await this.request(path);
+        if(Array.isArray(data)) return data;
+        return data.items || data.data || data.results || [];
+      } catch(e) {
+        return [];
+      }
+    },
+
+    async loadAll(){
+      this.loading=true;
+      this.notice='';
+      try {
+        try {
+          const me=await this.request('/api/auth/me');
+          this.tenant=me.tenant || me.data || me || this.tenant;
+          localStorage.setItem('mrhaas_tenant',JSON.stringify(this.tenant));
+        } catch(e) {
+          if(e.message.includes('Akaunti hairuhusiwi')) throw e;
+        }
+
+        const base='/'+encodeURIComponent(this.tenantId);
+        const results=await Promise.all([
+          this.safeGet('/api/clients'+base),
+          this.safeGet('/api/devices'+base),
+          this.safeGet('/api/sites'+base),
+          this.safeGet('/api/packages'+base),
+          this.safeGet('/api/vouchers'+base),
+          this.safeGet('/api/payments'+base)
+        ]);
+
+        [this.clients,this.devices,this.sites,this.packages,this.vouchers,this.payments]=results;
+
+        this.stats=[
+          {label:'Jumla ya Wateja',value:this.clients.length,icon:'👥',description:'Wateja waliorudishwa na backend'},
+          {label:'Vifaa vya Mtandao',value:this.devices.length,icon:'📡',description:'Vifaa vilivyosajiliwa'},
+          {label:'Mapato (TSh)',value:this.moneyNumber(this.payments.reduce((sum,p)=>sum+Number(p.amount||0),0)),icon:'💰',description:'Jumla ya malipo yaliyopatikana kwenye orodha'},
+          {label:'Sites / Maeneo',value:this.sites.length,icon:'📍',description:'Maeneo yaliyosajiliwa'}
+        ];
+
+        try {
+          const settings=await this.request('/api/payment-settings');
+          this.paymentSettings={...this.paymentSettings,...(settings.settings||settings.data||settings)};
+        } catch(e) {}
+
+        try {
+          const portal=await this.request('/api/portal/settings/'+encodeURIComponent(this.tenantId));
+          this.portal={...this.portal,...(portal.settings||portal.data||portal)};
+        } catch(e) {
+          this.portal.name=this.portal.name || this.tenant.name || this.tenant.business_name || '';
+        }
+      } catch(e) {
+        this.showNotice(e.message,'error');
+      } finally {
+        this.loading=false;
+      }
+    },
+
+    go(page){this.page=page;this.sidebarOpen=false;this.notice='';},
+
+    pageTitle(){
+      const item=this.menu.find(x=>x.id===this.page);
+      return item?item.label:'Dashboard';
+    },
+
+    showNotice(text,type='success'){
+      this.notice=text;
+      this.noticeType=type;
+    },
+
+    async createClient(){
+      this.loading=true;
+      try{
+        await this.request('/api/clients',{
+          method:'POST',
+          body:JSON.stringify({...this.clientFormData,tenant_id:this.tenantId})
+        });
+        this.clientFormData={name:'',phone:'',service_type:'hotspot',package_id:''};
+        this.clientForm=false;
+        await this.loadAll();
+        this.showNotice('Mteja ameongezwa.');
+      }catch(e){this.showNotice(e.message,'error');}
+      finally{this.loading=false;}
+    },
+
+    async createDevice(){
+      this.loading=true;
+      try{
+        await this.request('/api/devices',{
+          method:'POST',
+          body:JSON.stringify({...this.deviceFormData,tenant_id:this.tenantId})
+        });
+        this.deviceFormData={name:'',vendor:'MikroTik',ip_address:'',site_id:''};
+        this.deviceForm=false;
+        await this.loadAll();
+        this.showNotice('Kifaa kimehifadhiwa. Muunganisho halisi bado unahitaji usanidi wa backend.');
+      }catch(e){this.showNotice(e.message,'error');}
+      finally{this.loading=false;}
+    },
+
+    async createSite(){
+      this.loading=true;
+      try{
+        await this.request('/api/sites',{
+          method:'POST',
+          body:JSON.stringify({...this.siteFormData,tenant_id:this.tenantId})
+        });
+        this.siteFormData={name:'',location:''};
+        this.siteForm=false;
+        await this.loadAll();
+        this.showNotice('Site imeongezwa.');
+      }catch(e){this.showNotice(e.message,'error');}
+      finally{this.loading=false;}
+    },
+
+    async createPackage(){
+      this.loading=true;
+      try{
+        await this.request('/api/packages',{
+          method:'POST',
+          body:JSON.stringify({...this.packageFormData,tenant_id:this.tenantId})
+        });
+        this.packageFormData={name:'',price:0,duration:'30 days',service_type:'hotspot'};
+        this.packageForm=false;
+        await this.loadAll();
+        this.showNotice('Package imehifadhiwa.');
+      }catch(e){this.showNotice(e.message,'error');}
+      finally{this.loading=false;}
+    },
+
+    async createVoucher(){
+      this.loading=true;
+      try{
+        await this.request('/api/vouchers',{
+          method:'POST',
+          body:JSON.stringify({...this.voucherFormData,tenant_id:this.tenantId})
+        });
+        this.voucherForm=false;
+        await this.loadAll();
+        this.showNotice('Ombi la vocha limetumwa. Hakikisha backend inatengeneza vocha halisi.');
+      }catch(e){this.showNotice(e.message,'error');}
+      finally{this.loading=false;}
+    },
+
+    async createPayment(){
+      this.loading=true;
+      try{
+        await this.request('/api/payments/manual',{
+          method:'POST',
+          body:JSON.stringify({...this.paymentFormData,tenant_id:this.tenantId})
+        });
+        this.paymentFormData={customer_name:'',amount:0,method:'mobile_money',reference:''};
+        await this.loadAll();
+        this.showNotice('Malipo yamehifadhiwa kwenye mfumo.');
+      }catch(e){this.showNotice(e.message,'error');}
+      finally{this.loading=false;}
+    },
+
+    async savePaymentSettings(){
+      this.loading=true;
+      try{
+        await this.request('/api/payment-settings',{
+          method:'PUT',
+          body:JSON.stringify(this.paymentSettings)
+        });
+        this.showNotice('Mipangilio ya malipo imehifadhiwa.');
+      }catch(e){this.showNotice(e.message,'error');}
+      finally{this.loading=false;}
+    },
+
+    async savePortal(){
+      this.loading=true;
+      try{
+        await this.request('/api/portal/settings/'+encodeURIComponent(this.tenantId),{
+          method:'POST',
+          body:JSON.stringify(this.portal)
+        });
+        this.showNotice('Mipangilio ya portal imehifadhiwa.');
+      }catch(e){this.showNotice(e.message,'error');}
+      finally{this.loading=false;}
+    },
+
+    async deleteItem(type,id){
+      if(!id || !confirm('Una uhakika unataka kufuta taarifa hii?')) return;
+      try{
+        await this.request('/api/'+type+'/'+encodeURIComponent(id),{method:'DELETE'});
+        await this.loadAll();
+        this.showNotice('Taarifa imefutwa.');
+      }catch(e){this.showNotice(e.message,'error');}
+    },
+
+    requestPlan(plan){
+      this.showNotice('Ombi la mpango '+plan+' halijatumwa bado. Backend inahitaji endpoint salama ya kubadili mpango na kuthibitisha malipo.','error');
+    },
+
+    logout(){
+      localStorage.removeItem('mrhaas_token');
+      localStorage.removeItem('mrhaas_tenant_id');
+      localStorage.removeItem('mrhaas_tenant');
+      localStorage.removeItem('mrhaas_role');
+      window.location.href='/login.html';
+    },
+
+    money(value){
+      return 'TSh '+Number(value||0).toLocaleString('en-US');
+    },
+
+    moneyNumber(value){
+      return Number(value||0).toLocaleString('en-US');
+    },
+
+    formatDate(value){
+      if(!value) return 'Haijawekwa';
+      const date=new Date(value);
+      if(Number.isNaN(date.getTime())) return 'Haijawekwa';
+      return date.toLocaleDateString('sw-TZ',{year:'numeric',month:'short',day:'numeric'});
+    }
+  }
+}
 </script>
-<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
+</body>
 </html>
