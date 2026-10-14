@@ -389,26 +389,49 @@ function superApp() {
     updateForm: {version:'',title:'',description:'',release_notes:''},
 
     async init() {
-      this.token = localStorage.getItem('mrhaas_token') || '';
-      this.tenantId = localStorage.getItem('mrhaas_tenant_id') || '';
-      this.role = localStorage.getItem('mrhaas_role') || '';
+    
+async init() {
+  this.token = localStorage.getItem('mrhaas_token') || '';
+  this.tenantId = localStorage.getItem('mrhaas_tenant_id') || '';
+  this.role = localStorage.getItem('mrhaas_role') || '';
 
-      if (!this.token || this.role !== 'super_admin') {
-        this.show('Ingia kwa akaunti yenye ruhusa ya Super Admin.', true);
-        return;
-      }
+  if (!this.token) {
+    this.show('Hujaingia. Tafadhali ingia kama Super Admin.', true);
+    return;
+  }
 
-      try {
-        const saved = JSON.parse(localStorage.getItem('mrhaas_tenant') || '{}');
-        this.email = saved.email || 'Super Admin';
-      } catch(e) {
-        this.email = 'Super Admin';
-      }
+  this.sidebarOpen = false;
 
-      // Hakikisha sidebar inafuata ukubwa wa kifaa
-      this.sidebarOpen = false;
-      await this.refresh();
-    },
+  try {
+    const result = await this.api('/api/auth/me');
+
+    const user = result.user || result;
+
+    if (
+      user.role !== 'super_admin' &&
+      user.tenant_id !== 'tenant_super_admin'
+    ) {
+      this.show('Akaunti hii haina ruhusa ya Super Admin.', true);
+      return;
+    }
+
+    this.role = 'super_admin';
+    localStorage.setItem('mrhaas_role', 'super_admin');
+
+    this.email =
+      user.email ||
+      JSON.parse(localStorage.getItem('mrhaas_tenant') || '{}').email ||
+      'Super Admin';
+
+    await this.refresh();
+  } catch (e) {
+    this.show(
+      'Imeshindwa kuthibitisha Super Admin: ' + e.message,
+      true
+    );
+  }
+},
+
 
     headers() {
       return {
