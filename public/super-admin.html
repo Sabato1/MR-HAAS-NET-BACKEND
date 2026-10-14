@@ -264,18 +264,40 @@ function superApp(){
     editingId:null,
     form:{name:'',email:'',password:'',plan:'START',status:'active'},
 
-    async init(){
-      if(!this.token || !this.tenantId){
-        location.replace('/login.html');
-        return;
-      }
-      if(this.role!=='super_admin' && this.tenantId!=='tenant_super_admin'){
-        location.replace('/index.html');
-        return;
-      }
-      this.email=JSON.parse(localStorage.getItem('mrhaas_tenant')||'{}').email||'Super Admin';
-      await this.refresh();
-    },
+    
+async init(){
+  const savedToken = localStorage.getItem('mrhaas_token') || '';
+  const savedTenantId = localStorage.getItem('mrhaas_tenant_id') || '';
+  const savedRole = localStorage.getItem('mrhaas_role') || '';
+
+  this.token = savedToken;
+  this.tenantId = savedTenantId;
+  this.role = savedRole;
+
+  if(!this.token){
+    alert('Tafadhali ingia kwanza kwenye akaunti ya Super Admin.');
+    location.replace('/login.html');
+    return;
+  }
+
+  if(this.role !== 'super_admin' &&
+     this.tenantId !== 'tenant_super_admin'){
+    alert('Akaunti hii haina ruhusa ya Super Admin.');
+    return;
+  }
+
+  try {
+    const tenant = JSON.parse(
+      localStorage.getItem('mrhaas_tenant') || '{}'
+    );
+    this.email = tenant.email || 'Super Admin';
+  } catch(e) {
+    this.email = 'Super Admin';
+  }
+
+  await this.refresh();
+},
+
 
     headers(){
       return {
