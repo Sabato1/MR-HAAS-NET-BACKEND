@@ -394,23 +394,40 @@ async toggleStatus(t){
 },
 
 
-    async toggleStatus(t){
-      const next=t.status==='suspended'?'active':'suspended';
-      const message=next==='suspended'
-        ?'Unataka kusimamisha akaunti hii?'
-        :'Unataka kuwasha tena akaunti hii?';
-      if(!confirm(message)) return;
-      try{
-        await this.api('/api/super/tenants/'+encodeURIComponent(t.id),{
-          method:'PUT',
-          body:JSON.stringify({status:next})
-        });
-        this.show(next==='suspended'?'Akaunti imesimamishwa.':'Akaunti imewashwa.');
-        await this.refresh();
-      }catch(e){
-        this.show(e.message,true);
+    async toggleStatus(t) {
+  if (t.status === 'deleted') {
+    this.show('Akaunti hii imefutwa na haiwezi kuwashwa hapa.', true);
+    return;
+  }
+
+  const next = t.status === 'suspended' ? 'active' : 'suspended';
+
+  const message = next === 'suspended'
+    ? 'Unataka kusimamisha akaunti hii?'
+    : 'Unataka kuwasha tena akaunti hii?';
+
+  if (!confirm(message)) return;
+
+  try {
+    await this.api(
+      '/api/super/tenant/' + encodeURIComponent(t.id) + '/status',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ status: next })
       }
-    },
+    );
+
+    this.show(
+      next === 'suspended'
+        ? 'Akaunti imesimamishwa.'
+        : 'Akaunti imewashwa.'
+    );
+
+    await this.refresh();
+  } catch (e) {
+    this.show(e.message, true);
+  }
+},
 
     filteredTenants(){
       const q=this.search.toLowerCase().trim();
