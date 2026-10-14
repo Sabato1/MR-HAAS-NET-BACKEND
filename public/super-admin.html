@@ -274,11 +274,13 @@ async init(){
   this.tenantId = savedTenantId;
   this.role = savedRole;
 
-  if(!this.token){
-    alert('Tafadhali ingia kwanza kwenye akaunti ya Super Admin.');
-    location.replace('/login.html');
-    return;
-  }
+
+if (this.role !== 'super_admin') {
+  alert('Akaunti hii haina ruhusa ya Super Admin.');
+  window.location.replace('/login.html');
+  return;
+}
+
 
   if(this.role !== 'super_admin' &&
      this.tenantId !== 'tenant_super_admin'){
