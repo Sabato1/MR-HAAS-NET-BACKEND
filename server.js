@@ -586,12 +586,19 @@ app.get('/api/subscription', authMiddleware, asyncRoute(async (req, res) => {
     : req.tenant_id;
 
   if (!tenantId) fail(400, 'tenant_id inahitajika kwa Super Admin.');
+  
   ensureTenantAccess(req, tenantId);
 
   const tenant = await getTenantRecord(tenantId);
-  const trialEnd = tenant.trial_ends_at ? new Date(tenant.trial_ends_at) : null;
-  const paidEnd = tenant.subscription_ends_at ? new Date(tenant.subscription_ends_at) : null;
+  const trialEnd = tenant.trial_ends_at
+    ? new Date(tenant.trial_ends_at)
+    : null;
+  const paidEnd = tenant.subscription_ends_at
+    ? new Date(tenant.subscription_ends_at)
+    : null;
   const now = new Date();
+
+  const freeForever = tenant.free_forever === true;
 
   const trialActive =
     tenant.subscription_status === 'trial' &&
@@ -611,13 +618,15 @@ app.get('/api/subscription', authMiddleware, asyncRoute(async (req, res) => {
       trial_started_at: tenant.trial_started_at,
       trial_ends_at: tenant.trial_ends_at,
       subscription_ends_at: tenant.subscription_ends_at,
+      free_forever: freeForever,
       trial_active: Boolean(trialActive),
       paid_active: Boolean(paidActive),
-      service_access: Boolean(trialActive || paidActive),
+      service_access: Boolean(freeForever || trialActive || paidActive),
       plans: PLANS
     }
   });
 }));
+
 
 app.get('/api/payment-settings', authMiddleware, asyncRoute(async (req, res) => {
   const tenantId = req.role === 'super_admin'
@@ -907,35 +916,101 @@ app.delete(
   })
 );
 
+
 app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
   const tenantId = req.params.id;
   const plan = getPlan(req.body.plan);
-  const status = String(req.body.subscription_status || '').toLowerCase();
+  let status = String(req.body.subscription_status || '').toLowerCase();
 
   if (!plan) fail(400, 'Mpango si sahihi.');
+
   if (!['trial', 'active', 'expired', 'pending', 'cancelled'].includes(status)) {
     fail(400, 'subscription_status si sahihi.');
+  }
+
+  const current = await one(
+    'SELECT * FROM tenants WHERE id = $1 AND id <> $2',
+    [tenantId, SUPER_ADMIN_ID]
+  );
+
+  if (!current) fail(404, 'WISP haijapatikana.');
+
+  const freeForever =
+    req.body.free_forever === true ||
+    req.body.free_forever === 'true';
+
+  let trialStarted = current.trial_started_at;
+  let trialEnds = current.trial_ends_at;
+
+  // Super Admin anaweza kuongeza siku za trial.
+  if (req.body.trial_days !== undefined) {
+    const days = Number(req.body.trial_days);
+
+    if (!Number.isInteger(days) || days < 1 || days > 3650) {
+      fail(400, 'Siku za trial ziwe kati ya 1 na 3650.');
+    }
+
+    const now = new Date();
+    const oldEnd = trialEnds ? new Date(trialEnds) : now;
+    const base = oldEnd > now ? oldEnd : now;
+
+    trialStarted = trialStarted || now;
+    trialEnds = new Date(base.getTime() + days * 86400000);
+    status = 'trial';
   }
 
   const endsAt = req.body.subscription_ends_at
     ? new Date(req.body.subscription_ends_at)
     : null;
 
-  if (endsAt && Number.isNaN(endsAt.getTime())) fail(400, 'Tarehe ya mwisho si sahihi.');
+  if (endsAt && Number.isNaN(endsAt.getTime())) {
+    fail(400, 'Tarehe ya mwisho si sahihi.');
+  }
 
   const tenant = await one(
     `UPDATE tenants
-     SET plan = $1, max_devices = $2, max_clients = $3,
+     SET plan = $1,
+         max_devices = $2,
+         max_clients = $3,
          subscription_status = $4,
-         subscription_ends_at = $5
-     WHERE id = $6 AND id <> $7
+         subscription_ends_at = $5,
+         trial_started_at = $6,
+         trial_ends_at = $7,
+         free_forever = $8,
+         updated_at = NOW()
+     WHERE id = $9 AND id <> $10
      RETURNING *`,
-    [plan.name, plan.max_devices, plan.max_clients, status, endsAt, tenantId, SUPER_ADMIN_ID]
+    [
+      plan.name,
+      plan.max_devices,
+      plan.max_clients,
+      status,
+      endsAt,
+      trialStarted,
+      trialEnds,
+      freeForever,
+      tenantId,
+      SUPER_ADMIN_ID
+    ]
   );
 
   if (!tenant) fail(404, 'WISP haijapatikana.');
 
-  res.json({ success: true, tenant: publicTenant(tenant) });
+  res.json({
+    success: true,
+    message: freeForever
+      ? 'Free Forever imewashwa.'
+      : 'Subscription imesasishwa.',
+    tenant: publicTenant(tenant),
+    subscription: {
+      plan: tenant.plan,
+      status: tenant.subscription_status,
+      trial_started_at: tenant.trial_started_at,
+      trial_ends_at: tenant.trial_ends_at,
+      subscription_ends_at: tenant.subscription_ends_at,
+      free_forever: tenant.free_forever
+    }
+  });
 }));
 
 
