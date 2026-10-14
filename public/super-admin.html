@@ -385,35 +385,7 @@ if (this.role !== 'super_admin') {
     },
 
     
-async toggleStatus(t){
-  const next = t.status === 'suspended' ? 'active' : 'suspended';
 
-  const message = next === 'suspended'
-    ? 'Unataka kusimamisha akaunti hii?'
-    : 'Unataka kurejesha akaunti hii?';
-
-  if (!confirm(message)) return;
-
-  try {
-    await this.api(
-      '/api/super/tenant/' + encodeURIComponent(t.id) + '/status',
-      {
-        method: 'PATCH',
-        body: JSON.stringify({ status: next })
-      }
-    );
-
-    this.show(
-      next === 'suspended'
-        ? 'Akaunti imesimamishwa.'
-        : 'Akaunti imerejeshwa.'
-    );
-
-    await this.refresh();
-  } catch (e) {
-    this.show(e.message, true);
-  }
-},
 
 
     async toggleStatus(t) {
