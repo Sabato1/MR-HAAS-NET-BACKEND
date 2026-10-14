@@ -27,6 +27,7 @@ async function initializeDatabase() {
   try {
     await client.query('BEGIN');
 
+    
     await client.query(`
       CREATE TABLE IF NOT EXISTS tenants (
         id TEXT PRIMARY KEY,
@@ -49,6 +50,12 @@ async function initializeDatabase() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
+
+    await client.query(`
+      ALTER TABLE tenants
+      ADD COLUMN IF NOT EXISTS free_forever BOOLEAN NOT NULL DEFAULT FALSE;
+    `);
+
 
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_tenants_email_lower
