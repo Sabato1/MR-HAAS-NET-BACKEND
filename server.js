@@ -941,6 +941,410 @@ app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin,
    SITES
 ========================= */
 
+/* =========================
+   SYSTEM UPDATES / BETA TESTING
+========================= */
+
+// Super Admin: Orodha ya updates pamoja na takwimu za beta.
+app.get(
+  '/api/super/updates',
+  authMiddleware,
+  requireSuperAdmin,
+  asyncRoute(async (req, res) => {
+    const updates = await query(
+      `SELECT u.*,
+          COUNT(ut.tenant_id)::int AS assigned_tenants,
+          COUNT(ut.tenant_id) FILTER
+            (WHERE ut.channel = 'beta')::int AS beta_tenants,
+          COUNT(ut.tenant_id) FILTER
+            (WHERE ut.status = 'approved')::int AS approved_tenants,
+          COUNT(ut.tenant_id) FILTER
+            (WHERE ut.status = 'failed')::int AS failed_tenants
+       FROM system_updates u
+       LEFT JOIN system_update_tenants ut ON ut.update_id = u.id
+       GROUP BY u.id
+       ORDER BY u.created_at DESC`
+    );
+
+    res.json({ success: true, updates });
+  })
+);
+
+// Super Admin: Kutengeneza update mpya.
+app.post(
+  '/api/super/updates',
+  authMiddleware,
+  requireSuperAdmin,
+  asyncRoute(async (req, res) => {
+    const version = String(req.body.version || '').trim();
+    const title = String(req.body.title || '').trim();
+    const description = String(req.body.description || '').trim();
+    const releaseNotes = String(req.body.release_notes || '').trim();
+
+    if (!version || !title) {
+      fail(400, 'Version na jina la update vinahitajika.');
+    }
+
+    if (version.length > 50 || title.length > 200) {
+      fail(400, 'Version au jina la update ni refu mno.');
+    }
+
+    const update = await one(
+      `INSERT INTO system_updates
+        (id, version, title, description, release_notes,
+         status, created_by, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,'draft',$6,NOW(),NOW())
+       RETURNING *`,
+      [
+        makeId('update'),
+        version,
+        title,
+        description,
+        releaseNotes,
+        req.email
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Update mpya imehifadhiwa kama draft.',
+      update
+    });
+  })
+);
+
+// Super Admin: Kuchagua Tenant wachache wa kufanya beta testing.
+app.post(
+  '/api/super/updates/:id/beta-tenants',
+  authMiddleware,
+  requireSuperAdmin,
+  asyncRoute(async (req, res) => {
+    const updateId = String(req.params.id || '').trim();
+    const tenantIds = [
+      ...new Set(
+        (Array.isArray(req.body.tenant_ids) ? req.body.tenant_ids : [])
+          .map(id => String(id || '').trim())
+          .filter(Boolean)
+      )
+    ];
+
+    if (!updateId) fail(400, 'ID ya update inahitajika.');
+
+    if (!tenantIds.length || tenantIds.length > 20) {
+      fail(400, 'Chagua Tenant 1 hadi 20 kwa beta testing.');
+    }
+
+    const client = await db.pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const updateResult = await client.query(
+        `SELECT id, version, status
+         FROM system_updates
+         WHERE id = $1
+         FOR UPDATE`,
+        [updateId]
+      );
+
+      const update = updateResult.rows[0];
+
+      if (!update) fail(404, 'Update haijapatikana.');
+
+      if (!['draft', 'beta'].includes(update.status)) {
+        fail(409, 'Update hii haiwezi kupewa beta katika hali yake ya sasa.');
+      }
+
+      const tenantResult = await client.query(
+        `SELECT id, business_name
+         FROM tenants
+         WHERE id = ANY($1::text[])
+           AND id <> $2
+           AND status = 'active'`,
+        [tenantIds, SUPER_ADMIN_ID]
+      );
+
+      if (tenantResult.rows.length !== tenantIds.length) {
+        fail(400, 'Baadhi ya Tenant hawapo, wamesimamishwa au wamefutwa. Hakiki orodha kisha ujaribu tena.');
+      }
+
+      for (const tenant of tenantResult.rows) {
+        await client.query(
+          `INSERT INTO system_update_tenants
+            (update_id, tenant_id, channel, status, assigned_at, updated_at)
+           VALUES ($1,$2,'beta','pending',NOW(),NOW())
+           ON CONFLICT (update_id, tenant_id)
+           DO UPDATE SET
+             channel = 'beta',
+             status = 'pending',
+             feedback = '',
+             assigned_at = NOW(),
+             updated_at = NOW()`,
+          [updateId, tenant.id]
+        );
+
+        await client.query(
+          `INSERT INTO audit_logs
+            (tenant_id, actor_email, action, entity_type, entity_id, details)
+           VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
+          [
+            tenant.id,
+            req.email || null,
+            'system_update_beta_assigned',
+            'system_update',
+            updateId,
+            JSON.stringify({
+              version: update.version,
+              tenant_name: tenant.business_name
+            })
+          ]
+        );
+      }
+
+      await client.query(
+        `UPDATE system_updates
+         SET status = 'beta', updated_at = NOW()
+         WHERE id = $1`,
+        [updateId]
+      );
+
+      await client.query('COMMIT');
+
+      res.json({
+        success: true,
+        message: 'Tenant wamechaguliwa kwa beta testing.',
+        update_id: updateId,
+        beta_tenants: tenantResult.rows
+      });
+    } catch (error) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('[BETA ROLLBACK ERROR]', rollbackError.message);
+      }
+
+      throw error;
+    } finally {
+      client.release();
+    }
+  })
+);
+
+// Tenant: Kuona updates alizochaguliwa kujaribu.
+app.get(
+  '/api/tenant/updates',
+  authMiddleware,
+  asyncRoute(async (req, res) => {
+    if (req.role !== 'tenant') {
+      fail(403, 'Endpoint hii ni kwa akaunti za Tenant.');
+    }
+
+    const updates = await query(
+      `SELECT u.id, u.version, u.title, u.description,
+              u.release_notes, u.status AS update_status,
+              ut.channel, ut.status AS testing_status,
+              ut.feedback, ut.assigned_at, ut.updated_at
+       FROM system_update_tenants ut
+       JOIN system_updates u ON u.id = ut.update_id
+       WHERE ut.tenant_id = $1
+       ORDER BY ut.assigned_at DESC`,
+      [req.tenant_id]
+    );
+
+    res.json({ success: true, updates });
+  })
+);
+
+// Tenant: Kutuma hali ya majaribio na maoni.
+app.patch(
+  '/api/tenant/updates/:id/feedback',
+  authMiddleware,
+  asyncRoute(async (req, res) => {
+    if (req.role !== 'tenant') {
+      fail(403, 'Endpoint hii ni kwa akaunti za Tenant.');
+    }
+
+    const updateId = String(req.params.id || '').trim();
+    const status = String(req.body.status || '').trim().toLowerCase();
+    const feedback = String(req.body.feedback || '').trim().slice(0, 3000);
+
+    if (!['testing', 'approved', 'failed'].includes(status)) {
+      fail(400, 'Hali lazima iwe testing, approved au failed.');
+    }
+
+    const assignment = await one(
+      `UPDATE system_update_tenants ut
+       SET status = $1, feedback = $2, updated_at = NOW()
+       FROM system_updates u
+       WHERE ut.update_id = $3
+         AND ut.tenant_id = $4
+         AND u.id = ut.update_id
+         AND u.status = 'beta'
+         AND ut.channel = 'beta'
+       RETURNING ut.update_id, ut.tenant_id, ut.channel,
+                 ut.status, ut.feedback, ut.updated_at`,
+      [status, feedback, updateId, req.tenant_id]
+    );
+
+    if (!assignment) {
+      fail(404, 'Beta assignment haijapatikana au update haipo kwenye beta testing.');
+    }
+
+    res.json({
+      success: true,
+      message: 'Majibu ya beta testing yamehifadhiwa.',
+      assignment
+    });
+  })
+);
+
+// Super Admin: Kuachia update kwa Tenant wote baada ya angalau
+// Tenant mmoja wa beta kuidhinisha.
+app.post(
+  '/api/super/updates/:id/release',
+  authMiddleware,
+  requireSuperAdmin,
+  asyncRoute(async (req, res) => {
+    const updateId = String(req.params.id || '').trim();
+    const client = await db.pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const updateResult = await client.query(
+        `SELECT id, version, status
+         FROM system_updates
+         WHERE id = $1
+         FOR UPDATE`,
+        [updateId]
+      );
+
+      const update = updateResult.rows[0];
+
+      if (!update) fail(404, 'Update haijapatikana.');
+
+      if (update.status !== 'beta') {
+        fail(409, 'Update lazima iwe kwenye beta testing kabla ya kuachiliwa.');
+      }
+
+      const approvalResult = await client.query(
+        `SELECT COUNT(*)::int AS total
+         FROM system_update_tenants
+         WHERE update_id = $1
+           AND channel = 'beta'
+           AND status = 'approved'`,
+        [updateId]
+      );
+
+      if (Number(approvalResult.rows[0].total) < 1) {
+        fail(409, 'Angalau Tenant mmoja wa beta lazima aidhinishe update kabla ya release.');
+      }
+
+      const tenantsResult = await client.query(
+        `SELECT id FROM tenants
+         WHERE id <> $1 AND status = 'active'`,
+        [SUPER_ADMIN_ID]
+      );
+
+      for (const tenant of tenantsResult.rows) {
+        await client.query(
+          `INSERT INTO system_update_tenants
+            (update_id, tenant_id, channel, status, assigned_at, updated_at)
+           VALUES ($1,$2,'stable','notified',NOW(),NOW())
+           ON CONFLICT (update_id, tenant_id)
+           DO UPDATE SET
+             channel = 'stable',
+             status = CASE
+               WHEN system_update_tenants.status = 'approved'
+               THEN 'approved'
+               ELSE 'notified'
+             END,
+             updated_at = NOW()`,
+          [updateId, tenant.id]
+        );
+
+        await client.query(
+          `INSERT INTO audit_logs
+            (tenant_id, actor_email, action, entity_type, entity_id, details)
+           VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
+          [
+            tenant.id,
+            req.email || null,
+            'system_update_released',
+            'system_update',
+            updateId,
+            JSON.stringify({ version: update.version })
+          ]
+        );
+      }
+
+      const releasedResult = await client.query(
+        `UPDATE system_updates
+         SET status = 'released',
+             released_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING *`,
+        [updateId]
+      );
+
+      await client.query('COMMIT');
+
+      res.json({
+        success: true,
+        message: 'Update imeachiliwa kwa Tenant wote walio active.',
+        update: releasedResult.rows[0],
+        tenants_notified: tenantsResult.rows.length
+      });
+    } catch (error) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('[RELEASE ROLLBACK ERROR]', rollbackError.message);
+      }
+
+      throw error;
+    } finally {
+      client.release();
+    }
+  })
+);
+
+// Super Admin: Kusitisha au kurudisha update kwenye beta.
+app.patch(
+  '/api/super/updates/:id/status',
+  authMiddleware,
+  requireSuperAdmin,
+  asyncRoute(async (req, res) => {
+    const status = String(req.body.status || '').trim().toLowerCase();
+
+    if (!['paused', 'beta'].includes(status)) {
+      fail(400, 'Hali inayoruhusiwa hapa ni paused au beta.');
+    }
+
+    const update = await one(
+      `UPDATE system_updates
+       SET status = $1, updated_at = NOW()
+       WHERE id = $2 AND status IN ('beta', 'paused')
+       RETURNING *`,
+      [status, req.params.id]
+    );
+
+    if (!update) {
+      fail(404, 'Update haijapatikana au haiwezi kubadilishwa katika hali yake ya sasa.');
+    }
+
+    res.json({
+      success: true,
+      message: status === 'paused'
+        ? 'Update imesitishwa.'
+        : 'Update imerudishwa kwenye beta testing.',
+      update
+    });
+  })
+);
+
+
 app.get('/api/sites/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
   const tenantId = req.params.tenant_id;
   ensureTenantAccess(req, tenantId);
