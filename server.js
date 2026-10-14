@@ -775,24 +775,45 @@ app.put('/api/super/tenant/:id/plan', authMiddleware, requireSuperAdmin, asyncRo
   res.json({ success: true, message: 'Mpango umebadilishwa.', tenant: publicTenant(tenant) });
 }));
 
-app.put('/api/super/tenant/:id/status', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
-  const status = String(req.body.status || '').toLowerCase();
 
-  if (!['active', 'suspended', 'inactive'].includes(status)) {
-    fail(400, 'Hali inayokubalika ni active, suspended au inactive.');
+app.patch('/api/super/tenant/:id/status', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
+  const tenantId = String(req.params.id || '').trim();
+  const status = String(req.body.status || '').trim().toLowerCase();
+
+  if (!tenantId) {
+    fail(400, 'ID ya Tenant inahitajika.');
+  }
+
+  if (tenantId === String(SUPER_ADMIN_ID)) {
+    fail(403, 'Huwezi kubadilisha hali ya akaunti ya Super Admin.');
+  }
+
+  if (!['active', 'suspended'].includes(status)) {
+    fail(400, 'Hali inaruhusiwa ni active au suspended.');
   }
 
   const tenant = await one(
-    `UPDATE tenants SET status = $1
-     WHERE id = $2 AND id <> $3
-     RETURNING *`,
-    [status, req.params.id, SUPER_ADMIN_ID]
+    `UPDATE tenants
+     SET status = $1
+     WHERE id = $2
+       AND id <> $3
+     RETURNING id, business_name, email, status`,
+    [status, tenantId, SUPER_ADMIN_ID]
   );
 
-  if (!tenant) fail(404, 'WISP haijapatikana.');
+  if (!tenant) {
+    fail(404, 'WISP haijapatikana.');
+  }
 
-  res.json({ success: true, tenant: publicTenant(tenant) });
+  res.json({
+    success: true,
+    message: status === 'suspended'
+      ? 'Akaunti ya Tenant imesimamishwa.'
+      : 'Akaunti ya Tenant imerejeshwa.',
+    tenant
+  });
 }));
+
 
 app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
   const tenantId = req.params.id;
