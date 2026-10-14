@@ -178,6 +178,7 @@
         });
 
         const data = await response.json().catch(() => ({}));
+        console.log('LOGIN RESPONSE:', data);
 
         if (!response.ok) {
           throw new Error(data.message || data.error ||
