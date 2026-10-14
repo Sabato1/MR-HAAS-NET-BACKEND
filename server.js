@@ -814,7 +814,79 @@ app.patch('/api/super/tenant/:id/status', authMiddleware, requireSuperAdmin, asy
   });
 }));
 
+// Soft-delete Tenant: hifadhi malipo na historia ya biashara.
+app.delete(
+  '/api/super/tenant/:id',
+  authMiddleware,
+  requireSuperAdmin,
+  asyncRoute(async (req, res) => {
+    const tenantId = String(req.params.id || '').trim();
 
+    if (!tenantId) {
+      fail(400, 'ID ya Tenant inahitajika.');
+    }
+
+    if (tenantId === String(SUPER_ADMIN_ID)) {
+      fail(403, 'Huwezi kufuta akaunti ya Super Admin.');
+    }
+
+    const tenant = await one(
+      `SELECT id, business_name, email, status
+       FROM tenants
+       WHERE id = $1`,
+      [tenantId]
+    );
+
+    if (!tenant) {
+      fail(404, 'WISP haijapatikana.');
+    }
+
+    if (tenant.status === 'deleted') {
+      fail(409, 'Akaunti hii tayari imefutwa.');
+    }
+
+    // Zima akaunti bila kufuta data za biashara.
+    const updated = await one(
+      `UPDATE tenants
+       SET status = 'deleted',
+           updated_at = NOW()
+       WHERE id = $1
+         AND id <> $2
+       RETURNING id, business_name, email, status`,
+      [tenantId, SUPER_ADMIN_ID]
+    );
+
+    if (!updated) {
+      fail(404, 'WISP haijapatikana.');
+    }
+
+    // Hifadhi kumbukumbu ya hatua ya Super Admin.
+    await query(
+      `INSERT INTO audit_logs
+        (tenant_id, actor_email, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+      [
+        tenantId,
+        req.email || null,
+        'tenant_soft_deleted',
+        'tenant',
+        tenantId,
+        JSON.stringify({
+          business_name: tenant.business_name,
+          email: tenant.email,
+          previous_status: tenant.status,
+          new_status: 'deleted'
+        })
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Akaunti imezimwa. Historia ya malipo na taarifa za biashara zimehifadhiwa.',
+      tenant: updated
+    });
+  })
+);
 app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
   const tenantId = req.params.id;
   const plan = getPlan(req.body.plan);
