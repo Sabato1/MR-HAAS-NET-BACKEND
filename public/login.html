@@ -215,12 +215,13 @@ if (!token || !tenantId) {
         showMessage('Umeingia kikamilifu. Tunaelekeza...', true);
 
         setTimeout(() => {
-          if (role === 'super_admin' || tenantId === 'tenant_super_admin') {
-            window.location.href = '/super-admin.html';
-          } else {
-            window.location.href = '/index.html';
-          }
-        }, 400);
+  if (role === 'super_admin' ||
+      tenant.role === 'super_admin') {
+    window.location.replace('/super-admin.html');
+  } else {
+    window.location.replace('/index.html');
+  }
+}, 400);
 
       } catch (error) {
         showMessage(error.message || 'Tatizo la mtandao. Jaribu tena.');
