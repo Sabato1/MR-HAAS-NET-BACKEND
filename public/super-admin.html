@@ -362,35 +362,37 @@ if (this.role !== 'super_admin') {
       this.modal=true;
     },
 
-    async saveTenant(){
-      this.saving=true;
-      try{
-        if(this.editing){
-          await this.api('/api/super/tenants/'+encodeURIComponent(this.editingId),{
-            method:'PUT',
-            body:JSON.stringify({name:this.form.name,plan:this.form.plan,status:this.form.status})
-          });
-          this.show('Taarifa za WISP zimesasishwa.');
-        }else{
-          await this.api('/api/super/tenants',{
-            method:'POST',
-            body:JSON.stringify({
-              name:this.form.name,
-              email:this.form.email,
-              password:this.form.password,
-              plan:this.form.plan
-            })
-          });
-          this.show('Ombi la kusajili WISP limewasilishwa.');
-        }
-        this.modal=false;
-        await this.refresh();
-      }catch(e){
-        this.show(e.message,true);
-      }finally{
-        this.saving=false;
+    
+async toggleStatus(t){
+  const next = t.status === 'suspended' ? 'active' : 'suspended';
+
+  const message = next === 'suspended'
+    ? 'Unataka kusimamisha akaunti hii?'
+    : 'Unataka kurejesha akaunti hii?';
+
+  if (!confirm(message)) return;
+
+  try {
+    await this.api(
+      '/api/super/tenant/' + encodeURIComponent(t.id) + '/status',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ status: next })
       }
-    },
+    );
+
+    this.show(
+      next === 'suspended'
+        ? 'Akaunti imesimamishwa.'
+        : 'Akaunti imerejeshwa.'
+    );
+
+    await this.refresh();
+  } catch (e) {
+    this.show(e.message, true);
+  }
+},
+
 
     async toggleStatus(t){
       const next=t.status==='suspended'?'active':'suspended';
