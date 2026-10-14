@@ -905,34 +905,6 @@ app.delete(
   })
 );
 
-
-    // Hifadhi kumbukumbu ya hatua ya Super Admin.
-    await query(
-      `INSERT INTO audit_logs
-        (tenant_id, actor_email, action, entity_type, entity_id, details)
-       VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
-      [
-        tenantId,
-        req.email || null,
-        'tenant_soft_deleted',
-        'tenant',
-        tenantId,
-        JSON.stringify({
-          business_name: tenant.business_name,
-          email: tenant.email,
-          previous_status: tenant.status,
-          new_status: 'deleted'
-        })
-      ]
-    );
-
-    res.json({
-      success: true,
-      message: 'Akaunti imezimwa. Historia ya malipo na taarifa za biashara zimehifadhiwa.',
-      tenant: updated
-    });
-  })
-);
 app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
   const tenantId = req.params.id;
   const plan = getPlan(req.body.plan);
