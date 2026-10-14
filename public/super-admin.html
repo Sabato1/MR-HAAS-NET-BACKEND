@@ -233,8 +233,99 @@
         </div>
       
       </section>
+      
+      <!-- SYSTEM UPDATES & BETA -->
+      <section x-show="page==='updates'" class="space-y-5">
+        <div>
+          <h2 class="text-xl font-extrabold">System Updates & Beta Testing</h2>
+          <p class="muted mt-1">Tengeneza matoleo mapya, chagua WISP za majaribio na fuatilia maoni kabla ya kutoa toleo rasmi.</p>
+        </div>
 
-      <!-- SYSTEM UPDATES & BETA: SEHEMU MPYA ITAWEKWA HAPA -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="card">
+            <p class="muted text-sm">Matoleo yote</p>
+            <h3 class="text-2xl font-extrabold mt-2" x-text="updates.length"></h3>
+          </div>
+          <div class="card">
+            <p class="muted text-sm">Matoleo ya Beta</p>
+            <h3 class="text-2xl font-extrabold mt-2" x-text="updates.filter(u=>u.status==='beta').length"></h3>
+          </div>
+          <div class="card">
+            <p class="muted text-sm">Matoleo rasmi</p>
+            <h3 class="text-2xl font-extrabold mt-2" x-text="updates.filter(u=>u.status==='released').length"></h3>
+          </div>
+        </div>
+
+        <div class="card space-y-4">
+          <h3 class="font-bold text-lg">Tengeneza toleo jipya</h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="muted text-sm">Namba ya toleo</label>
+              <input class="input w-full mt-1" x-model="updateForm.version" placeholder="Mfano: 1.0.1">
+            </div>
+            <div>
+              <label class="muted text-sm">Jina la toleo</label>
+              <input class="input w-full mt-1" x-model="updateForm.title" placeholder="Mfano: Router Management Update">
+            </div>
+          </div>
+
+          <div>
+            <label class="muted text-sm">Maelezo</label>
+            <textarea class="input w-full mt-1" rows="3" x-model="updateForm.description" placeholder="Eleza maboresho ya toleo hili"></textarea>
+          </div>
+
+          <div>
+            <label class="muted text-sm">Release notes</label>
+            <textarea class="input w-full mt-1" rows="4" x-model="updateForm.release_notes" placeholder="Andika vipengele vipya, marekebisho na mambo ya kujaribu"></textarea>
+          </div>
+
+          <button class="btn-primary" @click="createUpdate()" :disabled="updateSaving">
+            <span x-text="updateSaving ? 'Inahifadhi...' : 'Tengeneza Draft'"></span>
+          </button>
+        </div>
+
+        <div class="card space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h3 class="font-bold text-lg">Matoleo yaliyotengenezwa</h3>
+            <button class="btn-secondary" @click="loadUpdates()">Refresh</button>
+          </div>
+
+          <template x-if="!updates.length">
+            <p class="muted text-sm">Bado hakuna matoleo. Tengeneza toleo la kwanza hapo juu.</p>
+          </template>
+
+          <div class="space-y-3">
+            <template x-for="u in updates" :key="u.id">
+              <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                <div class="flex flex-wrap justify-between gap-3">
+                  <div>
+                    <h4 class="font-bold" x-text="u.title"></h4>
+                    <p class="muted text-sm mt-1" x-text="'Version ' + u.version"></p>
+                    <p class="muted text-sm mt-1" x-text="u.description || 'Hakuna maelezo'"></p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="rounded-full px-3 py-1 text-xs font-bold bg-gray-100 dark:bg-gray-800" x-text="u.status"></span>
+                    <button class="btn-secondary" @click="viewUpdate(u)">Angalia</button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div class="card space-y-4" x-show="selectedUpdateDetails">
+          <h3 class="font-bold text-lg">Maelezo ya Beta Testing</h3>
+          <p class="muted text-sm" x-text="selectedUpdateDetails?.title || ''"></p>
+          <p class="muted text-sm" x-text="selectedUpdateDetails?.description || ''"></p>
+
+          <div class="flex flex-wrap gap-2">
+            <button class="btn-secondary" @click="changeUpdateStatus('beta')">Rudisha Beta</button>
+            <button class="btn-secondary" @click="changeUpdateStatus('paused')">Simamisha</button>
+            <button class="btn-primary" @click="releaseUpdate()">Toa Toleo Rasmi</button>
+          </div>
+        </div>
+      </section>
 
     </main>
   </div>
