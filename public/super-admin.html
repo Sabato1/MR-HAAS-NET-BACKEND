@@ -1,602 +1,362 @@
-<!DOCTYPE html>  <html lang="sw">  
-<head>  
-  <meta charset="UTF-8">  
-  <meta name="viewport" content="width=device-width, initial-scale=1">  
-  <meta name="theme-color" content="#090909">  
-  <title>Super Admin | MR HAAS NET</title>  
-  <script src="https://cdn.tailwindcss.com"></script>  
-  <style>  
-    [x-cloak]{display:none!important}  
-    *{box-sizing:border-box}  
-    body{margin:0;background:#f4f5f7;font-family:Arial,sans-serif}  
-    .gold{color:#d8ad48}  
-    .gold-bg{background:linear-gradient(135deg,#f5d77e,#b88627)}  
-    .sidebar{background:#0a0a0a;color:#e5e7eb}  
-    .nav{display:flex;gap:12px;align-items:center;width:100%;padding:12px;border-radius:9px;text-align:left;color:#bbb;font-size:14px}  
-    .nav:hover,.nav.active{background:#292115;color:#f5d77e}  
-    .card{background:white;border:1px solid #e7e8eb;border-radius:14px;padding:18px}  
-    .field{width:100%;border:1px solid #d7d9df;border-radius:9px;padding:11px 12px;background:white;outline:none}  
-    .field:focus{border-color:#c69a35;box-shadow:0 0 0 2px #d8ad4822}  
-    .btn{padding:10px 14px;border-radius:9px;font-size:13px;font-weight:700}  
-    .btn-gold{background:linear-gradient(135deg,#f5d77e,#b88627);color:#17120a}  
-    .btn-dark{background:#171717;color:white}  
-    .btn-outline{border:1px solid #ddd;background:white}  
-    .metric{font-size:27px;font-weight:800}  
-    .muted{font-size:12px;color:#777}  
-    .badge{display:inline-block;border-radius:20px;padding:4px 9px;font-size:11px;font-weight:700}  
-    .green{background:#dcfce7;color:#166534}  
-    .red{background:#fee2e2;color:#991b1b}  
-    .amber{background:#fef3c7;color:#92400e}  
-    .table-wrap{overflow-x:auto}  
-    table{width:100%;border-collapse:collapse;min-width:780px}  
-    th,td{padding:12px;text-align:left;border-bottom:1px solid #eee;font-size:13px}  
-    th{background:#fafafa;color:#666}  
-    @media(max-width:767px){.metric{font-size:22px}}  
-  </style>  
-</head>  <body>  
-<div id="app" x-data="superApp()" x-cloak x-init="init()">  
-  <div x-show="sidebarOpen" @click="sidebarOpen=false" class="fixed inset-0 z-40 bg-black/60 md:hidden"></div>    <aside class="sidebar fixed inset-y-0 left-0 z-50 flex w-64 flex-col transition-transform md:translate-x-0"  
-         :class="sidebarOpen?'translate-x-0':'-translate-x-full'">  
-    <div class="flex items-center gap-3 border-b border-white/10 px-5 py-5">  
-      <div class="flex h-11 w-11 items-center justify-center rounded-xl border border-yellow-700/50 font-black gold">MH</div>  
-      <div><div class="font-extrabold text-white">MR HAAS <span class="gold">NET</span></div><div class="mt-1 text-[10px] tracking-widest text-gray-500">SUPER ADMIN</div></div>  
-    </div>  <div class="border-b border-white/10 p-4">  
-  <div class="text-xs text-gray-500">Mfumo mkuu</div>  
-  <div class="mt-1 font-bold text-white">Platform Control</div>  
-</div>  
 
-<nav class="flex-1 space-y-1 overflow-y-auto p-3">  
-  <button class="nav" :class="page==='dashboard'?'active':''" @click="go('dashboard')">▦ <span>Dashboard</span></button>  
-  <button class="nav" :class="page==='tenants'?'active':''" @click="go('tenants')">▣ <span>WISP / Tenants</span></button>  
- <button class="nav" :class="page==='updates'?'active':''" @click="go('updates')">
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090909">
+  <title>Super Admin | MR HAAS NET</title>
 
-↻ <span>System Updates & Beta</span>
-</button>
-<button class="nav" :class="page==='plans'?'active':''" @click="go('plans')">◇ <span>Mipango ya Bei</span></button>
-<button class="nav" :class="page==='payments'?'active':''" @click="go('payments')">TSh <span>Malipo ya Mfumo</span></button>
-<button class="nav" :class="page==='settings'?'active':''" @click="go('settings')">⚙ <span>Mipangilio</span></button>
-</nav>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
 
-<div class="border-t border-white/10 p-4">  
-  <div class="mb-3 truncate text-xs text-gray-400" x-text="email"></div>  
-  <button class="nav" @click="logout()">⇥ <span>Toka</span></button>  
+  <style>
+    [x-cloak]{display:none!important}
+    *{box-sizing:border-box}
+    body{margin:0;background:#f4f5f7;font-family:Arial,sans-serif}
+    .gold{color:#d8ad48}
+    .sidebar{background:#0a0a0a;color:#e5e7eb}
+    .nav{display:flex;gap:12px;align-items:center;width:100%;padding:12px;border-radius:9px;text-align:left;color:#bbb;font-size:14px;cursor:pointer}
+    .nav:hover,.nav.active{background:#292115;color:#f5d77e}
+    .card{background:white;border:1px solid #e7e8eb;border-radius:14px;padding:18px}
+    .field{width:100%;border:1px solid #d7d9df;border-radius:9px;padding:11px 12px;background:white;outline:none}
+    .field:focus{border-color:#c69a35;box-shadow:0 0 0 2px #d8ad4822}
+    .btn{padding:10px 14px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .btn-gold{background:linear-gradient(135deg,#f5d77e,#b88627);color:#17120a}
+    .btn-dark{background:#171717;color:white}
+    .btn-outline{border:1px solid #ddd;background:white;color:#222}
+    .metric{font-size:27px;font-weight:800}
+    .muted{font-size:12px;color:#777}
+    .badge{display:inline-block;border-radius:20px;padding:4px 9px;font-size:11px;font-weight:700}
+    .green{background:#dcfce7;color:#166534}
+    .red{background:#fee2e2;color:#991b1b}
+    .amber{background:#fef3c7;color:#92400e}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:700px}
+    th,td{padding:12px;text-align:left;border-bottom:1px solid #eee;font-size:13px}
+    th{background:#fafafa;color:#666}
+    [x-cloak]{display:none!important}
+    @media(max-width:767px){.metric{font-size:22px}}
+  </style>
+</head>
+
+<body>
+<div id="app" x-data="superApp()" x-cloak x-init="init()">
+
+  <!-- Overlay ya kufunga sidebar kwenye simu -->
+  <div x-show="sidebarOpen"
+       @click="sidebarOpen=false"
+       class="fixed inset-0 z-40 bg-black/60 md:hidden"></div>
+
+  <!-- SIDEBAR: imefungwa kwa simu, wazi kwa kompyuta -->
+  <aside
+    class="sidebar fixed inset-y-0 left-0 z-50 flex w-64 flex-col
+           transition-transform duration-200 -translate-x-full md:translate-x-0"
+    :class="sidebarOpen ? 'translate-x-0' : ''">
+
+    <div class="flex items-center gap-3 border-b border-white/10 px-5 py-5">
+      <div class="flex h-11 w-11 items-center justify-center rounded-xl border border-yellow-700/50 font-black gold">MH</div>
+      <div>
+        <div class="font-extrabold text-white">MR HAAS <span class="gold">NET</span></div>
+        <div class="mt-1 text-[10px] tracking-widest text-gray-500">SUPER ADMIN</div>
+      </div>
+    </div>
+
+    <div class="border-b border-white/10 p-4">
+      <div class="text-xs text-gray-500">Mfumo mkuu</div>
+      <div class="mt-1 font-bold text-white">Platform Control</div>
+    </div>
+
+    <nav class="flex-1 space-y-1 overflow-y-auto p-3">
+      <button type="button" class="nav"
+        :class="page==='dashboard'?'active':''"
+        @click="go('dashboard')">▦ <span>Overview / Dashboard</span></button>
+
+      <button type="button" class="nav"
+        :class="page==='tenants'?'active':''"
+        @click="go('tenants')">▣ <span>WISP / Tenants</span></button>
+
+      <button type="button" class="nav"
+        :class="page==='updates'?'active':''"
+        @click="go('updates')">↻ <span>System Updates & Beta</span></button>
+
+      <button type="button" class="nav"
+        :class="page==='plans'?'active':''"
+        @click="go('plans')">◇ <span>Mipango ya Bei</span></button>
+
+      <button type="button" class="nav"
+        :class="page==='payments'?'active':''"
+        @click="go('payments')">TSh <span>Malipo ya Mfumo</span></button>
+
+      <button type="button" class="nav"
+        :class="page==='settings'?'active':''"
+        @click="go('settings')">⚙ <span>Mipangilio</span></button>
+    </nav>
+
+    <div class="border-t border-white/10 p-4">
+      <div class="mb-3 truncate text-xs text-gray-400" x-text="email"></div>
+      <button type="button" class="nav" @click="logout()">⇥ <span>Toka</span></button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="min-h-screen md:ml-64">
+    <header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-4 md:px-7">
+      <div class="flex items-center gap-3">
+        <button type="button"
+          class="rounded-lg border px-3 py-2 md:hidden"
+          @click="sidebarOpen=!sidebarOpen">☰</button>
+        <div>
+          <h1 class="font-extrabold" x-text="title()"></h1>
+          <p class="hidden text-xs text-gray-500 sm:block">MR HAAS NET · SaaS Control Center</p>
+        </div>
+      </div>
+      <button type="button" class="btn btn-dark" @click="refresh()">↻ Refresh</button>
+    </header>
+
+    <main class="space-y-5 p-4 md:p-7">
+      <div x-show="notice" class="rounded-xl border p-3 text-sm"
+        :class="error?'border-red-200 bg-red-50 text-red-700':'border-green-200 bg-green-50 text-green-700'"
+        x-text="notice"></div>
+
+      <div x-show="loading" class="card text-sm text-gray-500">Inapakia taarifa...</div>
+
+      <!-- OVERVIEW -->
+      <section x-show="page==='dashboard'" class="space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-extrabold">Muhtasari wa Mfumo</h2>
+            <p class="muted mt-1">Dhibiti biashara zote za WISP.</p>
+          </div>
+          <button type="button" class="btn btn-gold" @click="openCreate()">+ Sajili WISP</button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div class="card"><div class="muted">Jumla ya WISP</div><div class="metric mt-3" x-text="tenants.length"></div></div>
+          <div class="card"><div class="muted">Akaunti Active</div><div class="metric mt-3" x-text="countStatus('active')"></div></div>
+          <div class="card"><div class="muted">Zilizosimamishwa</div><div class="metric mt-3" x-text="countSuspended()"></div></div>
+          <div class="card"><div class="muted">Trial zinazoendelea</div><div class="metric mt-3" x-text="countTrial()"></div></div>
+        </div>
+
+        <div class="card">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div><h3 class="font-bold">WISP zilizosajiliwa</h3><p class="muted mt-1">Biashara zinazosimamiwa na mfumo.</p></div>
+            <button type="button" class="btn btn-outline" @click="go('tenants')">Ona zote →</button>
+          </div>
+          <div class="table-wrap mt-4">
+            <table>
+              <thead><tr><th>Biashara</th><th>Email</th><th>Mpango</th><th>Status</th><th>Trial</th></tr></thead>
+              <tbody>
+                <template x-for="t in tenants.slice(0,8)" :key="t.id">
+                  <tr>
+                    <td class="font-bold" x-text="t.name || t.business_name || '-'"></td>
+                    <td x-text="t.email || '-'"></td>
+                    <td x-text="planLabel(t.plan || t.plan_name)"></td>
+                    <td><span class="badge" :class="statusClass(t.status)" x-text="t.status || 'active'"></span></td>
+                    <td x-text="trialLabel(t)"></td>
+                  </tr>
+                </template>
+                <tr x-show="tenants.length===0">
+                  <td colspan="5" class="text-center text-gray-500">Hakuna WISP zilizopatikana au API haijaunganishwa.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <template x-for="p in plans" :key="p.code">
+            <div class="card">
+              <div class="text-xs font-bold tracking-widest gold" x-text="p.name"></div>
+              <div class="metric mt-3" x-text="money(p.price)+' TSh'"></div>
+              <div class="muted mt-1">Kwa mwezi</div>
+              <div class="mt-4 text-sm text-gray-600" x-text="limits(p)"></div>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <!-- TENANTS -->
+      <section x-show="page==='tenants'" class="space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 class="text-xl font-extrabold">Usimamizi wa WISP</h2><p class="muted mt-1">Sajili, simamisha au washa akaunti.</p></div>
+          <button type="button" class="btn btn-gold" @click="openCreate()">+ Sajili WISP</button>
+        </div>
+
+        <div class="card">
+          <input class="field mb-4 max-w-md" placeholder="Tafuta jina, email au mpango..." x-model="search">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Biashara</th><th>Email</th><th>Mpango</th><th>Status</th><th>Trial inaisha</th><th>Vitendo</th></tr></thead>
+              <tbody>
+                <template x-for="t in filteredTenants()" :key="t.id">
+                  <tr>
+                    <td><div class="font-bold" x-text="t.name || t.business_name || '-'"></div><div class="muted" x-text="t.subdomain || t.id"></div></td>
+                    <td x-text="t.email || '-'"></td>
+                    <td x-text="planLabel(t.plan || t.plan_name)"></td>
+                    <td><span class="badge" :class="statusClass(t.status)" x-text="t.status || 'active'"></span></td>
+                    <td x-text="trialDate(t)"></td>
+                    <td>
+                      <div class="flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline" @click="editTenant(t)" :disabled="t.status==='deleted'">Badili</button>
+                        <button type="button" class="btn" :class="t.status==='suspended'?'btn-gold':'btn-dark'" @click="toggleStatus(t)" :disabled="t.status==='deleted'" x-text="t.status==='suspended'?'Washa':'Simamisha'"></button>
+                        <button type="button" class="btn" style="background:#fee2e2;color:#991b1b" @click="deleteTenant(t)" :disabled="t.status==='deleted'">Futa</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <tr x-show="filteredTenants().length===0"><td colspan="6" class="text-center text-gray-500">Hakuna WISP inayolingana na utafutaji.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PLANS -->
+      <section x-show="page==='plans'" class="space-y-5">
+        <div><h2 class="text-xl font-extrabold">Mipango ya Bei</h2><p class="muted mt-1">Mipango ya biashara za WISP.</p></div>
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <template x-for="p in plans" :key="p.code">
+            <div class="card">
+              <div class="text-xs font-extrabold tracking-widest gold" x-text="p.name"></div>
+              <div class="mt-3 text-2xl font-extrabold" x-text="money(p.price)+' TSh'"></div>
+              <div class="muted mt-1" x-text="p.code==='REVENUE_SHARE'?'Ada ya kuanza + 3% ya mapato':'Kwa mwezi'"></div>
+              <div class="my-4 h-px bg-gray-100"></div>
+              <p class="text-sm text-gray-600" x-text="limits(p)"></p>
+            </div>
+          </template>
+        </div>
+        <div class="card space-y-3 text-sm text-gray-600">
+          <h3 class="font-bold text-black">Masharti ya mipango</h3>
+          <p><b>START:</b> TSh 10,000/mwezi, vifaa 2, wateja 50.</p>
+          <p><b>DIAMOND:</b> TSh 15,000/mwezi, vifaa 7, wateja 500.</p>
+          <p><b>PREMIUM:</b> TSh 20,000/mwezi, vifaa bila kikomo, wateja 5,000.</p>
+          <p><b>REVENUE SHARE:</b> TSh 20,000 ya kujiunga + 3% ya mapato.</p>
+        </div>
+      </section>
+
+      <!-- PAYMENTS -->
+      <section x-show="page==='payments'" class="space-y-5">
+        <div><h2 class="text-xl font-extrabold">Malipo ya Mfumo</h2><p class="muted mt-1">Usimamizi wa subscription na malipo.</p></div>
+        <div class="card">
+          <h3 class="font-bold">Payment Gateway</h3>
+          <p class="muted mt-2">AzamPay — muunganisho uliopangwa.</p>
+          <p class="mt-4 text-sm text-gray-600">Miamala halisi itaonekana baada ya subscription API na payment webhook kuunganishwa. Hakuna malipo yanayothibitishwa na ukurasa huu pekee.</p>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section x-show="page==='settings'" class="space-y-5">
+        <div><h2 class="text-xl font-extrabold">Mipangilio ya Mfumo</h2></div>
+        <div class="card space-y-4">
+          <div><div class="muted">Jina la mfumo</div><div class="mt-1 font-bold">MR HAAS MULTI-TENANT WISP MANAGEMENT</div></div>
+          <div><div class="muted">Aina ya mfumo</div><div class="mt-1 font-bold">Multi-tenant WISP SaaS</div></div>
+          <div><div class="muted">Mifumo ya intaneti</div><div class="mt-1 font-bold">MikroTik Hotspot / PPPoE / RADIUS</div></div>
+          <div><div class="muted">Payment gateway</div><div class="mt-1 font-bold">AzamPay</div></div>
+          <p class="text-xs text-gray-500">Hifadhi siri na API keys kwenye environment variables za server.</p>
+        </div>
+      </section>
+
+      <!-- SYSTEM UPDATES -->
+      <section x-show="page==='updates'" class="space-y-5">
+        <div>
+          <h2 class="text-xl font-extrabold">System Updates & Beta Testing</h2>
+          <p class="muted mt-1">Tengeneza matoleo na fuatilia majaribio.</p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div class="card"><p class="muted">Matoleo yote</p><h3 class="metric mt-2" x-text="updates.length"></h3></div>
+          <div class="card"><p class="muted">Beta</p><h3 class="metric mt-2" x-text="updates.filter(u=>u.status==='beta').length"></h3></div>
+          <div class="card"><p class="muted">Matoleo rasmi</p><h3 class="metric mt-2" x-text="updates.filter(u=>u.status==='released').length"></h3></div>
+        </div>
+
+        <div class="card space-y-4">
+          <h3 class="text-lg font-bold">Tengeneza toleo jipya</h3>
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div><label class="muted">Namba ya toleo</label><input class="field mt-1" x-model="updateForm.version" placeholder="1.0.1"></div>
+            <div><label class="muted">Jina la toleo</label><input class="field mt-1" x-model="updateForm.title" placeholder="Router Management Update"></div>
+          </div>
+          <div><label class="muted">Maelezo</label><textarea class="field mt-1" rows="3" x-model="updateForm.description"></textarea></div>
+          <div><label class="muted">Release notes</label><textarea class="field mt-1" rows="4" x-model="updateForm.release_notes"></textarea></div>
+          <button type="button" class="btn btn-gold" @click="createUpdate()" :disabled="updateSaving" x-text="updateSaving?'Inahifadhi...':'Tengeneza Draft'"></button>
+        </div>
+
+        <div class="card space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="text-lg font-bold">Matoleo yaliyotengenezwa</h3>
+            <button type="button" class="btn btn-outline" @click="loadUpdates()">Refresh</button>
+          </div>
+          <template x-if="updates.length===0"><p class="muted">Hakuna matoleo yaliyopatikana.</p></template>
+          <template x-for="u in updates" :key="u.id">
+            <div class="rounded-xl border p-4">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h4 class="font-bold" x-text="u.title || 'Toleo lisilo na jina'"></h4>
+                  <p class="muted mt-1" x-text="'Version '+u.version"></p>
+                  <p class="mt-2 text-sm text-gray-600" x-text="u.description || 'Hakuna maelezo'"></p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <span class="badge amber" x-text="u.status || 'draft'"></span>
+                  <button type="button" class="btn btn-outline" @click="viewUpdate(u)">Angalia</button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="card space-y-4" x-show="selectedUpdateDetails">
+          <h3 class="text-lg font-bold">Usimamizi wa toleo</h3>
+          <p class="font-bold" x-text="selectedUpdateDetails?.title"></p>
+          <p class="muted" x-text="'Version '+(selectedUpdateDetails?.version || '')"></p>
+          <p class="text-sm text-gray-600" x-text="selectedUpdateDetails?.description || ''"></p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline" @click="changeUpdateStatus('beta')">Rudisha Beta</button>
+            <button type="button" class="btn btn-outline" @click="changeUpdateStatus('paused')">Simamisha</button>
+            <button type="button" class="btn btn-gold" @click="releaseUpdate()">Toa Toleo Rasmi</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- CREATE / EDIT TENANT MODAL -->
+  <div x-show="modal" x-transition class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/60 p-4">
+    <div @click.outside="modal=false" class="my-6 w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-lg font-extrabold" x-text="editing?'Badili Taarifa za WISP':'Sajili WISP Mpya'"></h2>
+        <button type="button" class="text-2xl text-gray-500" @click="modal=false">×</button>
+      </div>
+      <form class="mt-5 space-y-4" @submit.prevent="saveTenant()">
+        <div><label class="mb-1 block text-sm font-bold">Jina la biashara *</label><input class="field" x-model="form.name" required></div>
+        <div><label class="mb-1 block text-sm font-bold">Barua pepe *</label><input class="field" type="email" x-model="form.email" required :disabled="editing"></div>
+        <div x-show="!editing"><label class="mb-1 block text-sm font-bold">Nenosiri la awali *</label><input class="field" type="password" x-model="form.password" minlength="8" :required="!editing" autocomplete="new-password"></div>
+        <div>
+          <label class="mb-1 block text-sm font-bold">Mpango</label>
+          <select class="field" x-model="form.plan">
+            <option value="START">START — TSh 10,000/mwezi</option>
+            <option value="DIAMOND">DIAMOND — TSh 15,000/mwezi</option>
+            <option value="PREMIUM">PREMIUM — TSh 20,000/mwezi</option>
+            <option value="REVENUE_SHARE">REVENUE SHARE — TSh 20,000 + 3%</option>
+          </select>
+        </div>
+        <div x-show="editing">
+          <label class="mb-1 block text-sm font-bold">Hali ya akaunti</label>
+          <select class="field" x-model="form.status">
+            <option value="active">Active</option><option value="suspended">Suspended</option><option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="rounded-lg bg-amber-50 p-3 text-xs text-amber-900" x-show="!editing">Trial ya siku 4 lazima isimamiwe na backend.</div>
+        <div class="flex flex-wrap gap-2 pt-2">
+          <button type="submit" class="btn btn-gold" :disabled="saving" x-text="saving?'Inahifadhi...':(editing?'Hifadhi Mabadiliko':'Sajili WISP')"></button>
+          <button type="button" class="btn btn-outline" @click="modal=false">Ghairi</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
-  </aside>    <div class="min-h-screen md:ml-64">  
-    <header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-4 md:px-7">  
-      <div class="flex items-center gap-3">  
-        <button class="rounded-lg border px-3 py-2 md:hidden" @click="sidebarOpen=!sidebarOpen">☰</button>  
-        <div><h1 class="font-extrabold" x-text="title()"></h1><p class="hidden text-xs text-gray-500 sm:block">MR HAAS NET · SaaS Control Center</p></div>  
-      </div>  
-      <button class="btn btn-dark" @click="refresh()">↻ <span class="hidden sm:inline">Refresh</span></button>  
-    </header>  <main class="space-y-5 p-4 md:p-7">  
-  <div x-show="notice" class="rounded-xl border p-3 text-sm"  
-       :class="error?'border-red-200 bg-red-50 text-red-700':'border-green-200 bg-green-50 text-green-700'"  
-       x-text="notice"></div>  
-
-  <div x-show="loading" class="card text-sm text-gray-500">Inapakia taarifa za mfumo...</div>  
-
-  <!-- DASHBOARD -->  
-  <section x-show="page==='dashboard'" class="space-y-5">  
-    <div class="flex flex-wrap items-center justify-between gap-3">  
-      <div><h2 class="text-xl font-extrabold">Muhtasari wa Mfumo</h2><p class="muted mt-1">Dhibiti watoa huduma wote wa WISP.</p></div>  
-      <button class="btn btn-gold" @click="openCreate()">+ Sajili WISP</button>  
-    </div>  
-
-    <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">  
-      <div class="card"><div class="muted">Jumla ya WISP</div><div class="metric mt-3" x-text="tenants.length"></div></div>  
-      <div class="card"><div class="muted">Akaunti Active</div><div class="metric mt-3" x-text="countStatus('active')"></div></div>  
-      <div class="card"><div class="muted">Zilizosimamishwa</div><div class="metric mt-3" x-text="countSuspended()"></div></div>  
-      <div class="card"><div class="muted">Trial zinazoendelea</div><div class="metric mt-3" x-text="countTrial()"></div></div>  
-    </div>  
-
-    <div class="card">  
-      <div class="flex flex-wrap items-center justify-between gap-3">  
-        <div><h3 class="font-bold">WISP zilizosajiliwa</h3><p class="muted mt-1">Orodha ya biashara zinazosimamiwa na mfumo.</p></div>  
-        <button class="btn btn-outline" @click="go('tenants')">Ona zote →</button>  
-      </div>  
-      <div class="table-wrap mt-4"><table>  
-        <thead><tr><th>Biashara</th><th>Email</th><th>Mpango</th><th>Status</th><th>Trial</th></tr></thead>  
-        <tbody>  
-          <template x-for="t in tenants.slice(0,8)" :key="t.id">  
-            <tr>  
-              <td class="font-bold" x-text="t.name || t.business_name || '-'"></td>  
-              <td x-text="t.email || '-'"></td>  
-              <td><span class="badge amber" x-text="planLabel(t.plan || t.plan_name)"></span></td>  
-              <td><span class="badge" :class="statusClass(t.status)" x-text="t.status || 'active'"></span></td>  
-              <td x-text="trialLabel(t)"></td>  
-            </tr>  
-          </template>  
-          <tr x-show="tenants.length===0"><td colspan="5" class="text-center text-gray-500">Hakuna tenants zilizoonekana. Hakikisha API ya Super Admin imeunganishwa.</td></tr>  
-        </tbody>  
-      </table></div>  
-    </div>  
-
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">  
-      <template x-for="p in plans" :key="p.code">  
-        <div class="card"><div class="text-xs font-bold tracking-widest gold" x-text="p.name"></div><div class="metric mt-3" x-text="money(p.price)+' TSh'"></div><div class="muted mt-1">Kwa mwezi</div><div class="mt-4 text-sm text-gray-600" x-text="limits(p)"></div></div>  
-      </template>  
-    </div>  
-  </section>  
-
-  <!-- TENANTS -->  
-  <section x-show="page==='tenants'" class="space-y-5">  
-    <div class="flex flex-wrap items-center justify-between gap-3">  
-      <div><h2 class="text-xl font-extrabold">Usimamizi wa WISP</h2><p class="muted mt-1">Sajili, sasisha mpango au simamisha akaunti.</p></div>  
-      <button class="btn btn-gold" @click="openCreate()">+ Sajili WISP</button>  
-    </div>  
-
-    <div class="card">  
-      <input class="field mb-4 max-w-md" placeholder="Tafuta jina, email au mpango..." x-model="search">  
-      <div class="table-wrap"><table>  
-        <thead><tr><th>Biashara</th><th>Email</th><th>Mpango</th><th>Status</th><th>Trial inaisha</th><th>Vitendo</th></tr></thead>  
-        <tbody>  
-          <template x-for="t in filteredTenants()" :key="t.id">  
-            <tr>  
-              <td><div class="font-bold" x-text="t.name || t.business_name || '-'"></div><div class="muted" x-text="t.subdomain || t.id"></div></td>  
-              <td x-text="t.email || '-'"></td>  
-              <td x-text="planLabel(t.plan || t.plan_name)"></td>  
-              <td><span class="badge" :class="statusClass(t.status)" x-text="t.status || 'active'"></span></td>  
-              <td x-text="trialDate(t)"></td>  
-              <td>
-
-  <div class="flex flex-wrap gap-2">  
-    <button  
-      class="btn btn-outline"  
-      @click="editTenant(t)"  
-      :disabled="t.status==='deleted'">  
-      Badili  
-    </button>  <button  
-  class="btn"  
-  :class="t.status==='suspended'?'btn-gold':'btn-dark'"  
-  @click="toggleStatus(t)"  
-  :disabled="t.status==='deleted'"  
-  x-text="t.status==='suspended'?'Washa':'Simamisha'">  
-</button>  
-
-<button  
-  class="btn"  
-  style="background:#fee2e2;color:#991b1b"  
-  @click="deleteTenant(t)"  
-  :disabled="t.status==='deleted'"  
-  x-text="t.status==='deleted'?'Imefutwa':'Futa'">  
-</button>
-
-  </div>  
-</td>  
-                </tr>  
-              </template>  
-              <tr x-show="filteredTenants().length===0"><td colspan="6" class="text-center text-gray-500">Hakuna WISP inayolingana na utafutaji.</td></tr>  
-            </tbody>  
-          </table></div>  
-        </div>  
-      </section>  <!-- PLANS -->  
-  <section x-show="page==='plans'" class="space-y-5">  
-    <div><h2 class="text-xl font-extrabold">Mipango ya Bei</h2><p class="muted mt-1">Mipango iliyokubaliwa kwa biashara za WISP.</p></div>  
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">  
-      <template x-for="p in plans" :key="p.code">  
-        <div class="card flex flex-col">  
-          <div class="text-xs font-extrabold tracking-widest gold" x-text="p.name"></div>  
-          <div class="mt-3 text-2xl font-extrabold" x-text="money(p.price)+' TSh'"></div>  
-          <div class="muted mt-1" x-text="p.code==='REVENUE_SHARE'?'Ada ya kuanza + 3% ya mapato kwa mwezi':'Kwa mwezi'"></div>  
-          <div class="my-4 h-px bg-gray-100"></div>  
-          <div class="space-y-2 text-sm text-gray-600">  
-            <p x-text="limits(p)"></p>  
-            <p x-show="p.code==='REVENUE_SHARE'">Ada ya usajili: TSh 20,000</p>  
-            <p x-show="p.code==='REVENUE_SHARE'">Revenue share: 3%</p>  
-          </div>  
-        </div>  
-      </template>  
-    </div>  
-    <div class="card">  
-      <h3 class="font-bold">Masharti ya mipango</h3>  
-      <div class="mt-3 space-y-3 text-sm text-gray-600">  
-        <p><b>START:</b> TSh 10,000 kwa mwezi, vifaa 2, wateja 50.</p>  
-        <p><b>DIAMOND:</b> TSh 15,000 kwa mwezi, vifaa 7, wateja 500.</p>  
-        <p><b>PREMIUM:</b> TSh 20,000 kwa mwezi, vifaa bila kikomo, wateja 5,000.</p>  
-        <p><b>REVENUE SHARE:</b> TSh 20,000 ya kujiunga pamoja na 3% ya mapato ya kila mwezi, vifaa na wateja bila kikomo.</p>  
-        <p>Kila WISP mpya hupata trial ya siku 4 kuanzia baada ya usajili kufanikiwa. Utekelezaji wa masharti haya lazima uthibitishwe kwenye backend.</p>  
-      </div>  
-    </div>  
-  </section>  
-
-  <!-- PAYMENTS -->  
-  <section x-show="page==='payments'" class="space-y-5">  
-    <div><h2 class="text-xl font-extrabold">Malipo ya Mfumo</h2><p class="muted mt-1">Taarifa za mapato ya subscription na malipo ya WISP.</p></div>  
-    <div class="card">  
-      <div class="flex items-center gap-3"><div class="text-2xl gold">TSh</div><div><div class="font-bold">Payment Gateway</div><div class="muted">AzamPay ndiyo gateway iliyopangwa kwa muunganisho wa baadaye.</div></div></div>  
-      <p class="mt-4 text-sm text-gray-600">Miamala ya kweli itaonekana hapa baada ya backend ya subscription na webhook ya malipo kuunganishwa. Usichukulie taarifa za mfano kama malipo yaliyothibitishwa.</p>  
-    </div>  
-  </section>  
-
-  <!-- SETTINGS -->  
-  <section x-show="page==='settings'" class="space-y-5">  
-    <div><h2 class="text-xl font-extrabold">Mipangilio ya Mfumo</h2><p class="muted mt-1">Taarifa za msingi za platform.</p></div>  
-    <div class="card space-y-3">  
-      <div><div class="muted">Jina la mfumo</div><div class="mt-1 font-bold">MR HAAS MULTI-TENANT WISP MANAGEMENT</div></div>  
-      <div><div class="muted">Aina ya mfumo</div><div class="mt-1 font-bold">Multi-tenant WISP SaaS</div></div>  
-      <div><div class="muted">Mifumo ya intaneti</div><div class="mt-1 font-bold">MikroTik Hotspot / PPPoE / RADIUS</div></div>  
-      <div><div class="muted">Payment gateway iliyopangwa</div><div class="mt-1 font-bold">AzamPay</div></div>  
-      <p class="text-xs text-gray-500">Siri za Super Admin na API keys zihifadhiwe kwenye environment variables za server, si kwenye HTML.</p>  
-    </div>  
-    
-  </section>  
-    
-    
-  <!-- SYSTEM UPDATES & BETA -->  
-  <section x-show="page==='updates'" class="space-y-5">  
-    <div>  
-      <h2 class="text-xl font-extrabold">System Updates & Beta Testing</h2>  
-      <p class="muted mt-1">Tengeneza matoleo mapya, chagua WISP za majaribio na fuatilia maoni kabla ya kutoa toleo rasmi.</p>  
-    </div>  
-
-    <!-- MUHTASARI -->  
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">  
-      <div class="card">  
-        <p class="muted">Matoleo yote</p>  
-        <h3 class="metric mt-2" x-text="updates.length"></h3>  
-      </div>  
-      <div class="card">  
-        <p class="muted">Matoleo ya Beta</p>  
-        <h3 class="metric mt-2" x-text="updates.filter(u => u.status === 'beta').length"></h3>  
-      </div>  
-      <div class="card">  
-        <p class="muted">Matoleo rasmi</p>  
-        <h3 class="metric mt-2" x-text="updates.filter(u => u.status === 'released').length"></h3>  
-      </div>  
-    </div>  
-
-    <!-- TENGENEZA TOLEO -->  
-    <div class="card space-y-4">  
-      <h3 class="text-lg font-bold">Tengeneza toleo jipya</h3>  
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">  
-        <div>  
-          <label class="muted">Namba ya toleo</label>  
-          <input  
-            class="field mt-1"  
-            type="text"  
-            x-model="updateForm.version"  
-            placeholder="Mfano: 1.0.1">  
-        </div>  
-
-        <div>  
-          <label class="muted">Jina la toleo</label>  
-          <input  
-            class="field mt-1"  
-            type="text"  
-            x-model="updateForm.title"  
-            placeholder="Mfano: Router Management Update">  
-        </div>  
-      </div>  
-
-      <div>  
-        <label class="muted">Maelezo</label>  
-        <textarea  
-          class="field mt-1"  
-          rows="3"  
-          x-model="updateForm.description"  
-          placeholder="Eleza maboresho ya toleo hili"></textarea>  
-      </div>  
-
-      <div>  
-        <label class="muted">Release notes</label>  
-        <textarea  
-          class="field mt-1"  
-          rows="4"  
-          x-model="updateForm.release_notes"  
-          placeholder="Andika vipengele vipya, marekebisho na mambo ya kujaribu"></textarea>  
-      </div>  
-
-      <button  
-        type="button"  
-        class="btn btn-gold"  
-        @click="createUpdate()"  
-        :disabled="updateSaving">  
-        <span x-text="updateSaving ? 'Inahifadhi...' : 'Tengeneza Draft'"></span>  
-      </button>  
-    </div>  
-
-    <!-- ORODHA YA MAToleo -->  
-    <div class="card space-y-4">  
-      <div class="flex flex-wrap items-center justify-between gap-3">  
-        <h3 class="text-lg font-bold">Matoleo yaliyotengenezwa</h3>  
-        <button  
-          type="button"  
-          class="btn btn-outline"  
-          @click="loadUpdates()">  
-          Refresh  
-        </button>  
-      </div>  
-
-      <template x-if="updates.length === 0">  
-        <p class="muted">Bado hakuna matoleo. Tengeneza toleo la kwanza hapo juu.</p>  
-      </template>  
-
-      <div class="space-y-3">  
-        <template x-for="u in updates" :key="u.id">  
-          <div class="rounded-xl border border-gray-200 p-4">  
-            <div class="flex flex-wrap items-start justify-between gap-3">  
-              <div class="min-w-0">  
-                <h4 class="font-bold" x-text="u.title || 'Toleo lisilo na jina'"></h4>  
-                <p class="muted mt-1" x-text="'Version ' + u.version"></p>  
-                <p class="mt-2 text-sm text-gray-600" x-text="u.description || 'Hakuna maelezo'"></p>  
-              </div>  
-
-              <div class="flex flex-wrap items-center gap-2">  
-                <span  
-                  class="badge amber"  
-                  x-text="u.status || 'draft'"></span>  
-                <button  
-                  type="button"  
-                  class="btn btn-outline"  
-                  @click="viewUpdate(u)">  
-                  Angalia  
-                </button>  
-              </div>  
-            </div>  
-          </div>  
-        </template>  
-      </div>  
-    </div>  
-
-    <!-- USIMAMIZI WA BETA -->  
-    <div class="card space-y-4" x-show="selectedUpdateDetails">  
-      <h3 class="text-lg font-bold">Maelezo ya Beta Testing</h3>  
-
-      <div>  
-        <p class="font-bold" x-text="selectedUpdateDetails ? selectedUpdateDetails.title : ''"></p>  
-        <p class="muted mt-1" x-text="selectedUpdateDetails ? ('Version ' + selectedUpdateDetails.version) : ''"></p>  
-        <p class="mt-2 text-sm text-gray-600" x-text="selectedUpdateDetails ? (selectedUpdateDetails.description || 'Hakuna maelezo') : ''"></p>  
-      </div>  
-
-      <div class="flex flex-wrap gap-2">  
-        <button  
-          type="button"  
-          class="btn btn-outline"  
-          @click="changeUpdateStatus('beta')">  
-          Rudisha Beta  
-        </button>  
-
-        <button  
-          type="button"  
-          class="btn btn-outline"  
-          @click="changeUpdateStatus('paused')">  
-          Simamisha  
-        </button>  
-
-        <button  
-          type="button"  
-          class="btn btn-gold"  
-          @click="releaseUpdate()">  
-          Toa Toleo Rasmi  
-        </button>  
-      </div>  
-
-      <p class="muted">  
-        Toa toleo rasmi baada ya kukagua matokeo na idhini za majaribio.  
-      </p>  
-    </div>  
-  </section>
-
-  <!-- CREATE / EDIT TENANT MODAL -->    <div x-show="modal" x-transition class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/60 p-4">  
-    <div @click.outside="modal=false" class="my-6 w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">  
-      <div class="flex items-center justify-between gap-3">  
-        <h2 class="text-lg font-extrabold" x-text="editing?'Badili Taarifa za WISP':'Sajili WISP Mpya'"></h2>  
-        <button class="text-2xl text-gray-500" @click="modal=false">×</button>  
-      </div>  
-      <form class="mt-5 space-y-4" @submit.prevent="saveTenant()">  
-        <div><label class="mb-1 block text-sm font-bold">Jina la biashara *</label><input class="field" x-model="form.name" required></div>  
-        <div><label class="mb-1 block text-sm font-bold">Barua pepe *</label><input class="field" type="email" x-model="form.email" required :disabled="editing"></div>  
-        <div x-show="!editing"><label class="mb-1 block text-sm font-bold">Nenosiri la awali *</label><input class="field" type="password" x-model="form.password" minlength="8" :required="!editing" autocomplete="new-password"><p class="muted mt-1">Tumia nenosiri lenye angalau herufi 8.</p></div>  
-        <div><label class="mb-1 block text-sm font-bold">Mpango</label>  
-          <select class="field" x-model="form.plan">  
-            <option value="START">START — TSh 10,000/mwezi</option>  
-            <option value="DIAMOND">DIAMOND — TSh 15,000/mwezi</option>  
-            <option value="PREMIUM">PREMIUM — TSh 20,000/mwezi</option>  
-            <option value="REVENUE_SHARE">REVENUE SHARE — TSh 20,000 + 3%</option>  
-          </select>  
-        </div>  
-        <div x-show="editing"><label class="mb-1 block text-sm font-bold">Hali ya akaunti</label><select class="field" x-model="form.status"><option value="active">Active</option><option value="suspended">Suspended</option><option value="inactive">Inactive</option></select></div>  
-        <div class="rounded-lg bg-amber-50 p-3 text-xs text-amber-900" x-show="!editing">Trial ya siku 4 inapaswa kuanzishwa na backend baada ya usajili kufanikiwa.</div>  
-        <div class="flex flex-wrap gap-2 pt-2"><button class="btn btn-gold" :disabled="saving" x-text="saving?'Inahifadhi...':(editing?'Hifadhi Mabadiliko':'Sajili WISP')"></button><button type="button" class="btn btn-outline" @click="modal=false">Ghairi</button></div>  
-      </form>  
-    </div>  
-  </div>  
-</div>  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>  <script>  
-function superApp(){  
-  return {  
-    token:localStorage.getItem('mrhaas_token')||'',  
-    tenantId:localStorage.getItem('mrhaas_tenant_id')||'',  
-    role:localStorage.getItem('mrhaas_role')||'',  
-    email:'',  
-    page:'dashboard',  
-    sidebarOpen:false,  
-    loading:false,  
-    saving:false,  
-    notice:'',  
-    error:false,  
-    search:'',  
-    tenants:[],  
-    plans:[  
-      {code:'START',name:'START',price:10000,device_limit:2,client_limit:50},  
-      {code:'DIAMOND',name:'DIAMOND',price:15000,device_limit:7,client_limit:500},  
-      {code:'PREMIUM',name:'PREMIUM',price:20000,device_limit:-1,client_limit:5000},  
-      {code:'REVENUE_SHARE',name:'REVENUE SHARE',price:20000,device_limit:-1,client_limit:-1,signup_fee:20000,revenue_share_percent:3}  
-    ],  
-    modal:false,  
-    editing:false,  
-    editingId:null,  
-    form:{name:'',email:'',password:'',plan:'START',status:'active'},  
-  
-      
-async init(){  
-  const savedToken = localStorage.getItem('mrhaas_token') || '';  
-  const savedTenantId = localStorage.getItem('mrhaas_tenant_id') || '';  
-  const savedRole = localStorage.getItem('mrhaas_role') || '';  
-  
-  this.token = savedToken;  
-  this.tenantId = savedTenantId;  
-  this.role = savedRole;  
-  
-  
-if (this.role !== 'super_admin') {  
-  alert('Akaunti hii haina ruhusa ya Super Admin.');  
-  window.location.replace('/login.html');  
-  return;  
-}  
-  
-  
-  if(this.role !== 'super_admin' &&  
-     this.tenantId !== 'tenant_super_admin'){  
-    alert('Akaunti hii haina ruhusa ya Super Admin.');  
-    return;  
-  }  
-  
-  try {  
-    const tenant = JSON.parse(  
-      localStorage.getItem('mrhaas_tenant') || '{}'  
-    );  
-    this.email = tenant.email || 'Super Admin';  
-  } catch(e) {  
-    this.email = 'Super Admin';  
-  }  
-  
-  await this.refresh();  
-},  
-  
-  
-    headers(){  
-      return {  
-        'Authorization':'Bearer '+this.token,  
-        'Content-Type':'application/json',  
-        'X-Tenant-ID':this.tenantId  
-      };  
-    },  
-  
-    async api(path,options={}){  
-      const response=await fetch(path,{...options,headers:{...this.headers(),...(options.headers||{})}});  
-      const data=await response.json().catch(()=>({}));  
-      if(response.status===401 || response.status===403){  
-        throw new Error(data.message||data.error||'Huna ruhusa ya kufanya kitendo hiki. Hakiki Super Admin login na backend.');  
-      }  
-      if(!response.ok) throw new Error(data.message||data.error||'Ombi limeshindwa: '+response.status);  
-      return data;  
-    },  
-  
-    async refresh(){  
-      this.loading=true;  
-      try{  
-        const [tenantResult]=await Promise.all([  
-          this.api('/api/super/tenants')  
-        ]);  
-        this.tenants=tenantResult.tenants||tenantResult.items||tenantResult.data||[];  
-        if(!Array.isArray(this.tenants)) this.tenants=[];  
-        this.notice='';  
-      }catch(e){  
-        this.show(e.message,true);  
-      }finally{  
-        this.loading=false;  
-      }  
-    },  
-  
-    async loadPlans(){  
-      try{  
-        const result=await this.api('/api/plans');  
-        if(Array.isArray(result.plans)) this.plans=result.plans;  
-      }catch(e){}  
-    },  
-  
-    openCreate(){  
-      this.editing=false;  
-      this.editingId=null;  
-      this.form={name:'',email:'',password:'',plan:'START',status:'active'};  
-      this.modal=true;  
-    },  
-  
-    editTenant(t){  
-      this.editing=true;  
-      this.editingId=t.id;  
-      this.form={  
-        name:t.name||t.business_name||'',  
-        email:t.email||'',  
-        password:'',  
-        plan:String(t.plan||t.plan_name||'START').toUpperCase(),  
-        status:t.status||'active'  
-      };  
-      this.modal=true;  
-    },  
-  
-      
-  
-  
-  
-    async toggleStatus(t) {  
-  if (t.status === 'deleted') {  
-    this.show('Akaunti hii imefutwa na haiwezi kuwashwa hapa.', true);  
-    return;  
-  }  
-  
-  const next = t.status === 'suspended' ? 'active' : 'suspended';  
-  
-  const message = next === 'suspended'  
-    ? 'Unataka kusimamisha akaunti hii?'  
-    : 'Unataka kuwasha tena akaunti hii?';  
-  
-  if (!confirm(message)) return;  
-  
-  try {  
-    await this.api(  
-      '/api/super/tenant/' + encodeURIComponent(t.id) + '/status',  
-      {  
-        method: 'PATCH',  
-        body: JSON.stringify({ status: next })  
-      }  
-    );  
-  
-    this.show(  
-      next === 'suspended'  
-        ? 'Akaunti imesimamishwa.'  
-        : 'Akaunti imewashwa.'  
-    );  
-  
-    await this.refresh();  
-  } catch (e) {  
-    this.show(e.message, true);  
-  }  
-},  
-async deleteTenant(t) {  
-  if (!t || !t.id) {  
-    this.show('Taarifa za Tenant hazijapatikana.', true);  
-    return;  
-  }  
-  
-  if (t.status === 'deleted') {  
-    this.show('Akaunti hii tayari imefutwa.', true);  
-    return;  
-  }  
-  
-  const confirmName = prompt(  
-    'Ili kufuta akaunti hii, andika jina la WISP kama lilivyo:\n' +  
-    t.business_name  
-  );  
-  
-  if (confirmName === null) return;  
-  
-  if (confirmName.trim() !== t.business_name) {  
-    this.show('Jina halilingani. Hakuna kilichobadilishwa.', true);  
-    return;  
-  }  
-  
-  const finalConfirm = confirm(  
-    'Una uhakika unataka kufuta akaunti ya ' +  
-    t.business_name +  
-    '?\n\nAkaunti itazimwa. Historia ya malipo itahifadhiwa.'  
-  );  
-  
-  if (!finalConfirm) return;  
-  
-
+<script>
 function superApp() {
   return {
     token: localStorage.getItem('mrhaas_token') || '',
@@ -607,57 +367,47 @@ function superApp() {
     sidebarOpen: false,
     loading: false,
     saving: false,
+    updateSaving: false,
     notice: '',
     error: false,
     search: '',
     tenants: [],
+    updates: [],
+    selectedUpdateDetails: null,
+
     plans: [
       {code:'START',name:'START',price:10000,device_limit:2,client_limit:50},
       {code:'DIAMOND',name:'DIAMOND',price:15000,device_limit:7,client_limit:500},
       {code:'PREMIUM',name:'PREMIUM',price:20000,device_limit:-1,client_limit:5000},
-      {code:'REVENUE_SHARE',name:'REVENUE SHARE',price:20000,device_limit:-1,client_limit:-1,signup_fee:20000,revenue_share_percent:3}
+      {code:'REVENUE_SHARE',name:'REVENUE SHARE',price:20000,device_limit:-1,client_limit:-1}
     ],
+
     modal: false,
     editing: false,
     editingId: null,
     form: {name:'',email:'',password:'',plan:'START',status:'active'},
-
-    // SYSTEM UPDATES
-    updates: [],
-    updateSaving: false,
-    updateForm: {
-      version: '',
-      title: '',
-      description: '',
-      release_notes: ''
-    },
-    selectedUpdateDetails: null,
+    updateForm: {version:'',title:'',description:'',release_notes:''},
 
     async init() {
       this.token = localStorage.getItem('mrhaas_token') || '';
       this.tenantId = localStorage.getItem('mrhaas_tenant_id') || '';
       this.role = localStorage.getItem('mrhaas_role') || '';
 
-      if (
-        this.role !== 'super_admin' &&
-        this.tenantId !== 'tenant_super_admin'
-      ) {
-        alert('Akaunti hii haina ruhusa ya Super Admin.');
-        window.location.replace('/login.html');
+      if (!this.token || this.role !== 'super_admin') {
+        this.show('Ingia kwa akaunti yenye ruhusa ya Super Admin.', true);
         return;
       }
 
       try {
-        const tenant = JSON.parse(
-          localStorage.getItem('mrhaas_tenant') || '{}'
-        );
-        this.email = tenant.email || 'Super Admin';
-      } catch (e) {
+        const saved = JSON.parse(localStorage.getItem('mrhaas_tenant') || '{}');
+        this.email = saved.email || 'Super Admin';
+      } catch(e) {
         this.email = 'Super Admin';
       }
 
+      // Hakikisha sidebar inafuata ukubwa wa kifaa
+      this.sidebarOpen = false;
       await this.refresh();
-      await this.loadPlans();
     },
 
     headers() {
@@ -668,47 +418,28 @@ function superApp() {
       };
     },
 
-    async api(path, options = {}) {
-      const response = await fetch(path, {
+    async api(url, options = {}) {
+      const response = await fetch(url, {
         ...options,
-        headers: {
-          ...this.headers(),
-          ...(options.headers || {})
-        }
+        headers: {...this.headers(), ...(options.headers || {})}
       });
-
       const data = await response.json().catch(() => ({}));
 
-      if (response.status === 401 || response.status === 403) {
-        throw new Error(
-          data.message || data.error ||
-          'Huna ruhusa. Ingia tena kwa akaunti ya Super Admin.'
-        );
-      }
-
       if (!response.ok) {
-        throw new Error(
-          data.message || data.error ||
-          'Ombi limeshindwa: ' + response.status
-        );
+        throw new Error(data.message || data.error || 'Ombi limeshindwa: HTTP ' + response.status);
       }
-
       return data;
     },
 
     async refresh() {
       this.loading = true;
-
       try {
         const result = await this.api('/api/super/tenants');
         this.tenants = result.tenants || result.items || result.data || [];
-
-        if (!Array.isArray(this.tenants)) {
-          this.tenants = [];
-        }
-
+        if (!Array.isArray(this.tenants)) this.tenants = [];
         this.notice = '';
-      } catch (e) {
+        this.error = false;
+      } catch(e) {
         this.show(e.message, true);
       } finally {
         this.loading = false;
@@ -718,143 +449,16 @@ function superApp() {
     async loadPlans() {
       try {
         const result = await this.api('/api/plans');
-        if (Array.isArray(result.plans)) {
-          this.plans = result.plans;
-        }
-      } catch (e) {
-        // Tumia mipango iliyopo ikiwa API haipatikani.
-      }
-    },
-
-    // SYSTEM UPDATES FUNCTIONS
-    async loadUpdates() {
-      try {
-        const result = await this.api('/api/super/updates');
-        this.updates = result.updates || result.items || result.data || [];
-
-        if (!Array.isArray(this.updates)) {
-          this.updates = [];
-        }
-
-        if (this.selectedUpdateDetails) {
-          this.selectedUpdateDetails =
-            this.updates.find(
-              u => u.id === this.selectedUpdateDetails.id
-            ) || null;
-        }
-      } catch (e) {
+        if (Array.isArray(result.plans)) this.plans = result.plans;
+      } catch(e) {
         this.show(e.message, true);
       }
     },
 
-    async createUpdate() {
-      if (
-        !this.updateForm.version.trim() ||
-        !this.updateForm.title.trim()
-      ) {
-        this.show('Jaza namba na jina la toleo.', true);
-        return;
-      }
-
-      this.updateSaving = true;
-
-      try {
-        const result = await this.api('/api/super/updates', {
-          method: 'POST',
-          body: JSON.stringify(this.updateForm)
-        });
-
-        this.show(result.message || 'Draft ya toleo imetengenezwa.');
-
-        this.updateForm = {
-          version: '',
-          title: '',
-          description: '',
-          release_notes: ''
-        };
-
-        await this.loadUpdates();
-      } catch (e) {
-        this.show(e.message, true);
-      } finally {
-        this.updateSaving = false;
-      }
-    },
-
-    viewUpdate(update) {
-      this.selectedUpdateDetails = update;
-    },
-
-    async changeUpdateStatus(status) {
-      if (!this.selectedUpdateDetails) {
-        this.show('Chagua toleo kwanza.', true);
-        return;
-      }
-
-      const action = status === 'paused'
-        ? 'kusimamisha'
-        : 'kurudisha kwenye Beta';
-
-      if (!confirm('Una uhakika unataka ' + action + ' toleo hili?')) {
-        return;
-      }
-
-      try {
-        const id = encodeURIComponent(this.selectedUpdateDetails.id);
-
-        const result = await this.api(
-          '/api/super/updates/' + id + '/status',
-          {
-            method: 'PATCH',
-            body: JSON.stringify({status})
-          }
-        );
-
-        this.show(result.message || 'Hali ya toleo imebadilishwa.');
-        await this.loadUpdates();
-      } catch (e) {
-        this.show(e.message, true);
-      }
-    },
-
-    async releaseUpdate() {
-      if (!this.selectedUpdateDetails) {
-        this.show('Chagua toleo kwanza.', true);
-        return;
-      }
-
-      if (!confirm(
-        'Unataka kutoa toleo hili rasmi? Hakikisha majaribio yamekamilika.'
-      )) {
-        return;
-      }
-
-      try {
-        const id = encodeURIComponent(this.selectedUpdateDetails.id);
-
-        const result = await this.api(
-          '/api/super/updates/' + id + '/release',
-          {method: 'POST', body: JSON.stringify({})}
-        );
-
-        this.show(result.message || 'Ombi la kutoa toleo limetekelezwa.');
-        await this.loadUpdates();
-      } catch (e) {
-        this.show(e.message, true);
-      }
-    },
-
-    // TENANT FUNCTIONS
     openCreate() {
       this.editing = false;
       this.editingId = null;
-      this.form = {
-        name: '',
-        email: '',
-        password: '',
-        plan: 'START',
-        status: 'active'
-      };
+      this.form = {name:'',email:'',password:'',plan:'START',status:'active'};
       this.modal = true;
     },
 
@@ -872,29 +476,37 @@ function superApp() {
     },
 
     async saveTenant() {
+      if (this.saving) return;
       this.saving = true;
-
       try {
-        const isEdit = this.editing;
-        const url = isEdit
-          ? '/api/super/tenant/' + encodeURIComponent(this.editingId)
-          : '/api/super/tenants';
+        const body = {
+          name: this.form.name.trim(),
+          email: this.form.email.trim(),
+          plan: this.form.plan,
+          status: this.form.status
+        };
 
-        const payload = {...this.form};
-        if (isEdit) delete payload.password;
-
-        const result = await this.api(url, {
-          method: isEdit ? 'PATCH' : 'POST',
-          body: JSON.stringify(payload)
-        });
+        let result;
+        if (this.editing) {
+          result = await this.api('/api/super/tenant/' + encodeURIComponent(this.editingId), {
+            method: 'PATCH',
+            body: JSON.stringify(body)
+          });
+        } else {
+          if (!this.form.password || this.form.password.length < 8) {
+            throw new Error('Nenosiri lazima liwe na herufi angalau 8.');
+          }
+          body.password = this.form.password;
+          result = await this.api('/api/super/tenants', {
+            method: 'POST',
+            body: JSON.stringify(body)
+          });
+        }
 
         this.modal = false;
-        this.show(result.message || (
-          isEdit ? 'Taarifa za WISP zimesasishwa.' : 'WISP imesajiliwa.'
-        ));
-
+        this.show(result.message || 'Taarifa zimehifadhiwa.');
         await this.refresh();
-      } catch (e) {
+      } catch(e) {
         this.show(e.message, true);
       } finally {
         this.saving = false;
@@ -902,68 +514,42 @@ function superApp() {
     },
 
     async toggleStatus(t) {
-      if (t.status === 'deleted') {
-        this.show('Akaunti hii imefutwa tayari.', true);
-        return;
-      }
+      if (!t || !t.id || t.status === 'deleted') return;
+      const status = t.status === 'suspended' ? 'active' : 'suspended';
 
-      const next = t.status === 'suspended' ? 'active' : 'suspended';
-
-      if (!confirm(
-        next === 'suspended'
-          ? 'Unataka kusimamisha akaunti hii?'
-          : 'Unataka kuwasha tena akaunti hii?'
-      )) return;
+      if (!confirm(status === 'suspended' ? 'Unataka kusimamisha akaunti hii?' : 'Unataka kuwasha tena akaunti hii?')) return;
 
       try {
-        const result = await this.api(
-          '/api/super/tenant/' + encodeURIComponent(t.id) + '/status',
-          {
-            method: 'PATCH',
-            body: JSON.stringify({status: next})
-          }
-        );
-
-        this.show(result.message || 'Hali ya akaunti imebadilishwa.');
+        const result = await this.api('/api/super/tenant/' + encodeURIComponent(t.id) + '/status', {
+          method: 'PATCH',
+          body: JSON.stringify({status})
+        });
+        this.show(result.message || 'Hali ya akaunti imesasishwa.');
         await this.refresh();
-      } catch (e) {
+      } catch(e) {
         this.show(e.message, true);
       }
     },
 
     async deleteTenant(t) {
-      if (!t || !t.id || t.status === 'deleted') {
-        this.show('Akaunti haipo au tayari imefutwa.', true);
-        return;
-      }
-
-      const name = t.business_name || t.name || '';
-
-      const typed = prompt(
-        'Ili kuthibitisha kufuta, andika jina hili:\n' + name
-      );
-
+      if (!t || !t.id || t.status === 'deleted') return;
+      const name = t.name || t.business_name || '';
+      const typed = prompt('Andika jina la WISP kuthibitisha kufuta:\n' + name);
       if (typed === null) return;
 
-      if (typed.trim() !== name) {
+      if (typed.trim() !== name.trim()) {
         this.show('Jina halilingani. Hakuna kilichobadilishwa.', true);
         return;
       }
-
-      if (!confirm(
-        'Thibitisha kufuta akaunti ya ' + name +
-        '. Historia ya mfumo inapaswa kuhifadhiwa.'
-      )) return;
+      if (!confirm('Una uhakika unataka kufuta akaunti ya ' + name + '?')) return;
 
       try {
-        const result = await this.api(
-          '/api/super/tenant/' + encodeURIComponent(t.id),
-          {method: 'DELETE'}
-        );
-
+        const result = await this.api('/api/super/tenant/' + encodeURIComponent(t.id), {
+          method: 'DELETE'
+        });
         this.show(result.message || 'Ombi la kufuta limekamilika.');
         await this.refresh();
-      } catch (e) {
+      } catch(e) {
         this.show(e.message, true);
       }
     },
@@ -971,128 +557,171 @@ function superApp() {
     filteredTenants() {
       const q = this.search.toLowerCase().trim();
       if (!q) return this.tenants;
-
       return this.tenants.filter(t =>
-        [
-          t.name, t.business_name, t.email, t.plan,
-          t.plan_name, t.status, t.subdomain, t.id
-        ].some(v => String(v || '').toLowerCase().includes(q))
+        [t.name,t.business_name,t.email,t.plan,t.plan_name,t.status,t.subdomain,t.id]
+          .some(v => String(v || '').toLowerCase().includes(q))
       );
     },
 
     countStatus(status) {
-      return this.tenants.filter(
-        t => String(t.status || 'active').toLowerCase() === status
-      ).length;
+      return this.tenants.filter(t => String(t.status || 'active').toLowerCase() === status).length;
     },
 
     countSuspended() {
-      return this.tenants.filter(
-        t => ['suspended', 'inactive'].includes(
-          String(t.status || '').toLowerCase()
-        )
-      ).length;
+      return this.tenants.filter(t => ['suspended','inactive'].includes(String(t.status || '').toLowerCase())).length;
     },
 
     countTrial() {
       return this.tenants.filter(t => {
         const end = t.trial_ends_at || t.trial_end || t.trial_expires_at;
-        return end &&
-          new Date(end).getTime() > Date.now() &&
-          !['suspended', 'inactive'].includes(
-            String(t.status || '').toLowerCase()
-          );
+        return end && new Date(end).getTime() > Date.now();
       }).length;
     },
 
     planLabel(value) {
-      return String(value || 'TRIAL').replaceAll('_', ' ');
+      return String(value || 'TRIAL').replace(/_/g, ' ');
     },
 
     limits(p) {
-      const devices = p.device_limit ?? p.devices ?? '-';
-      const clients = p.client_limit ?? p.clients ?? '-';
-
-      return 'Vifaa: ' +
-        (Number(devices) === -1 ? 'Bila kikomo' : devices) +
-        ' · Wateja: ' +
-        (Number(clients) === -1 ? 'Bila kikomo' : clients);
+      const d = p.device_limit ?? p.devices ?? '-';
+      const c = p.client_limit ?? p.clients ?? '-';
+      return 'Vifaa: ' + (Number(d) === -1 ? 'Bila kikomo' : d) +
+        ' · Wateja: ' + (Number(c) === -1 ? 'Bila kikomo' : c);
     },
 
     statusClass(status) {
-      if (status === 'suspended' || status === 'inactive' || status === 'deleted') return 'red';
-      if (status === 'trial' || status === 'pending') return 'amber';
+      if (['suspended','inactive','deleted'].includes(status)) return 'red';
+      if (['trial','pending'].includes(status)) return 'amber';
       return 'green';
     },
 
     trialDate(t) {
       const value = t.trial_ends_at || t.trial_end || t.trial_expires_at;
       if (!value) return '-';
-
-      const date = new Date(value);
-      return isNaN(date.getTime()) ? '-' : date.toLocaleDateString('en-GB');
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('en-GB');
     },
 
     trialLabel(t) {
       const end = t.trial_ends_at || t.trial_end || t.trial_expires_at;
       if (!end) return 'Haijulikani';
-
-      const days = Math.ceil(
-        (new Date(end).getTime() - Date.now()) / 86400000
-      );
-
-      if (days < 0) return 'Imeisha';
-      return days + ' siku';
+      const days = Math.ceil((new Date(end).getTime() - Date.now()) / 86400000);
+      return days < 0 ? 'Imeisha' : days + ' siku';
     },
 
-    money(v) {
-      return Number(v || 0).toLocaleString('en-TZ');
+    money(value) {
+      return Number(value || 0).toLocaleString('en-TZ');
     },
 
     title() {
       return ({
-        dashboard: 'Dashboard',
-        tenants: 'Usimamizi wa WISP',
-        plans: 'Mipango ya Bei',
-        payments: 'Malipo ya Mfumo',
-        settings: 'Mipangilio',
-        updates: 'System Updates & Beta Testing'
+        dashboard:'Overview / Dashboard',
+        tenants:'Usimamizi wa WISP',
+        updates:'System Updates & Beta',
+        plans:'Mipango ya Bei',
+        payments:'Malipo ya Mfumo',
+        settings:'Mipangilio'
       })[this.page] || 'Super Admin';
     },
 
     go(p) {
       this.page = p;
-      this.sidebarOpen = false;
 
-      if (p === 'updates') {
-        this.loadUpdates();
+      // Simu: funga baada ya kuchagua. Kompyuta: CSS huiacha wazi.
+      if (window.innerWidth < 768) this.sidebarOpen = false;
+
+      if (p === 'dashboard' || p === 'tenants') this.refresh();
+      if (p === 'plans') this.loadPlans();
+      if (p === 'updates') this.loadUpdates();
+    },
+
+    async loadUpdates() {
+      try {
+        const result = await this.api('/api/super/updates');
+        this.updates = result.updates || result.items || result.data || [];
+        if (!Array.isArray(this.updates)) this.updates = [];
+        this.notice = '';
+        this.error = false;
+      } catch(e) {
+        this.show('Imeshindwa kupakia updates: ' + e.message, true);
       }
     },
 
-    show(text, isError = false) {
-      this.notice = text;
+    async createUpdate() {
+      if (this.updateSaving) return;
+      if (!this.updateForm.version.trim() || !this.updateForm.title.trim()) {
+        this.show('Jaza namba na jina la toleo.', true);
+        return;
+      }
+
+      this.updateSaving = true;
+      try {
+        const result = await this.api('/api/super/updates', {
+          method: 'POST',
+          body: JSON.stringify(this.updateForm)
+        });
+        this.updateForm = {version:'',title:'',description:'',release_notes:''};
+        this.show(result.message || 'Draft imetengenezwa.');
+        await this.loadUpdates();
+      } catch(e) {
+        this.show(e.message, true);
+      } finally {
+        this.updateSaving = false;
+      }
+    },
+
+    viewUpdate(update) {
+      this.selectedUpdateDetails = update;
+    },
+
+    async changeUpdateStatus(status) {
+      if (!this.selectedUpdateDetails) return;
+      const u = this.selectedUpdateDetails;
+      if (!confirm('Badili hali ya toleo kuwa ' + status + '?')) return;
+
+      try {
+        const result = await this.api('/api/super/updates/' + encodeURIComponent(u.id) + '/status', {
+          method: 'PATCH',
+          body: JSON.stringify({status})
+        });
+        this.show(result.message || 'Hali imesasishwa.');
+        await this.loadUpdates();
+        this.selectedUpdateDetails = this.updates.find(x => x.id === u.id) || null;
+      } catch(e) {
+        this.show(e.message, true);
+      }
+    },
+
+    async releaseUpdate() {
+      if (!this.selectedUpdateDetails) return;
+      if (!confirm('Unataka kutoa toleo hili rasmi?')) return;
+      const u = this.selectedUpdateDetails;
+
+      try {
+        const result = await this.api('/api/super/updates/' + encodeURIComponent(u.id) + '/release', {
+          method: 'POST',
+          body: JSON.stringify({})
+        });
+        this.show(result.message || 'Ombi la kutoa toleo limetumwa.');
+        await this.loadUpdates();
+        this.selectedUpdateDetails = this.updates.find(x => x.id === u.id) || null;
+      } catch(e) {
+        this.show(e.message, true);
+      }
+    },
+
+    show(message, isError = false) {
+      this.notice = message;
       this.error = isError;
     },
 
     logout() {
-      [
-        'mrhaas_token',
-        'mrhaas_tenant_id',
-        'mrhaas_tenant',
-        'mrhaas_role'
-      ].forEach(k => localStorage.removeItem(k));
-
-      location.replace('/login.html');
+      ['mrhaas_token','mrhaas_tenant_id','mrhaas_tenant','mrhaas_role']
+        .forEach(k => localStorage.removeItem(k));
+      window.location.replace('/login.html');
     }
   };
 }
-
-  
-    logout(){  
-      ['mrhaas_token','mrhaas_tenant_id','mrhaas_tenant','mrhaas_role']  
-        .forEach(k=>localStorage.removeItem(k));  
-      location.replace('/login.html');  
-    }  
-  };  
-}  
-</script>  </body>  
+</script>
+</body>
+</html>
