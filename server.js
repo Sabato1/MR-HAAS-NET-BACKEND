@@ -74,6 +74,9 @@ app.use(cors({
 
 
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/super-admin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'super-admin.html'));
+});
 
 const PLANS = {
   START: {
