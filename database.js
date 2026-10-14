@@ -329,6 +329,51 @@ async function initializeDatabase() {
       END $$;
     `);
 
+    // System Updates: matoleo na maelezo ya maboresho.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS system_updates (
+        id TEXT PRIMARY KEY,
+        version VARCHAR(50) NOT NULL UNIQUE,
+        title VARCHAR(200) NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        release_notes TEXT NOT NULL DEFAULT '',
+        status VARCHAR(30) NOT NULL DEFAULT 'draft'
+          CHECK (status IN ('draft', 'beta', 'released', 'paused')),
+        created_by VARCHAR(255),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        released_at TIMESTAMPTZ
+      );
+    `);
+
+    // Tenant waliochaguliwa kupokea au kujaribu update.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS system_update_tenants (
+        update_id TEXT NOT NULL
+          REFERENCES system_updates(id) ON DELETE CASCADE,
+        tenant_id TEXT NOT NULL
+          REFERENCES tenants(id) ON DELETE CASCADE,
+        channel VARCHAR(20) NOT NULL DEFAULT 'beta'
+          CHECK (channel IN ('beta', 'stable')),
+        status VARCHAR(30) NOT NULL DEFAULT 'pending'
+          CHECK (status IN ('pending', 'notified', 'testing', 'approved', 'failed')),
+        feedback TEXT NOT NULL DEFAULT '',
+        assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (update_id, tenant_id)
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_system_update_tenants_tenant
+      ON system_update_tenants (tenant_id, assigned_at DESC);
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_system_updates_status
+      ON system_updates (status, created_at DESC);
+    `);
+
     await client.query('COMMIT');
 
     console.log('MR HAAS WISP database schema iko tayari.');
