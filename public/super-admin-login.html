@@ -1,1 +1,173 @@
 
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080808">
+  <title>Super Admin Login | MR HAAS NET</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: radial-gradient(ellipse at top, #30230a, #111 45%, #050505);
+      color: #f8fafc;
+    }
+    .gold { color: #e7bd58; }
+    .panel {
+      background: rgba(17,17,17,.96);
+      border: 1px solid rgba(231,189,88,.35);
+      box-shadow: 0 20px 70px rgba(0,0,0,.45);
+    }
+    .field {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      background: #090909;
+      border: 1px solid #383838;
+      color: white;
+      outline: none;
+    }
+    .field:focus { border-color: #e7bd58; }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      font-weight: 800;
+      color: #17120a;
+      background: linear-gradient(135deg,#f5d77e,#b88627);
+    }
+    .btn:disabled { opacity: .6; }
+  </style>
+</head>
+<body class="flex items-center justify-center p-4">
+  <main class="w-full max-w-md">
+    <header class="text-center mb-7">
+      <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-yellow-600/50 bg-black text-3xl gold font-bold">
+        MH
+      </div>
+      <h1 class="text-2xl font-extrabold">
+        MR HAAS <span class="gold">NET</span>
+      </h1>
+      <p class="mt-2 text-sm text-gray-400">
+        SUPER ADMIN CONTROL PANEL
+      </p>
+    </header>
+
+    <section class="panel rounded-2xl p-6 sm:p-8">
+      <h2 class="text-xl font-bold">Super Admin Login</h2>
+      <p class="mt-2 mb-6 text-sm text-gray-400">
+        Ingia kwa akaunti ya msimamizi mkuu wa mfumo.
+      </p>
+
+      <div id="message" class="hidden mb-4 rounded-lg border p-3 text-sm"
+           role="alert"></div>
+
+      <form id="loginForm" class="space-y-5">
+        <div>
+          <label for="email" class="block mb-2 text-sm font-semibold">
+            Barua pepe ya Super Admin
+          </label>
+          <input id="email" class="field" type="email"
+                 autocomplete="username" required
+                 placeholder="admin@example.com">
+        </div>
+
+        <div>
+          <label for="password" class="block mb-2 text-sm font-semibold">
+            Nenosiri la Super Admin
+          </label>
+          <input id="password" class="field" type="password"
+                 autocomplete="current-password" required
+                 placeholder="Ingiza nenosiri">
+        </div>
+
+        <button id="submitBtn" class="btn" type="submit">
+          INGIA SUPER ADMIN
+        </button>
+      </form>
+
+      <p class="text-center text-sm text-gray-400 mt-6">
+        Wewe ni mmiliki wa WISP?
+        <a href="/login.html" class="gold font-bold hover:underline">
+          Ingia hapa
+        </a>
+      </p>
+    </section>
+
+    <footer class="text-center text-xs text-gray-500 mt-6">
+      © <span id="year"></span> MR HAAS NET
+    </footer>
+  </main>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const message = document.getElementById('message');
+    const button = document.getElementById('submitBtn');
+
+    document.getElementById('year').textContent =
+      new Date().getFullYear();
+
+    function showMessage(text, success = false) {
+      message.textContent = text;
+      message.className =
+        'mb-4 rounded-lg border p-3 text-sm ' +
+        (success
+          ? 'border-green-700 bg-green-950 text-green-300'
+          : 'border-red-700 bg-red-950 text-red-300');
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      button.disabled = true;
+      button.textContent = 'INAINGIA...';
+      message.className = 'hidden';
+
+      try {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        const response = await fetch('/api/super-admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || data.error || 'Imeshindikana kuingia.'
+          );
+        }
+
+        if (!data.token || data.role !== 'super_admin' ||
+            !data.tenant?.id) {
+          throw new Error(
+            'Majibu ya Super Admin kutoka server hayajakamilika.'
+          );
+        }
+
+        localStorage.setItem('mrhaas_token', data.token);
+        localStorage.setItem('mrhaas_tenant_id', String(data.tenant.id));
+        localStorage.setItem('mrhaas_tenant', JSON.stringify(data.tenant));
+        localStorage.setItem('mrhaas_role', 'super_admin');
+
+        showMessage('Umeingia kikamilifu. Inafungua dashboard...', true);
+
+        window.location.replace('/super-admin.html');
+
+      } catch (error) {
+        showMessage(error.message || 'Hitilafu ya mtandao.');
+        button.disabled = false;
+        button.textContent = 'INGIA SUPER ADMIN';
+      }
+    });
+  </script>
+</body>
+</html>
+
