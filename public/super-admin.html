@@ -145,10 +145,32 @@
                   <td x-text="planLabel(t.plan || t.plan_name)"></td>
                   <td><span class="badge" :class="statusClass(t.status)" x-text="t.status || 'active'"></span></td>
                   <td x-text="trialDate(t)"></td>
-                  <td><div class="flex flex-wrap gap-2">
-                    <button class="btn btn-outline" @click="editTenant(t)">Badili</button>
-                    <button class="btn" :class="t.status==='suspended'?'btn-gold':'btn-dark'" @click="toggleStatus(t)" x-text="t.status==='suspended'?'Washa':'Simamisha'"></button>
-                  </div></td>
+                  <td>
+  <div class="flex flex-wrap gap-2">
+    <button
+      class="btn btn-outline"
+      @click="editTenant(t)"
+      :disabled="t.status==='deleted'">
+      Badili
+    </button>
+
+    <button
+      class="btn"
+      :class="t.status==='suspended'?'btn-gold':'btn-dark'"
+      @click="toggleStatus(t)"
+      :disabled="t.status==='deleted'"
+      x-text="t.status==='suspended'?'Washa':'Simamisha'">
+    </button>
+
+    <button
+      class="btn"
+      style="background:#fee2e2;color:#991b1b"
+      @click="deleteTenant(t)"
+      :disabled="t.status==='deleted'"
+      x-text="t.status==='deleted'?'Imefutwa':'Futa'">
+    </button>
+  </div>
+</td>
                 </tr>
               </template>
               <tr x-show="filteredTenants().length===0"><td colspan="6" class="text-center text-gray-500">Hakuna WISP inayolingana na utafutaji.</td></tr>
