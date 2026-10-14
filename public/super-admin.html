@@ -428,7 +428,49 @@ async toggleStatus(t){
     this.show(e.message, true);
   }
 },
+async deleteTenant(t) {
+  if (!t || !t.id) {
+    this.show('Taarifa za Tenant hazijapatikana.', true);
+    return;
+  }
 
+  if (t.status === 'deleted') {
+    this.show('Akaunti hii tayari imefutwa.', true);
+    return;
+  }
+
+  const confirmName = prompt(
+    'Ili kufuta akaunti hii, andika jina la WISP kama lilivyo:\n' +
+    t.business_name
+  );
+
+  if (confirmName === null) return;
+
+  if (confirmName.trim() !== t.business_name) {
+    this.show('Jina halilingani. Hakuna kilichobadilishwa.', true);
+    return;
+  }
+
+  const finalConfirm = confirm(
+    'Una uhakika unataka kufuta akaunti ya ' +
+    t.business_name +
+    '?\n\nAkaunti itazimwa. Historia ya malipo itahifadhiwa.'
+  );
+
+  if (!finalConfirm) return;
+
+  try {
+    const result = await this.api(
+      '/api/super/tenant/' + encodeURIComponent(t.id),
+      { method: 'DELETE' }
+    );
+
+    this.show(result.message || 'Akaunti imezimwa.');
+    await this.refresh();
+  } catch (e) {
+    this.show(e.message || 'Imeshindikana kufuta akaunti.', true);
+  }
+},
     filteredTenants(){
       const q=this.search.toLowerCase().trim();
       if(!q) return this.tenants;
