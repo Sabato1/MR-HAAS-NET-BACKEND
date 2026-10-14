@@ -1001,7 +1001,308 @@ function superApp() {
         const end = t.trial_ends_at || t.trial_end || t.trial_expires_at;
         return end &&
           new Date(end).getTime() > Date.now() &&
-          !['suspended', 'inactive'].includes(
+
+function superApp() {
+  return {
+    token: localStorage.getItem('mrhaas_token') || '',
+    tenantId: localStorage.getItem('mrhaas_tenant_id') || '',
+    role: localStorage.getItem('mrhaas_role') || '',
+    email: '',
+    page: 'dashboard',
+    sidebarOpen: false,
+    loading: false,
+    saving: false,
+    updateSaving: false,
+    notice: '',
+    error: false,
+    search: '',
+    tenants: [],
+    updates: [],
+    selectedUpdateDetails: null,
+
+    plans: [
+      {code:'START',name:'START',price:10000,device_limit:2,client_limit:50},
+      {code:'DIAMOND',name:'DIAMOND',price:15000,device_limit:7,client_limit:500},
+      {code:'PREMIUM',name:'PREMIUM',price:20000,device_limit:-1,client_limit:5000},
+      {code:'REVENUE_SHARE',name:'REVENUE SHARE',price:20000,device_limit:-1,client_limit:-1}
+    ],
+
+    modal: false,
+    editing: false,
+    editingId: null,
+
+    form: {
+      name: '',
+      email: '',
+      password: '',
+      plan: 'START',
+      status: 'active'
+    },
+
+    updateForm: {
+      version: '',
+      title: '',
+      description: '',
+      release_notes: ''
+    },
+
+    async init() {
+      this.token = localStorage.getItem('mrhaas_token') || '';
+      this.tenantId = localStorage.getItem('mrhaas_tenant_id') || '';
+      this.role = localStorage.getItem('mrhaas_role') || '';
+
+      if (!this.token || this.role !== 'super_admin') {
+        alert('Ingia kwa akaunti yenye ruhusa ya Super Admin.');
+        window.location.replace('/login.html');
+        return;
+      }
+
+      try {
+        const saved = JSON.parse(
+          localStorage.getItem('mrhaas_tenant') || '{}'
+        );
+        this.email = saved.email || 'Super Admin';
+      } catch (e) {
+        this.email = 'Super Admin';
+      }
+
+      await this.refresh();
+    },
+
+    headers() {
+      return {
+        Authorization: 'Bearer ' + this.token,
+        'Content-Type': 'application/json',
+        'X-Tenant-ID': this.tenantId
+      };
+    },
+
+    async api(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...this.headers(),
+          ...(options.headers || {})
+        }
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(
+            data.message || data.error ||
+            'Huna ruhusa. Hakiki login ya Super Admin.'
+          );
+        }
+
+        throw new Error(
+          data.message || data.error ||
+          'Ombi limeshindwa. HTTP ' + response.status
+        );
+      }
+
+      return data;
+    },
+
+    async refresh() {
+      this.loading = true;
+
+      try {
+        const result = await this.api('/api/super/tenants');
+
+        this.tenants =
+          result.tenants || result.items || result.data || [];
+
+        if (!Array.isArray(this.tenants)) this.tenants = [];
+
+        this.notice = '';
+        this.error = false;
+      } catch (e) {
+        this.show(e.message, true);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async loadPlans() {
+      try {
+        const result = await this.api('/api/plans');
+        if (Array.isArray(result.plans)) this.plans = result.plans;
+      } catch (e) {
+        this.show(e.message, true);
+      }
+    },
+
+    openCreate() {
+      this.editing = false;
+      this.editingId = null;
+      this.form = {
+        name: '',
+        email: '',
+        password: '',
+        plan: 'START',
+        status: 'active'
+      };
+      this.modal = true;
+    },
+
+    editTenant(t) {
+      this.editing = true;
+      this.editingId = t.id;
+
+      this.form = {
+        name: t.name || t.business_name || '',
+        email: t.email || '',
+        password: '',
+        plan: String(t.plan || t.plan_name || 'START').toUpperCase(),
+        status: t.status || 'active'
+      };
+
+      this.modal = true;
+    },
+
+    async saveTenant() {
+      if (this.saving) return;
+
+      this.saving = true;
+
+      try {
+        const body = {
+          name: this.form.name.trim(),
+          email: this.form.email.trim(),
+          plan: this.form.plan,
+          status: this.form.status
+        };
+
+        let result;
+
+        if (this.editing) {
+          result = await this.api(
+            '/api/super/tenant/' +
+              encodeURIComponent(this.editingId),
+            {
+              method: 'PATCH',
+              body: JSON.stringify(body)
+            }
+          );
+        } else {
+          if (!this.form.password || this.form.password.length < 8) {
+            throw new Error('Nenosiri lazima liwe na herufi angalau 8.');
+          }
+
+          body.password = this.form.password;
+
+          result = await this.api('/api/super/tenants', {
+            method: 'POST',
+            body: JSON.stringify(body)
+          });
+        }
+
+        this.modal = false;
+        this.show(result.message || 'Taarifa zimehifadhiwa.');
+        await this.refresh();
+      } catch (e) {
+        this.show(e.message, true);
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async toggleStatus(t) {
+      if (!t || !t.id || t.status === 'deleted') return;
+
+      const next = t.status === 'suspended' ? 'active' : 'suspended';
+
+      if (!confirm(
+        next === 'suspended'
+          ? 'Unataka kusimamisha akaunti hii?'
+          : 'Unataka kuwasha tena akaunti hii?'
+      )) return;
+
+      try {
+        const result = await this.api(
+          '/api/super/tenant/' +
+            encodeURIComponent(t.id) + '/status',
+          {
+            method: 'PATCH',
+            body: JSON.stringify({status: next})
+          }
+        );
+
+        this.show(result.message || 'Hali ya akaunti imesasishwa.');
+        await this.refresh();
+      } catch (e) {
+        this.show(e.message, true);
+      }
+    },
+
+    async deleteTenant(t) {
+      if (!t || !t.id || t.status === 'deleted') return;
+
+      const name = t.name || t.business_name || '';
+
+      const typed = prompt(
+        'Kufuta akaunti, andika jina hili kama lilivyo:\n' + name
+      );
+
+      if (typed === null) return;
+
+      if (typed.trim() !== name.trim()) {
+        this.show('Jina halilingani. Hakuna kilichofutwa.', true);
+        return;
+      }
+
+      if (!confirm(
+        'Una uhakika wa kufuta akaunti ya ' + name +
+        '?\nHistoria ya malipo inapaswa kuhifadhiwa kwenye audit log.'
+      )) return;
+
+      try {
+        const result = await this.api(
+          '/api/super/tenant/' + encodeURIComponent(t.id),
+          {method: 'DELETE'}
+        );
+
+        this.show(result.message || 'Ombi la kufuta akaunti limekamilika.');
+        await this.refresh();
+      } catch (e) {
+        this.show(e.message, true);
+      }
+    },
+
+    filteredTenants() {
+      const q = this.search.toLowerCase().trim();
+      if (!q) return this.tenants;
+
+      return this.tenants.filter(t =>
+        [
+          t.name, t.business_name, t.email, t.plan,
+          t.plan_name, t.status, t.subdomain, t.id
+        ].some(v => String(v || '').toLowerCase().includes(q))
+      );
+    },
+
+    countStatus(status) {
+      return this.tenants.filter(
+        t => String(t.status || 'active').toLowerCase() === status
+      ).length;
+    },
+
+    countSuspended() {
+      return this.tenants.filter(t =>
+        ['suspended', 'inactive'].includes(
+          String(t.status || '').toLowerCase()
+        )
+      ).length;
+    },
+
+    countTrial() {
+      return this.tenants.filter(t => {
+        const end = t.trial_ends_at || t.trial_end || t.trial_expires_at;
+        return end &&
+          new Date(end).getTime() > Date.now() &&
+          !['suspended', 'inactive', 'deleted'].includes(
             String(t.status || '').toLowerCase()
           );
       }).length;
@@ -1022,8 +1323,8 @@ function superApp() {
     },
 
     statusClass(status) {
-      if (status === 'suspended' || status === 'inactive' || status === 'deleted') return 'red';
-      if (status === 'trial' || status === 'pending') return 'amber';
+      if (['suspended', 'inactive', 'deleted'].includes(status)) return 'red';
+      if (['trial', 'pending'].includes(status)) return 'amber';
       return 'green';
     },
 
@@ -1032,7 +1333,9 @@ function superApp() {
       if (!value) return '-';
 
       const date = new Date(value);
-      return isNaN(date.getTime()) ? '-' : date.toLocaleDateString('en-GB');
+      return isNaN(date.getTime())
+        ? '-'
+        : date.toLocaleDateString('en-GB');
     },
 
     trialLabel(t) {
@@ -1055,10 +1358,10 @@ function superApp() {
       return ({
         dashboard: 'Dashboard',
         tenants: 'Usimamizi wa WISP',
+        updates: 'System Updates & Beta',
         plans: 'Mipango ya Bei',
         payments: 'Malipo ya Mfumo',
-        settings: 'Mipangilio',
-        updates: 'System Updates & Beta Testing'
+        settings: 'Mipangilio'
       })[this.page] || 'Super Admin';
     },
 
@@ -1066,8 +1369,112 @@ function superApp() {
       this.page = p;
       this.sidebarOpen = false;
 
-      if (p === 'updates') {
-        this.loadUpdates();
+      if (p === 'updates') this.loadUpdates();
+      if (p === 'tenants' || p === 'dashboard') this.refresh();
+      if (p === 'plans') this.loadPlans();
+    },
+
+    async loadUpdates() {
+      try {
+        const result = await this.api('/api/super/updates');
+        this.updates = result.updates || result.items || result.data || [];
+
+        if (!Array.isArray(this.updates)) this.updates = [];
+        this.notice = '';
+        this.error = false;
+      } catch (e) {
+        this.show(
+          'Imeshindwa kupakia matoleo. Hakiki kama endpoint /api/super/updates ipo kwenye backend. ' +
+          e.message,
+          true
+        );
+      }
+    },
+
+    async createUpdate() {
+      if (this.updateSaving) return;
+
+      if (!this.updateForm.version.trim() || !this.updateForm.title.trim()) {
+        this.show('Jaza namba na jina la toleo.', true);
+        return;
+      }
+
+      this.updateSaving = true;
+
+      try {
+        const result = await this.api('/api/super/updates', {
+          method: 'POST',
+          body: JSON.stringify(this.updateForm)
+        });
+
+        this.updateForm = {
+          version: '',
+          title: '',
+          description: '',
+          release_notes: ''
+        };
+
+        this.show(result.message || 'Draft ya toleo imeundwa.');
+        await this.loadUpdates();
+      } catch (e) {
+        this.show(e.message, true);
+      } finally {
+        this.updateSaving = false;
+      }
+    },
+
+    viewUpdate(update) {
+      this.selectedUpdateDetails = update;
+    },
+
+    async changeUpdateStatus(status) {
+      if (!this.selectedUpdateDetails) return;
+
+      const update = this.selectedUpdateDetails;
+
+      if (!confirm('Unataka kubadilisha hali ya toleo kuwa ' + status + '?')) {
+        return;
+      }
+
+      try {
+        const result = await this.api(
+          '/api/super/updates/' + encodeURIComponent(update.id) + '/status',
+          {
+            method: 'PATCH',
+            body: JSON.stringify({status})
+          }
+        );
+
+        this.show(result.message || 'Hali ya toleo imesasishwa.');
+        await this.loadUpdates();
+
+        this.selectedUpdateDetails =
+          this.updates.find(u => u.id === update.id) || null;
+      } catch (e) {
+        this.show(e.message, true);
+      }
+    },
+
+    async releaseUpdate() {
+      if (!this.selectedUpdateDetails) return;
+
+      if (!confirm('Unataka kutoa toleo hili rasmi?')) return;
+
+      const update = this.selectedUpdateDetails;
+
+      try {
+        const result = await this.api(
+          '/api/super/updates/' + encodeURIComponent(update.id) + '/release',
+          {method: 'POST', body: JSON.stringify({})}
+        );
+
+        this.show(result.message || 'Ombi la kutoa toleo limetumwa.');
+        await this.loadUpdates();
+
+        this.selectedUpdateDetails =
+          this.updates.find(u => u.id === update.id) || null;
+      } catch (e) {
+        this.show(e.message, true);
       }
     },
 
@@ -1084,18 +1491,10 @@ function superApp() {
         'mrhaas_role'
       ].forEach(k => localStorage.removeItem(k));
 
-      location.replace('/login.html');
+      window.location.replace('/login.html');
     }
   };
 }
 
-  
-    logout(){  
-      ['mrhaas_token','mrhaas_tenant_id','mrhaas_tenant','mrhaas_role']  
-        .forEach(k=>localStorage.removeItem(k));  
-      location.replace('/login.html');  
-    }  
-  };  
-}  
 </script>  </body>  
 </html>  Je imo?
