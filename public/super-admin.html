@@ -56,6 +56,9 @@
     <nav class="flex-1 space-y-1 overflow-y-auto p-3">
       <button class="nav" :class="page==='dashboard'?'active':''" @click="go('dashboard')">▦ <span>Dashboard</span></button>
       <button class="nav" :class="page==='tenants'?'active':''" @click="go('tenants')">▣ <span>WISP / Tenants</span></button>
+     <button class="nav" :class="page==='updates'?'active':''" @click="go('updates')">
+  ↻ <span>System Updates & Beta</span>
+     </button>
       <button class="nav" :class="page==='plans'?'active':''" @click="go('plans')">◇ <span>Mipango ya Bei</span></button>
       <button class="nav" :class="page==='payments'?'active':''" @click="go('payments')">TSh <span>Malipo ya Mfumo</span></button>
       <button class="nav" :class="page==='settings'?'active':''" @click="go('settings')">⚙ <span>Mipangilio</span></button>
