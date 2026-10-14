@@ -793,13 +793,15 @@ app.patch('/api/super/tenant/:id/status', authMiddleware, requireSuperAdmin, asy
   }
 
   const tenant = await one(
-    `UPDATE tenants
-     SET status = $1
-     WHERE id = $2
-       AND id <> $3
-     RETURNING id, business_name, email, status`,
-    [status, tenantId, SUPER_ADMIN_ID]
-  );
+  `UPDATE tenants
+   SET status = $1,
+       updated_at = NOW()
+   WHERE id = $2
+     AND id <> $3
+     AND status <> 'deleted'
+   RETURNING id, business_name, email, status`,
+  [status, tenantId, SUPER_ADMIN_ID]
+);
 
   if (!tenant) {
     fail(404, 'WISP haijapatikana.');
