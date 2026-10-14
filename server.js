@@ -817,6 +817,7 @@ app.patch('/api/super/tenant/:id/status', authMiddleware, requireSuperAdmin, asy
 }));
 
 // Soft-delete Tenant: hifadhi malipo na historia ya biashara.
+
 app.delete(
   '/api/super/tenant/:id',
   authMiddleware,
@@ -828,39 +829,82 @@ app.delete(
       fail(400, 'ID ya Tenant inahitajika.');
     }
 
-    if (tenantId === String(SUPER_ADMIN_ID)) {
+    if (tenantId === SUPER_ADMIN_ID) {
       fail(403, 'Huwezi kufuta akaunti ya Super Admin.');
     }
 
-    const tenant = await one(
-      `SELECT id, business_name, email, status
-       FROM tenants
-       WHERE id = $1`,
-      [tenantId]
-    );
+    const client = await db.pool.connect();
 
-    if (!tenant) {
-      fail(404, 'WISP haijapatikana.');
+    try {
+      await client.query('BEGIN');
+
+      const result = await client.query(
+        `SELECT id, business_name, email, status
+         FROM tenants
+         WHERE id = $1
+         FOR UPDATE`,
+        [tenantId]
+      );
+
+      const tenant = result.rows[0];
+
+      if (!tenant) {
+        fail(404, 'WISP haijapatikana.');
+      }
+
+      if (tenant.status === 'deleted') {
+        fail(409, 'Akaunti hii tayari imefutwa.');
+      }
+
+      const updatedResult = await client.query(
+        `UPDATE tenants
+         SET status = 'deleted',
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING id, business_name, email, status`,
+        [tenantId]
+      );
+
+      await client.query(
+        `INSERT INTO audit_logs
+          (tenant_id, actor_email, action, entity_type, entity_id, details)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+        [
+          tenantId,
+          req.email || null,
+          'tenant_soft_deleted',
+          'tenant',
+          tenantId,
+          JSON.stringify({
+            business_name: tenant.business_name,
+            email: tenant.email,
+            previous_status: tenant.status,
+            new_status: 'deleted'
+          })
+        ]
+      );
+
+      await client.query('COMMIT');
+
+      res.json({
+        success: true,
+        message: 'Akaunti imezimwa. Historia ya malipo na taarifa za biashara zimehifadhiwa.',
+        tenant: updatedResult.rows[0]
+      });
+    } catch (error) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('[ROLLBACK ERROR]', rollbackError.message);
+      }
+
+      throw error;
+    } finally {
+      client.release();
     }
+  })
+);
 
-    if (tenant.status === 'deleted') {
-      fail(409, 'Akaunti hii tayari imefutwa.');
-    }
-
-    // Zima akaunti bila kufuta data za biashara.
-    const updated = await one(
-      `UPDATE tenants
-       SET status = 'deleted',
-           updated_at = NOW()
-       WHERE id = $1
-         AND id <> $2
-       RETURNING id, business_name, email, status`,
-      [tenantId, SUPER_ADMIN_ID]
-    );
-
-    if (!updated) {
-      fail(404, 'WISP haijapatikana.');
-    }
 
     // Hifadhi kumbukumbu ya hatua ya Super Admin.
     await query(
@@ -920,23 +964,6 @@ app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin,
   res.json({ success: true, tenant: publicTenant(tenant) });
 }));
 
-app.delete('/api/super/tenant/:id', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
-  if (req.params.id === SUPER_ADMIN_ID) fail(400, 'Huwezi kufuta Super Admin.');
-
-  const tenant = await one(
-    'SELECT id FROM tenants WHERE id = $1',
-    [req.params.id]
-  );
-  if (!tenant) fail(404, 'WISP haijapatikana.');
-
-  // Suspend instead of destructive deletion to preserve accounting/audit data.
-  await query(
-    `UPDATE tenants SET status = 'inactive' WHERE id = $1`,
-    [req.params.id]
-  );
-
-  res.json({ success: true, message: 'WISP imewekwa inactive; taarifa zake zimehifadhiwa.' });
-}));
 
 /* =========================
    SITES
