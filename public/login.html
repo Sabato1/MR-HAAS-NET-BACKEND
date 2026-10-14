@@ -185,18 +185,31 @@
             'Imeshindikana kuingia. Hakiki barua pepe na nenosiri.');
         }
 
-        const token = data.token || data.accessToken;
-        const tenant = data.tenant || data.data?.tenant || {};
-        const tenantId = data.tenant_id || data.tenantId ||
-          tenant.id || data.user?.tenant_id;
-        const role = data.role || data.user?.role ||
-          (tenantId === 'tenant_super_admin' ? 'super_admin' : 'tenant');
+        
+const token = data.token || data.accessToken;
+const tenant = data.tenant || data.data?.tenant || {};
 
-        if (!token || !tenantId) {
-          throw new Error(
-            'Majibu ya server hayajakamilika. Hakikisha API ya login inarudisha token na tenant ID.'
-          );
-        }
+const tenantId = data.tenant_id ||
+  data.tenantId ||
+  tenant.id ||
+  data.user?.tenant_id;
+
+const role = data.role ||
+  tenant.role ||
+  data.user?.role ||
+  (tenantId === 'tenant_super_admin' ? 'super_admin' : 'tenant');
+
+if (!token || !tenantId) {
+  throw new Error(
+    'Majibu ya server hayajakamilika. Hakikisha API ya login inarudisha token na tenant ID.'
+  );
+}
+
+localStorage.setItem('mrhaas_token', token);
+localStorage.setItem('mrhaas_tenant_id', String(tenantId));
+localStorage.setItem('mrhaas_tenant', JSON.stringify(tenant));
+localStorage.setItem('mrhaas_role', role);
+
 
         localStorage.setItem('mrhaas_token', token);
         localStorage.setItem('mrhaas_tenant_id', tenantId);
