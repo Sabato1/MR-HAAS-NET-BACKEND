@@ -171,11 +171,11 @@
       message.className = 'hidden mb-4 rounded-lg border p-3 text-sm';
 
       try {
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
+        const response = await fetch('/api/super-admin/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password })
+});
 
         const data = await response.json().catch(() => ({}));
         console.log('LOGIN RESPONSE:', data);
