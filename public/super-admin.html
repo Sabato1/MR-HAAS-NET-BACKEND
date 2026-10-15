@@ -307,29 +307,86 @@
         <div><label class="mb-1 block text-sm font-bold">Jina la biashara *</label><input class="field" x-model="form.name" required></div>  
         <div><label class="mb-1 block text-sm font-bold">Barua pepe *</label><input class="field" type="email" x-model="form.email" required :disabled="editing"></div>  
         <div x-show="!editing"><label class="mb-1 block text-sm font-bold">Nenosiri la awali *</label><input class="field" type="password" x-model="form.password" minlength="8" :required="!editing" autocomplete="new-password"></div>  
-        <div>  
-          <label class="mb-1 block text-sm font-bold">Mpango</label>  
-          <select class="field" x-model="form.plan">  
-            <option value="START">START — TSh 10,000/mwezi</option>  
-            <option value="DIAMOND">DIAMOND — TSh 15,000/mwezi</option>  
-            <option value="PREMIUM">PREMIUM — TSh 20,000/mwezi</option>  
-            <option value="REVENUE_SHARE">REVENUE SHARE — TSh 20,000 + 3%</option>  
-          </select>  
-        </div>  
-        <div x-show="editing">  
-          <label class="mb-1 block text-sm font-bold">Hali ya akaunti</label>  
-          <select class="field" x-model="form.status">  
-            <option value="active">Active</option><option value="suspended">Suspended</option><option value="inactive">Inactive</option>  
-          </select>  
-        </div>  
-        <div class="rounded-lg bg-amber-50 p-3 text-xs text-amber-900" x-show="!editing">Trial ya siku 4 lazima isimamiwe na backend.</div>  
-        <div class="flex flex-wrap gap-2 pt-2">  
-          <button type="submit" class="btn btn-gold" :disabled="saving" x-text="saving?'Inahifadhi...':(editing?'Hifadhi Mabadiliko':'Sajili WISP')"></button>  
-          <button type="button" class="btn btn-outline" @click="modal=false">Ghairi</button>  
-        </div>  
-      </form>  
-    </div>  
-  </div>  
+        <div>
+  <label class="mb-1 block text-sm font-bold">Mpango</label>
+  <select class="field" x-model="form.plan">
+    <option value="START">START — TSh 10,000/mwezi</option>
+    <option value="DIAMOND">DIAMOND — TSh 15,000/mwezi</option>
+    <option value="PREMIUM">PREMIUM — TSh 20,000/mwezi</option>
+    <option value="REVENUE_SHARE">REVENUE SHARE — TSh 20,000 + 3%</option>
+  </select>
+</div>
+
+<div x-show="editing">
+  <label class="mb-1 block text-sm font-bold">Hali ya akaunti</label>
+  <select class="field" x-model="form.status">
+    <option value="active">Active</option>
+    <option value="suspended">Suspended</option>
+    <option value="inactive">Inactive</option>
+  </select>
+</div>
+
+<!-- FREE FOREVER -->
+<div x-show="editing"
+     class="rounded-xl border border-amber-300 bg-amber-50 p-4">
+  <label class="flex cursor-pointer items-start gap-3">
+    <input
+      type="checkbox"
+      x-model="form.free_forever"
+      class="mt-1"
+    >
+    <span>
+      <strong class="block text-amber-900">Free Forever</strong>
+      <span class="text-sm text-amber-800">
+        Tenant atumie mfumo bila kuhitaji kulipia subscription.
+      </span>
+    </span>
+  </label>
+</div>
+
+<!-- TRIAL DAYS -->
+<div x-show="editing">
+  <label class="mb-1 block text-sm font-bold">
+    Trial Days
+  </label>
+  <input
+    class="field"
+    type="number"
+    min="0"
+    max="3650"
+    x-model.number="form.trial_days"
+    placeholder="Mfano: 30"
+  >
+  <p class="mt-1 text-xs text-gray-500">
+    Weka idadi ya siku za majaribio unazotaka kumpa Tenant.
+  </p>
+</div>
+
+<div class="rounded-lg bg-amber-50 p-3 text-xs text-amber-900"
+     x-show="!editing">
+  Trial ya siku 4 lazima isimamiwe na backend.
+</div>
+
+<div class="flex flex-wrap gap-2 pt-2">
+  <button
+    type="submit"
+    class="btn btn-gold"
+    :disabled="saving"
+    x-text="saving ? 'Inahifadhi...' :
+      (editing ? 'Hifadhi Mabadiliko' : 'Sajili WISP')">
+  </button>
+
+  <button
+    type="button"
+    class="btn btn-outline"
+    @click="modal=false">
+    Ghairi
+  </button>
+</div>
+</form>
+</div>
+</div>
+</div>
 </div>  <script>  
 function superApp() {  
   return {  
