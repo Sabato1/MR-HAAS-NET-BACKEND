@@ -11,48 +11,55 @@
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
 
   <style>
-    [x-cloak]{display:none!important}
-    *{box-sizing:border-box}
-    body{margin:0;background:#f4f5f7;font-family:Arial,sans-serif}
-    .gold{color:#d8ad48}
-    .sidebar{background:#0a0a0a;color:#e5e7eb}
-    .nav{display:flex;gap:12px;align-items:center;width:100%;padding:12px;border-radius:9px;text-align:left;color:#bbb;font-size:14px;cursor:pointer}
-    .nav:hover,.nav.active{background:#292115;color:#f5d77e}
-    .card{background:white;border:1px solid #e7e8eb;border-radius:14px;padding:18px}
-    .field{width:100%;border:1px solid #d7d9df;border-radius:9px;padding:11px 12px;background:white;outline:none}
-    .field:focus{border-color:#c69a35;box-shadow:0 0 0 2px #d8ad4822}
-    .btn{padding:10px 14px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .btn-gold{background:linear-gradient(135deg,#f5d77e,#b88627);color:#17120a}
-    .btn-dark{background:#171717;color:white}
-    .btn-outline{border:1px solid #ddd;background:white;color:#222}
-    .metric{font-size:27px;font-weight:800}
-    .muted{font-size:12px;color:#777}
-    .badge{display:inline-block;border-radius:20px;padding:4px 9px;font-size:11px;font-weight:700;white-space:nowrap}
-    .green{background:#dcfce7;color:#166534}
-    .red{background:#fee2e2;color:#991b1b}
-    .amber{background:#fef3c7;color:#92400e}
-    .gold-badge{background:#fef3c7;color:#854d0e}
-    .table-wrap{overflow-x:auto}
-    table{width:100%;border-collapse:collapse;min-width:700px}
-    th,td{padding:12px;text-align:left;border-bottom:1px solid #eee;font-size:13px}
-    th{background:#fafafa;color:#666}
-    @media(max-width:767px){.metric{font-size:22px}}
+    [x-cloak] { display: none !important; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f4f5f7; font-family: Arial, sans-serif; }
+    .gold { color: #d8ad48; }
+    .sidebar { background: #0a0a0a; color: #e5e7eb; }
+    .nav {
+      display: flex; gap: 12px; align-items: center; width: 100%;
+      padding: 12px; border-radius: 9px; text-align: left;
+      color: #bbb; font-size: 14px; cursor: pointer;
+    }
+    .nav:hover, .nav.active { background: #292115; color: #f5d77e; }
+    .card { background: white; border: 1px solid #e7e8eb; border-radius: 14px; padding: 18px; }
+    .field {
+      width: 100%; border: 1px solid #d7d9df; border-radius: 9px;
+      padding: 11px 12px; background: white; outline: none;
+    }
+    .field:focus { border-color: #c69a35; box-shadow: 0 0 0 2px #d8ad4822; }
+    .btn { padding: 10px 14px; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-gold { background: linear-gradient(135deg,#f5d77e,#b88627); color: #17120a; }
+    .btn-dark { background: #171717; color: white; }
+    .btn-outline { border: 1px solid #ddd; background: white; color: #222; }
+    .metric { font-size: 27px; font-weight: 800; }
+    .muted { font-size: 12px; color: #777; }
+    .badge { display: inline-block; border-radius: 20px; padding: 4px 9px; font-size: 11px; font-weight: 700; }
+    .green { background: #dcfce7; color: #166534; }
+    .red { background: #fee2e2; color: #991b1b; }
+    .amber { background: #fef3c7; color: #92400e; }
+    .gold-badge { background: #fef3c7; color: #854d0e; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 700px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
+    th { background: #fafafa; color: #666; }
+    @media(max-width:767px) {
+      .metric { font-size: 22px; }
+    }
   </style>
 </head>
 
 <body>
 <div id="app" x-data="superApp()" x-cloak x-init="init()">
 
-  <!-- MOBILE OVERLAY -->
   <div x-show="sidebarOpen"
        @click="sidebarOpen=false"
        class="fixed inset-0 z-40 bg-black/60 md:hidden"></div>
 
-  <!-- SIDEBAR -->
-  <aside
-    class="sidebar fixed inset-y-0 left-0 z-50 flex w-64 flex-col transition-transform duration-200 -translate-x-full md:translate-x-0"
-    :class="sidebarOpen ? 'translate-x-0' : ''">
+  <aside class="sidebar fixed inset-y-0 left-0 z-50 flex w-64 flex-col
+                transition-transform duration-200 -translate-x-full md:translate-x-0"
+         :class="sidebarOpen ? 'translate-x-0' : ''">
 
     <div class="flex items-center gap-3 border-b border-white/10 px-5 py-5">
       <div class="flex h-11 w-11 items-center justify-center rounded-xl border border-yellow-700/50 font-black gold">MH</div>
@@ -82,7 +89,6 @@
     </div>
   </aside>
 
-  <!-- MAIN -->
   <div class="min-h-screen md:ml-64">
     <header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-4 md:px-7">
       <div class="flex items-center gap-3">
@@ -97,8 +103,7 @@
 
     <main class="space-y-5 p-4 md:p-7">
 
-      <!-- NOTIFICATION -->
-      <div x-show="notice" x-transition class="rounded-xl border p-3 text-sm"
+      <div x-show="notice" class="rounded-xl border p-3 text-sm"
            :class="error?'border-red-200 bg-red-50 text-red-700':'border-green-200 bg-green-50 text-green-700'"
            x-text="notice"></div>
 
@@ -114,12 +119,11 @@
           <button type="button" class="btn btn-gold" @click="openCreate()">+ Sajili WISP</button>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 xl:grid-cols-5">
+        <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <div class="card"><div class="muted">Jumla ya WISP</div><div class="metric mt-3" x-text="tenants.length"></div></div>
           <div class="card"><div class="muted">Akaunti Active</div><div class="metric mt-3" x-text="countStatus('active')"></div></div>
           <div class="card"><div class="muted">Zilizosimamishwa</div><div class="metric mt-3" x-text="countSuspended()"></div></div>
           <div class="card"><div class="muted">Trial zinazoendelea</div><div class="metric mt-3" x-text="countTrial()"></div></div>
-          <div class="card"><div class="muted">Free Forever</div><div class="metric mt-3" x-text="countFreeForever()"></div></div>
         </div>
 
         <div class="card">
@@ -133,13 +137,11 @@
 
           <div class="table-wrap mt-4">
             <table>
-              <thead>
-                <tr><th>Biashara</th><th>Email</th><th>Mpango</th><th>Status</th><th>Subscription</th></tr>
-              </thead>
+              <thead><tr><th>Biashara</th><th>Email</th><th>Mpango</th><th>Status</th><th>Trial</th></tr></thead>
               <tbody>
                 <template x-for="t in tenants.slice(0,8)" :key="t.id">
                   <tr>
-                    <td class="font-bold" x-text="t.name || t.business_name || '-'"></td>
+                    <td class="font-bold" x-text="tenantName(t)"></td>
                     <td x-text="t.email || '-'"></td>
                     <td>
                       <span x-text="planLabel(t.plan || t.plan_name)"></span>
@@ -150,7 +152,7 @@
                   </tr>
                 </template>
                 <tr x-show="tenants.length===0">
-                  <td colspan="5" class="text-center text-gray-500">Hakuna WISP zilizopatikana au API haijaunganishwa.</td>
+                  <td colspan="5" class="text-center text-gray-500">Hakuna WISP zilizopatikana.</td>
                 </tr>
               </tbody>
             </table>
@@ -158,9 +160,9 @@
         </div>
 
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <template x-for="p in plans" :key="p.code">
+          <template x-for="p in plans" :key="p.code || p.name">
             <div class="card">
-              <div class="text-xs font-bold tracking-widest gold" x-text="p.name"></div>
+              <div class="text-xs font-bold tracking-widest gold" x-text="p.name || p.code"></div>
               <div class="metric mt-3" x-text="money(p.price)+' TSh'"></div>
               <div class="muted mt-1">Kwa mwezi</div>
               <div class="mt-4 text-sm text-gray-600" x-text="limits(p)"></div>
@@ -174,24 +176,24 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-xl font-extrabold">Usimamizi wa WISP</h2>
-            <p class="muted mt-1">Sajili, badili mipango, dhibiti subscription na akaunti.</p>
+            <p class="muted mt-1">Sajili, badili, simamisha au washa akaunti.</p>
           </div>
           <button type="button" class="btn btn-gold" @click="openCreate()">+ Sajili WISP</button>
         </div>
 
         <div class="card">
-          <input class="field mb-4 max-w-md" placeholder="Tafuta jina, email, mpango au Free Forever..." x-model="search">
+          <input class="field mb-4 max-w-md" placeholder="Tafuta jina, email au mpango..." x-model="search">
 
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>Biashara</th><th>Email</th><th>Mpango</th><th>Status</th><th>Subscription</th><th>Vitendo</th></tr>
+                <tr><th>Biashara</th><th>Email</th><th>Mpango</th><th>Status</th><th>Trial inaisha</th><th>Vitendo</th></tr>
               </thead>
               <tbody>
                 <template x-for="t in filteredTenants()" :key="t.id">
                   <tr>
                     <td>
-                      <div class="font-bold" x-text="t.name || t.business_name || '-'"></div>
+                      <div class="font-bold" x-text="tenantName(t)"></div>
                       <div class="muted" x-text="t.subdomain || t.id"></div>
                     </td>
                     <td x-text="t.email || '-'"></td>
@@ -200,18 +202,15 @@
                       <span x-show="isFreeForever(t)" class="badge gold-badge mt-1">FREE FOREVER</span>
                     </td>
                     <td><span class="badge" :class="statusClass(t.status)" x-text="t.status || 'active'"></span></td>
-                    <td>
-                      <div x-text="trialLabel(t)"></div>
-                      <div class="muted" x-show="!isFreeForever(t)" x-text="trialDate(t)==='-'?'':('Mwisho: '+trialDate(t))"></div>
-                    </td>
+                    <td x-text="trialDate(t)"></td>
                     <td>
                       <div class="flex flex-wrap gap-2">
                         <button type="button" class="btn btn-outline" @click="editTenant(t)" :disabled="t.status==='deleted'">Badili</button>
                         <button type="button" class="btn" :class="t.status==='suspended'?'btn-gold':'btn-dark'"
-                          @click="toggleStatus(t)" :disabled="t.status==='deleted'"
-                          x-text="t.status==='suspended'?'Washa':'Simamisha'"></button>
+                                @click="toggleStatus(t)" :disabled="t.status==='deleted'"
+                                x-text="t.status==='suspended'?'Washa':'Simamisha'"></button>
                         <button type="button" class="btn" style="background:#fee2e2;color:#991b1b"
-                          @click="deleteTenant(t)" :disabled="t.status==='deleted'">Futa</button>
+                                @click="deleteTenant(t)" :disabled="t.status==='deleted'">Futa</button>
                       </div>
                     </td>
                   </tr>
@@ -233,9 +232,9 @@
         </div>
 
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <template x-for="p in plans" :key="p.code">
+          <template x-for="p in plans" :key="p.code || p.name">
             <div class="card">
-              <div class="text-xs font-extrabold tracking-widest gold" x-text="p.name"></div>
+              <div class="text-xs font-extrabold tracking-widest gold" x-text="p.name || p.code"></div>
               <div class="mt-3 text-2xl font-extrabold" x-text="money(p.price)+' TSh'"></div>
               <div class="muted mt-1" x-text="p.code==='REVENUE_SHARE'?'Ada ya kuanza + 3% ya mapato':'Kwa mwezi'"></div>
               <div class="my-4 h-px bg-gray-100"></div>
@@ -262,7 +261,10 @@
         <div class="card">
           <h3 class="font-bold">Payment Gateway</h3>
           <p class="muted mt-2">AzamPay — muunganisho uliopangwa.</p>
-          <p class="mt-4 text-sm text-gray-600">Miamala halisi itaonekana baada ya subscription API na payment webhook kuunganishwa. Hakuna malipo yanayothibitishwa na ukurasa huu pekee.</p>
+          <p class="mt-4 text-sm text-gray-600">
+            Miamala halisi itaonekana baada ya subscription API na payment webhook kuunganishwa.
+            Hakuna malipo yanayothibitishwa na ukurasa huu pekee.
+          </p>
         </div>
       </section>
 
@@ -300,7 +302,7 @@
           <div><label class="muted">Maelezo</label><textarea class="field mt-1" rows="3" x-model="updateForm.description"></textarea></div>
           <div><label class="muted">Release notes</label><textarea class="field mt-1" rows="4" x-model="updateForm.release_notes"></textarea></div>
           <button type="button" class="btn btn-gold" @click="createUpdate()" :disabled="updateSaving"
-            x-text="updateSaving?'Inahifadhi...':'Tengeneza Draft'"></button>
+                  x-text="updateSaving?'Inahifadhi...':'Tengeneza Draft'"></button>
         </div>
 
         <div class="card space-y-4">
@@ -309,7 +311,9 @@
             <button type="button" class="btn btn-outline" @click="loadUpdates()">Refresh</button>
           </div>
 
-          <template x-if="updates.length===0"><p class="muted">Hakuna matoleo yaliyopatikana.</p></template>
+          <template x-if="updates.length===0">
+            <p class="muted">Hakuna matoleo yaliyopatikana.</p>
+          </template>
 
           <template x-for="u in updates" :key="u.id">
             <div class="rounded-xl border p-4">
@@ -389,8 +393,7 @@
           </select>
         </div>
 
-        <!-- FREE FOREVER -->
-        <div class="rounded-xl border border-amber-300 bg-amber-50 p-4">
+        <div x-show="editing" class="rounded-xl border border-amber-300 bg-amber-50 p-4">
           <label class="flex cursor-pointer items-start gap-3">
             <input type="checkbox" x-model="form.free_forever" class="mt-1">
             <span>
@@ -400,34 +403,29 @@
               </span>
             </span>
           </label>
-          <p class="mt-2 text-xs text-amber-800">
-            Hali hii lazima iheshimiwe na backend pia; checkbox peke yake haiwezi kuondoa vizuizi vya subscription.
-          </p>
         </div>
 
-        <!-- TRIAL DAYS -->
-        <div>
+        <div x-show="editing">
           <label class="mb-1 block text-sm font-bold">Trial Days</label>
           <input class="field" type="number" min="0" max="3650"
                  x-model.number="form.trial_days" placeholder="Mfano: 30">
           <p class="mt-1 text-xs text-gray-500">
-            Idadi ya siku za majaribio. Weka 0 kama hutaki kumpa siku za majaribio.
+            Weka siku za majaribio zinazotakiwa. Backend ndiyo huhifadhi tarehe ya mwisho.
           </p>
         </div>
 
         <div class="rounded-lg bg-amber-50 p-3 text-xs text-amber-900" x-show="!editing">
-          Usajili mpya utaanza kwa Trial Days ulizoweka ikiwa backend inaruhusu thamani hiyo.
+          Trial ya siku 4 inahitaji kuanzishwa na backend wakati wa usajili.
         </div>
 
         <div class="flex flex-wrap gap-2 pt-2">
           <button type="submit" class="btn btn-gold" :disabled="saving"
-                  x-text="saving ? 'Inahifadhi...' : (editing ? 'Hifadhi Mabadiliko' : 'Sajili WISP')"></button>
-          <button type="button" class="btn btn-outline" @click="modal=false">Ghairi</button>
+                  x-text="saving?'Inahifadhi...':(editing?'Hifadhi Mabadiliko':'Sajili WISP')"></button>
+          <button type="button" class="btn btn-outline" @click="modal=false" :disabled="saving">Ghairi</button>
         </div>
       </form>
     </div>
   </div>
-
 </div>
 
 <script>
@@ -450,10 +448,10 @@ function superApp() {
     selectedUpdateDetails: null,
 
     plans: [
-      {code:'START',name:'START',price:10000,device_limit:2,client_limit:50},
-      {code:'DIAMOND',name:'DIAMOND',price:15000,device_limit:7,client_limit:500},
-      {code:'PREMIUM',name:'PREMIUM',price:20000,device_limit:-1,client_limit:5000},
-      {code:'REVENUE_SHARE',name:'REVENUE SHARE',price:20000,device_limit:-1,client_limit:-1}
+      {code:'START', name:'START', price:10000, device_limit:2, client_limit:50},
+      {code:'DIAMOND', name:'DIAMOND', price:15000, device_limit:7, client_limit:500},
+      {code:'PREMIUM', name:'PREMIUM', price:20000, device_limit:-1, client_limit:5000},
+      {code:'REVENUE_SHARE', name:'REVENUE SHARE', price:20000, device_limit:-1, client_limit:-1}
     ],
 
     modal: false,
@@ -468,7 +466,12 @@ function superApp() {
       free_forever:false,
       trial_days:4
     },
-    updateForm: {version:'',title:'',description:'',release_notes:''},
+    updateForm: {
+      version:'',
+      title:'',
+      description:'',
+      release_notes:''
+    },
 
     async init() {
       this.token = localStorage.getItem('mrhaas_token') || '';
@@ -483,7 +486,7 @@ function superApp() {
       try {
         const saved = JSON.parse(localStorage.getItem('mrhaas_tenant') || '{}');
         this.email = saved.email || 'Super Admin';
-      } catch(e) {
+      } catch (e) {
         this.email = 'Super Admin';
       }
 
@@ -508,20 +511,25 @@ function superApp() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Ombi limeshindwa: HTTP ' + response.status);
+        throw new Error(
+          data.message || data.error ||
+          'Ombi limeshindwa: HTTP ' + response.status
+        );
       }
+
       return data;
     },
 
     async refresh() {
       this.loading = true;
+
       try {
         const result = await this.api('/api/super/tenants');
-        const list = result.tenants || result.items || result.data || [];
-        this.tenants = Array.isArray(list) ? list : [];
+        const rows = result.tenants || result.items || result.data || [];
+        this.tenants = Array.isArray(rows) ? rows : [];
         this.notice = '';
         this.error = false;
-      } catch(e) {
+      } catch (e) {
         this.show(e.message, true);
       } finally {
         this.loading = false;
@@ -531,8 +539,10 @@ function superApp() {
     async loadPlans() {
       try {
         const result = await this.api('/api/plans');
-        if (Array.isArray(result.plans)) this.plans = result.plans;
-      } catch(e) {
+        if (Array.isArray(result.plans) && result.plans.length) {
+          this.plans = result.plans;
+        }
+      } catch (e) {
         this.show(e.message, true);
       }
     },
@@ -556,40 +566,29 @@ function superApp() {
       this.editing = true;
       this.editingId = t.id;
 
+      const trialEnd =
+        t.trial_ends_at || t.trial_end || t.trial_expires_at;
+
+      const remainingDays = trialEnd
+        ? Math.max(
+            0,
+            Math.ceil(
+              (new Date(trialEnd).getTime() - Date.now()) / 86400000
+            )
+          )
+        : 0;
+
       this.form = {
         name: t.name || t.business_name || '',
         email: t.email || '',
         password: '',
         plan: String(t.plan || t.plan_name || 'START').toUpperCase(),
-        status: String(t.status || 'active').toLowerCase(),
+        status: t.status || 'active',
         free_forever: this.isFreeForever(t),
-        trial_days: this.getTrialDays(t)
+        trial_days: remainingDays
       };
 
       this.modal = true;
-    },
-
-    getTrialDays(t) {
-      const stored = Number(t.trial_days);
-      if (Number.isFinite(stored) && stored >= 0) return stored;
-
-      const end = t.trial_ends_at || t.trial_end || t.trial_expires_at;
-      if (end) {
-        const remaining = Math.ceil((new Date(end).getTime() - Date.now()) / 86400000);
-        if (Number.isFinite(remaining) && remaining > 0) return remaining;
-      }
-
-      return 4;
-    },
-
-    isFreeForever(t) {
-      return t?.free_forever === true ||
-        t?.free_forever === 1 ||
-        String(t?.free_forever).toLowerCase() === 'true';
-    },
-
-    countFreeForever() {
-      return this.tenants.filter(t => this.isFreeForever(t)).length;
     },
 
     async saveTenant() {
@@ -601,273 +600,116 @@ function superApp() {
         const name = String(this.form.name || '').trim();
         const email = String(this.form.email || '').trim();
         const plan = String(this.form.plan || 'START').toUpperCase();
-        const freeForever = Boolean(this.form.free_forever);
-        const trialDays = Number(this.form.trial_days);
+
+        const allowedPlans = [
+          'START',
+          'DIAMOND',
+          'PREMIUM',
+          'REVENUE_SHARE'
+        ];
 
         if (!name || !email) {
           throw new Error('Jaza jina la biashara na barua pepe.');
         }
 
-        if (!Number.isInteger(trialDays) || trialDays < 0 || trialDays > 3650) {
-          throw new Error('Trial Days lazima iwe namba kati ya 0 na 3650.');
+        if (!allowedPlans.includes(plan)) {
+          throw new Error('Mpango uliochagua haujatambuliwa.');
         }
 
-        const body = {
-          name,
-          email,
-          plan,
-          status: this.form.status,
-          free_forever: freeForever,
-          trial_days: trialDays
-        };
+        if (!this.editing) {
+          if (!this.form.password || this.form.password.length < 8) {
+            throw new Error('Nenosiri lazima liwe na herufi angalau 8.');
+          }
 
-        let result;
+          const result = await this.api('/api/super/tenants', {
+            method:'POST',
+            body:JSON.stringify({
+              name,
+              email,
+              password:this.form.password,
+              plan
+            })
+          });
 
-        if (this.editing) {
-          if (!this.editingId) throw new Error('ID ya Tenant haijapatikana.');
-
-          // Hifadhi jina na hali ya akaunti.
-          result = await this.api(
-            '/api/super/tenant/' + encodeURIComponent(this.editingId),
-            {
-              method: 'PATCH',
-              body: JSON.stringify({
-                name: body.name,
-                plan: body.plan,
-                status: body.status
-              })
-            }
-          );
-
-          // Hifadhi mpango, Free Forever na muda wa trial kupitia subscription API.
-          const subscriptionResult = await this.api(
-            '/api/super/tenant/' + encodeURIComponent(this.editingId) + '/subscription',
-            {
-
-async saveTenant() {
-    if (this.saving) return;
-
-    this.error = '';
-    this.notice = '';
-
-    const businessName = String(this.form.name || '').trim();
-    const email = String(this.form.email || '').trim().toLowerCase();
-    const password = String(this.form.password || '');
-    const plan = String(this.form.plan || 'START').trim().toUpperCase();
-    const freeForever = Boolean(this.form.free_forever);
-    const trialDays = Number(this.form.trial_days);
-
-    // Hakiki taarifa za msingi
-    if (!businessName) {
-        this.error = 'Weka jina la biashara.';
-        return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        this.error = 'Weka email sahihi.';
-        return;
-    }
-
-    if (!this.tenantId && password.length < 8) {
-        this.error = 'Password lazima iwe na angalau herufi/namba 8.';
-        return;
-    }
-
-    if (!freeForever &&
-        (!Number.isInteger(trialDays) || trialDays < 1 || trialDays > 3650)) {
-        this.error = 'Siku za majaribio ziwe kati ya 1 na 3650.';
-        return;
-    }
-
-    this.saving = true;
-
-    try {
-        // KUREKEBISHA TAARIFA ZA TENANT ALIYEKWISHA USAJILIWA
-        if (this.tenantId) {
-            const tenantId = encodeURIComponent(this.tenantId);
-
-            // Route sahihi ya kubadilisha plan na limits.
-            // Hakuna PATCH /api/super/tenant/:id kwenye server.js yako.
-            await this.api(`/api/super/tenant/${tenantId}/subscription`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    plan: plan,
-                    subscription_status: freeForever ? 'active' : 'trial',
-                    free_forever: freeForever,
-                    ...(freeForever ? {} : { trial_days: trialDays })
-                })
-            });
-
-            // Badilisha hali ya akaunti ikiwa imebadilishwa.
-            const selectedStatus =
-                this.form.status === 'suspended' ? 'suspended' : 'active';
-
-            const currentTenant = (this.tenants || []).find(
-                t => String(t.id) === String(this.tenantId)
-            );
-
-async saveTenant() {
-    if (this.saving) return;
-
-    this.error = '';
-    this.notice = '';
-
-    const businessName = String(this.form.name || '').trim();
-    const email = String(this.form.email || '').trim().toLowerCase();
-    const password = String(this.form.password || '');
-    const plan = String(this.form.plan || 'START').trim().toUpperCase();
-    const freeForever = Boolean(this.form.free_forever);
-    const trialDays = Number(this.form.trial_days);
-
-    // Hakiki taarifa za msingi
-    if (!businessName) {
-        this.error = 'Weka jina la biashara.';
-        return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        this.error = 'Weka email sahihi.';
-        return;
-    }
-
-    if (!this.tenantId && password.length < 8) {
-        this.error = 'Password lazima iwe na angalau herufi/namba 8.';
-        return;
-    }
-
-    if (!freeForever &&
-        (!Number.isInteger(trialDays) || trialDays < 1 || trialDays > 3650)) {
-        this.error = 'Siku za majaribio ziwe kati ya 1 na 3650.';
-        return;
-    }
-
-    this.saving = true;
-
-    try {
-        // KUREKEBISHA TAARIFA ZA TENANT ALIYEKWISHA USAJILIWA
-        if (this.tenantId) {
-            const tenantId = encodeURIComponent(this.tenantId);
-
-            // Route sahihi ya kubadilisha plan na limits.
-            // Hakuna PATCH /api/super/tenant/:id kwenye server.js yako.
-            await this.api(`/api/super/tenant/${tenantId}/subscription`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    plan: plan,
-                    subscription_status: freeForever ? 'active' : 'trial',
-                    free_forever: freeForever,
-                    ...(freeForever ? {} : { trial_days: trialDays })
-                })
-            });
-
-            // Badilisha hali ya akaunti ikiwa imebadilishwa.
-            const selectedStatus =
-                this.form.status === 'suspended' ? 'suspended' : 'active';
-
-            const currentTenant = (this.tenants || []).find(
-                t => String(t.id) === String(this.tenantId)
-            );
-
-            if (currentTenant && currentTenant.status !== selectedStatus) {
-                await this.api(`/api/super/tenant/${tenantId}/status`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({
-                        status: selectedStatus
-                    })
-                });
-            }
-
-            this.notice = freeForever
-                ? 'Mabadiliko yamehifadhiwa. Tenant amewekewa Free Forever.'
-                : 'Mabadiliko ya plan na muda wa majaribio yamehifadhiwa.';
-
-        } else {
-            // USAJILI WA TENANT MPYA
-            // Backend yako inahitaji business_name, owner_name,
-            // phone, email, password na plan.
-
-            const ownerName = String(
-                this.form.owner_name || this.form.name || ''
-            ).trim();
-
-            let phone = String(this.form.phone || '').trim();
-
-            // Form yako ya sasa haina phone; omba namba ikiwa haijawekwa.
-            if (!phone) {
-                phone = String(
-                    window.prompt('Ingiza namba ya simu ya mmiliki wa biashara:') || ''
-                ).trim();
-            }
-
-            if (!phone) {
-                this.error = 'Namba ya simu inahitajika kusajili tenant.';
-                return;
-            }
-
-            if (password.length < 8) {
-                this.error = 'Password lazima iwe na angalau herufi/namba 8.';
-                return;
-            }
-
-            await this.api('/api/super/tenants', {
-                method: 'POST',
-                body: JSON.stringify({
-                    business_name: businessName,
-                    owner_name: ownerName,
-                    phone: phone,
-                    email: email,
-                    password: password,
-                    plan: plan
-                })
-            });
-
-            this.notice = 'Tenant amesajiliwa kikamilifu.';
-
-            // Backend yako ya POST kwa sasa huanzisha trial ya siku 4.
-            // Free Forever na trial_days hazitumiki kwenye route hiyo
-            // mpaka uongeze msaada wake kwenye server.js.
+          this.modal = false;
+          this.show(result.message || 'WISP imesajiliwa.');
+          await this.refresh();
+          return;
         }
 
-        // Sasisha orodha ya tenants
+        const id = encodeURIComponent(this.editingId);
+
+        // Sasisha taarifa za msingi.
+        const result = await this.api('/api/super/tenant/' + id, {
+          method:'PATCH',
+          body:JSON.stringify({
+            name,
+            plan,
+            status:this.form.status
+          })
+        });
+
+        // Sasisha mpango na taarifa za subscription.
+        const subscriptionResult = await this.api(
+          '/api/super/tenant/' + id + '/subscription',
+          {
+            method:'PUT',
+            body:JSON.stringify({
+              plan,
+              free_forever:Boolean(this.form.free_forever),
+              trial_days:Math.max(
+                0,
+                Math.min(3650, Number(this.form.trial_days) || 0)
+              )
+            })
+          }
+        );
+
+        this.modal = false;
+        this.show(
+          subscriptionResult.message ||
+          result.message ||
+          'Mabadiliko yamehifadhiwa.'
+        );
+
         await this.refresh();
 
-        // Funga fomu ikiwa mfumo wako unatumia page hii.
-        this.page = 'tenants';
-
-    } catch (e) {
-        console.error('saveTenant error:', e);
-        this.error = e && e.message
-            ? `Imeshindikana kuhifadhi: ${e.message}`
-            : 'Imeshindikana kuhifadhi mabadiliko. Jaribu tena.';
-    } finally {
+      } catch (e) {
+        this.show(
+          'Imeshindwa kuhifadhi: ' + e.message +
+          '. Kagua kama endpoint ya subscription ipo kwenye backend.',
+          true
+        );
+      } finally {
         this.saving = false;
-    }
-},
-
+      }
+    },
 
     async toggleStatus(t) {
       if (!t || !t.id || t.status === 'deleted') return;
 
       const status = t.status === 'suspended' ? 'active' : 'suspended';
 
-      if (!confirm(
+      const confirmed = confirm(
         status === 'suspended'
-          ? 'Unataka kusimamisha akaunti hii?'
+          ? 'Unataka kusimamisha akaunti hii? Wateja wa WISP hii wanaweza kupoteza huduma.'
           : 'Unataka kuwasha tena akaunti hii?'
-      )) return;
+      );
+
+      if (!confirmed) return;
 
       try {
         const result = await this.api(
           '/api/super/tenant/' + encodeURIComponent(t.id) + '/status',
           {
-            method: 'PATCH',
-            body: JSON.stringify({status})
+            method:'PATCH',
+            body:JSON.stringify({status})
           }
         );
 
         this.show(result.message || 'Hali ya akaunti imesasishwa.');
         await this.refresh();
-      } catch(e) {
+      } catch (e) {
         this.show(e.message, true);
       }
     },
@@ -875,19 +717,22 @@ async saveTenant() {
     async deleteTenant(t) {
       if (!t || !t.id || t.status === 'deleted') return;
 
-      const name = t.name || t.business_name || '';
-      const typed = prompt('Andika jina la WISP kuthibitisha kufuta:\n' + name);
+      const name = this.tenantName(t);
+      const typed = prompt(
+        'ONYO: Kufuta akaunti ya WISP.\n' +
+        'Andika jina hili kamili kuthibitisha:\n\n' + name
+      );
 
       if (typed === null) return;
 
       if (typed.trim() !== name.trim()) {
-        this.show('Jina halilingani. Hakuna kilichobadilishwa.', true);
+        this.show('Jina halilingani. Hakuna kilichofutwa.', true);
         return;
       }
 
       if (!confirm(
         'Una uhakika unataka kufuta akaunti ya ' + name +
-        '?\nHakikisha unaelewa athari za kufuta akaunti hii.'
+        '? Hakikisha unaelewa athari kwa taarifa zake.'
       )) return;
 
       try {
@@ -898,7 +743,7 @@ async saveTenant() {
 
         this.show(result.message || 'Ombi la kufuta limekamilika.');
         await this.refresh();
-      } catch(e) {
+      } catch (e) {
         this.show(e.message, true);
       }
     },
@@ -907,34 +752,46 @@ async saveTenant() {
       const q = this.search.toLowerCase().trim();
       if (!q) return this.tenants;
 
-      return this.tenants.filter(t => {
-        const values = [
-          t.name, t.business_name, t.email, t.plan, t.plan_name,
-          t.status, t.subdomain, t.id
-        ];
+      return this.tenants.filter(t => [
+        t.name,
+        t.business_name,
+        t.email,
+        t.plan,
+        t.plan_name,
+        t.status,
+        t.subdomain,
+        t.id,
+        this.isFreeForever(t) ? 'free forever' : ''
+      ].some(v => String(v || '').toLowerCase().includes(q)));
+    },
 
-        if (this.isFreeForever(t)) values.push('free forever', 'free_forever');
+    tenantName(t) {
+      return t.name || t.business_name || t.owner_name || '-';
+    },
 
-        return values.some(v => String(v || '').toLowerCase().includes(q));
-      });
+    isFreeForever(t) {
+      return t.free_forever === true ||
+             t.free_forever === 'true' ||
+             t.free_forever === 1;
     },
 
     countStatus(status) {
-      return this.tenants.filter(t =>
-        String(t.status || 'active').toLowerCase() === status
+      return this.tenants.filter(
+        t => String(t.status || 'active').toLowerCase() === status
       ).length;
     },
 
     countSuspended() {
-      return this.tenants.filter(t =>
-        ['suspended','inactive'].includes(String(t.status || '').toLowerCase())
+      return this.tenants.filter(
+        t => ['suspended','inactive'].includes(
+          String(t.status || '').toLowerCase()
+        )
       ).length;
     },
 
     countTrial() {
       return this.tenants.filter(t => {
         if (this.isFreeForever(t)) return false;
-
         const end = t.trial_ends_at || t.trial_end || t.trial_expires_at;
         return end && new Date(end).getTime() > Date.now();
       }).length;
@@ -945,18 +802,19 @@ async saveTenant() {
     },
 
     limits(p) {
-      const d = p.device_limit ?? p.devices ?? '-';
-      const c = p.client_limit ?? p.clients ?? '-';
+      const d = p.device_limit ?? p.max_devices ?? p.devices ?? '-';
+      const c = p.client_limit ?? p.max_clients ?? p.clients ?? '-';
 
-      return 'Vifaa: ' + (Number(d) === -1 ? 'Bila kikomo' : d) +
-        ' · Wateja: ' + (Number(c) === -1 ? 'Bila kikomo' : c);
+      return 'Vifaa: ' +
+        (Number(d) === -1 ? 'Bila kikomo' : d) +
+        ' · Wateja: ' +
+        (Number(c) === -1 ? 'Bila kikomo' : c);
     },
 
     statusClass(status) {
-      status = String(status || 'active').toLowerCase();
-
-      if (['suspended','inactive','deleted'].includes(status)) return 'red';
-      if (['trial','pending'].includes(status)) return 'amber';
+      const s = String(status || 'active').toLowerCase();
+      if (['suspended','inactive','deleted'].includes(s)) return 'red';
+      if (['trial','pending'].includes(s)) return 'amber';
       return 'green';
     },
 
@@ -976,11 +834,11 @@ async saveTenant() {
       const end = t.trial_ends_at || t.trial_end || t.trial_expires_at;
       if (!end) return 'Haijulikani';
 
-      const time = new Date(end).getTime();
-      if (!Number.isFinite(time)) return 'Haijulikani';
+      const timestamp = new Date(end).getTime();
+      if (isNaN(timestamp)) return 'Haijulikani';
 
-      const days = Math.ceil((time - Date.now()) / 86400000);
-      return days <= 0 ? 'Imeisha' : days + ' siku zimebaki';
+      const days = Math.ceil((timestamp - Date.now()) / 86400000);
+      return days < 0 ? 'Imeisha' : days + ' siku';
     },
 
     money(value) {
@@ -1000,7 +858,6 @@ async saveTenant() {
 
     go(p) {
       this.page = p;
-
       if (window.innerWidth < 768) this.sidebarOpen = false;
 
       if (p === 'dashboard' || p === 'tenants') this.refresh();
@@ -1011,11 +868,11 @@ async saveTenant() {
     async loadUpdates() {
       try {
         const result = await this.api('/api/super/updates');
-        const list = result.updates || result.items || result.data || [];
-        this.updates = Array.isArray(list) ? list : [];
+        const rows = result.updates || result.items || result.data || [];
+        this.updates = Array.isArray(rows) ? rows : [];
         this.notice = '';
         this.error = false;
-      } catch(e) {
+      } catch (e) {
         this.show('Imeshindwa kupakia updates: ' + e.message, true);
       }
     },
@@ -1045,7 +902,7 @@ async saveTenant() {
 
         this.show(result.message || 'Draft imetengenezwa.');
         await this.loadUpdates();
-      } catch(e) {
+      } catch (e) {
         this.show(e.message, true);
       } finally {
         this.updateSaving = false;
@@ -1073,8 +930,9 @@ async saveTenant() {
 
         this.show(result.message || 'Hali imesasishwa.');
         await this.loadUpdates();
-        this.selectedUpdateDetails = this.updates.find(x => x.id === u.id) || null;
-      } catch(e) {
+        this.selectedUpdateDetails =
+          this.updates.find(x => String(x.id) === String(u.id)) || null;
+      } catch (e) {
         this.show(e.message, true);
       }
     },
@@ -1096,8 +954,9 @@ async saveTenant() {
 
         this.show(result.message || 'Ombi la kutoa toleo limetumwa.');
         await this.loadUpdates();
-        this.selectedUpdateDetails = this.updates.find(x => x.id === u.id) || null;
-      } catch(e) {
+        this.selectedUpdateDetails =
+          this.updates.find(x => String(x.id) === String(u.id)) || null;
+      } catch (e) {
         this.show(e.message, true);
       }
     },
