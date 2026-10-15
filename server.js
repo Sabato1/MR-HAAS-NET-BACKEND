@@ -292,33 +292,50 @@ const ensureTenantAccess = (req, tenantId) => {
 };
 
 const requireSubscription = asyncRoute(async (req, res, next) => {
-  if (req.role === 'super_admin') return next();
+if (req.role === 'super_admin') return next();
 
-  const tenant = req.tenant;
-  const now = Date.now();
-  const trialEnd = tenant.trial_ends_at ? new Date(tenant.trial_ends_at).getTime() : 0;
-  const paidEnd = tenant.subscription_ends_at
-    ? new Date(tenant.subscription_ends_at).getTime()
-    : 0;
+const tenant = req.tenant;
 
-  const trialValid =
-    tenant.subscription_status === 'trial' &&
-    trialEnd > now;
+if (!tenant) {
+fail(401, 'Taarifa za Tenant hazijapatikana. Ingia tena.');
+}
 
-  const paidValid =
-    tenant.subscription_status === 'active' &&
-    paidEnd > now;
+// Ruhusu Tenant mwenye Free Forever kuendelea.
+if (
+tenant.free_forever === true ||
+tenant.free_forever === 'true'
+) {
+return next();
+}
 
-  if (!trialValid && !paidValid) {
-    return res.status(402).json({
-      success: false,
-      code: 'SUBSCRIPTION_REQUIRED',
-      message: 'Muda wa majaribio umeisha au usajili haujalipiwa. Tafadhali chagua mpango na ukamilishe malipo.',
-      plans: PLANS
-    });
-  }
+const now = Date.now();
 
-  next();
+const trialEnd = tenant.trial_ends_at
+? new Date(tenant.trial_ends_at).getTime()
+: 0;
+
+const paidEnd = tenant.subscription_ends_at
+? new Date(tenant.subscription_ends_at).getTime()
+: 0;
+
+const trialValid =
+tenant.subscription_status === 'trial' &&
+trialEnd > now;
+
+const paidValid =
+tenant.subscription_status === 'active' &&
+paidEnd > now;
+
+if (!trialValid && !paidValid) {
+return res.status(402).json({
+success: false,
+code: 'SUBSCRIPTION_REQUIRED',
+message: 'Muda wa majaribio umeisha au usajili haujalipiwa. Tafadhali chagua mpango na ukamilishe malipo.',
+plans: PLANS
+});
+}
+
+return next();
 });
 
 const checkPlanLimit = async (tenant, field, table) => {
@@ -598,6 +615,7 @@ app.get('/api/subscription', authMiddleware, asyncRoute(async (req, res) => {
     : null;
   const now = new Date();
 
+  
   const freeForever = tenant.free_forever === true;
 
   const trialActive =
@@ -609,6 +627,11 @@ app.get('/api/subscription', authMiddleware, asyncRoute(async (req, res) => {
     tenant.subscription_status === 'active' &&
     paidEnd &&
     paidEnd > now;
+
+  const serviceAccess = Boolean(
+    freeForever || trialActive || paidActive
+  );
+
 
   res.json({
     success: true,
