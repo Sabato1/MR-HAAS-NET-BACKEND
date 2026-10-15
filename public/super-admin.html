@@ -706,6 +706,68 @@ async saveTenant() {
                 t => String(t.id) === String(this.tenantId)
             );
 
+async saveTenant() {
+    if (this.saving) return;
+
+    this.error = '';
+    this.notice = '';
+
+    const businessName = String(this.form.name || '').trim();
+    const email = String(this.form.email || '').trim().toLowerCase();
+    const password = String(this.form.password || '');
+    const plan = String(this.form.plan || 'START').trim().toUpperCase();
+    const freeForever = Boolean(this.form.free_forever);
+    const trialDays = Number(this.form.trial_days);
+
+    // Hakiki taarifa za msingi
+    if (!businessName) {
+        this.error = 'Weka jina la biashara.';
+        return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        this.error = 'Weka email sahihi.';
+        return;
+    }
+
+    if (!this.tenantId && password.length < 8) {
+        this.error = 'Password lazima iwe na angalau herufi/namba 8.';
+        return;
+    }
+
+    if (!freeForever &&
+        (!Number.isInteger(trialDays) || trialDays < 1 || trialDays > 3650)) {
+        this.error = 'Siku za majaribio ziwe kati ya 1 na 3650.';
+        return;
+    }
+
+    this.saving = true;
+
+    try {
+        // KUREKEBISHA TAARIFA ZA TENANT ALIYEKWISHA USAJILIWA
+        if (this.tenantId) {
+            const tenantId = encodeURIComponent(this.tenantId);
+
+            // Route sahihi ya kubadilisha plan na limits.
+            // Hakuna PATCH /api/super/tenant/:id kwenye server.js yako.
+            await this.api(`/api/super/tenant/${tenantId}/subscription`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    plan: plan,
+                    subscription_status: freeForever ? 'active' : 'trial',
+                    free_forever: freeForever,
+                    ...(freeForever ? {} : { trial_days: trialDays })
+                })
+            });
+
+            // Badilisha hali ya akaunti ikiwa imebadilishwa.
+            const selectedStatus =
+                this.form.status === 'suspended' ? 'suspended' : 'active';
+
+            const currentTenant = (this.tenants || []).find(
+                t => String(t.id) === String(this.tenantId)
+            );
+
             if (currentTenant && currentTenant.status !== selectedStatus) {
                 await this.api(`/api/super/tenant/${tenantId}/status`, {
                     method: 'PATCH',
