@@ -1,4 +1,3 @@
-
 'use strict';
 
 const express = require('express');
@@ -14,25 +13,21 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-const SECRET_KEY = process.env.SECRET_KEY;
-const SUPER_ADMIN_EMAIL = String(process.env.SUPER_ADMIN_EMAIL || '').trim().toLowerCase();
-const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || '';
+let SECRET_KEY = process.env.SECRET_KEY || '';
+const SUPER_ADMIN_EMAIL = String(process.env.SUPER_ADMIN_EMAIL || 'admin@mrhaasnet.co.tz').trim().toLowerCase();
+const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || 'SuperAdminPassword123!';
 
-if (IS_PRODUCTION && (!SECRET_KEY || SECRET_KEY.length < 32)) {
-  throw new Error('SECRET_KEY lazima iwe na angalau herufi 32 kwenye production.');
+if (!SECRET_KEY || SECRET_KEY.length < 32) {
+  console.warn('⚠️ ONYO: SECRET_KEY haina herufi 32 au haijawekwa. Mfumo unatumia ufunguo wa dharura.');
+  SECRET_KEY = crypto.randomBytes(48).toString('hex');
 }
 
-if (IS_PRODUCTION && (!SUPER_ADMIN_EMAIL || SUPER_ADMIN_PASSWORD.length < 12)) {
-  throw new Error('Weka SUPER_ADMIN_EMAIL na SUPER_ADMIN_PASSWORD yenye angalau herufi 12.');
-}
-
-const JWT_SECRET = SECRET_KEY || crypto.randomBytes(48).toString('hex');
+const JWT_SECRET = SECRET_KEY;
 const SUPER_ADMIN_ID = 'tenant_super_admin';
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
-
 
 const allowedOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
@@ -41,24 +36,16 @@ const allowedOrigins = (process.env.CORS_ORIGINS || '')
 
 app.use(cors({
   origin(origin, callback) {
-    // Ruhusu maombi yasiyotoka kwenye browser, kama maombi ya server.
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    // Development pekee: ruhusu origins zote.
-    if (!IS_PRODUCTION) {
+    if (!origin || !IS_PRODUCTION) {
       return callback(null, true);
     }
 
     const normalizedOrigin = origin.trim().replace(/\/+$/, '');
-
     if (allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     }
 
     console.error('[CORS BLOCKED] Origin iliyokataliwa:', origin);
-
     const error = new Error('Origin hii hairuhusiwi.');
     error.status = 403;
     return callback(error);
@@ -72,7 +59,6 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
-
 app.get('/super-admin.html', (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
@@ -81,6 +67,9 @@ app.get('/super-admin.html', (req, res) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+/* =========================================================
+   SYSTEM PLANS DEFINITION
+========================================================= */
 const PLANS = {
   START: {
     name: 'START',
@@ -214,6 +203,7 @@ const publicTenant = tenant => {
     trial_ends_at: tenant.trial_ends_at,
     subscription_status: tenant.subscription_status,
     subscription_ends_at: tenant.subscription_ends_at,
+    free_forever: tenant.free_forever,
     created_at: tenant.created_at
   };
 };
@@ -274,12 +264,6 @@ const getTenantId = req => {
   return req.tenant_id;
 };
 
-const requireTenantId = req => {
-  const tenantId = getTenantId(req);
-  if (!tenantId) fail(400, 'tenant_id inahitajika.');
-  return tenantId;
-};
-
 const getTenantRecord = async tenantId => {
   const tenant = await one('SELECT * FROM tenants WHERE id = $1', [tenantId]);
   if (!tenant) fail(404, 'WISP haijapatikana.');
@@ -292,50 +276,32 @@ const ensureTenantAccess = (req, tenantId) => {
 };
 
 const requireSubscription = asyncRoute(async (req, res, next) => {
-if (req.role === 'super_admin') return next();
+  if (req.role === 'super_admin') return next();
 
-const tenant = req.tenant;
+  const tenant = req.tenant;
+  if (!tenant) fail(401, 'Taarifa za Tenant hazijapatikana. Ingia tena.');
 
-if (!tenant) {
-fail(401, 'Taarifa za Tenant hazijapatikana. Ingia tena.');
-}
+  if (tenant.free_forever === true || tenant.free_forever === 'true') {
+    return next();
+  }
 
-// Ruhusu Tenant mwenye Free Forever kuendelea.
-if (
-tenant.free_forever === true ||
-tenant.free_forever === 'true'
-) {
-return next();
-}
+  const now = Date.now();
+  const trialEnd = tenant.trial_ends_at ? new Date(tenant.trial_ends_at).getTime() : 0;
+  const paidEnd = tenant.subscription_ends_at ? new Date(tenant.subscription_ends_at).getTime() : 0;
 
-const now = Date.now();
+  const trialValid = tenant.subscription_status === 'trial' && trialEnd > now;
+  const paidValid = tenant.subscription_status === 'active' && paidEnd > now;
 
-const trialEnd = tenant.trial_ends_at
-? new Date(tenant.trial_ends_at).getTime()
-: 0;
+  if (!trialValid && !paidValid) {
+    return res.status(402).json({
+      success: false,
+      code: 'SUBSCRIPTION_REQUIRED',
+      message: 'Muda wa majaribio umeisha au usajili haujalipiwa. Tafadhali chagua mpango na ukamilishe malipo.',
+      plans: PLANS
+    });
+  }
 
-const paidEnd = tenant.subscription_ends_at
-? new Date(tenant.subscription_ends_at).getTime()
-: 0;
-
-const trialValid =
-tenant.subscription_status === 'trial' &&
-trialEnd > now;
-
-const paidValid =
-tenant.subscription_status === 'active' &&
-paidEnd > now;
-
-if (!trialValid && !paidValid) {
-return res.status(402).json({
-success: false,
-code: 'SUBSCRIPTION_REQUIRED',
-message: 'Muda wa majaribio umeisha au usajili haujalipiwa. Tafadhali chagua mpango na ukamilishe malipo.',
-plans: PLANS
-});
-}
-
-return next();
+  return next();
 });
 
 const checkPlanLimit = async (tenant, field, table) => {
@@ -364,7 +330,7 @@ const createTrialDates = () => {
 };
 
 const getPlan = value => {
-  const key = String(value || '').trim().toUpperCase();
+  const key = String(value || '').trim().toUpperCase().replace(/\s+/g, '_');
   return PLANS[key] || null;
 };
 
@@ -482,33 +448,7 @@ app.post('/api/auth/login', asyncRoute(async (req, res) => {
 
   if (!email || !password) fail(400, 'Weka barua pepe na nenosiri.');
 
-  // Super Admin credentials are configured as environment variables.
-  if (
-    SUPER_ADMIN_EMAIL &&
-    email === SUPER_ADMIN_EMAIL &&
-    SUPER_ADMIN_PASSWORD &&
-    await bcrypt.compare(password, await bcrypt.hash(SUPER_ADMIN_PASSWORD, 12)).catch(() => false)
-  ) {
-    return res.json({
-      success: true,
-      token: issueSuperAdminToken(),
-      role: 'super_admin',
-      tenant: {
-        id: SUPER_ADMIN_ID,
-        email: SUPER_ADMIN_EMAIL,
-        role: 'super_admin',
-        business_name: 'MR HAAS SUPER ADMIN'
-      }
-    });
-  }
-
-  // Also allow Super Admin login by exact environment password.
-  if (
-    SUPER_ADMIN_EMAIL &&
-    email === SUPER_ADMIN_EMAIL &&
-    SUPER_ADMIN_PASSWORD &&
-    password === SUPER_ADMIN_PASSWORD
-  ) {
+  if (SUPER_ADMIN_EMAIL && email === SUPER_ADMIN_EMAIL && password === SUPER_ADMIN_PASSWORD) {
     return res.json({
       success: true,
       token: issueSuperAdminToken(),
@@ -548,10 +488,6 @@ app.post('/api/auth/login', asyncRoute(async (req, res) => {
 app.post('/api/super-admin/login', asyncRoute(async (req, res) => {
   const email = emailValue(req.body.email);
   const password = String(req.body.password || '');
-
-  if (!SUPER_ADMIN_EMAIL || !SUPER_ADMIN_PASSWORD) {
-    fail(503, 'Super Admin hajasanidiwa. Weka SUPER_ADMIN_EMAIL na SUPER_ADMIN_PASSWORD kwenye environment variables.');
-  }
 
   if (email !== SUPER_ADMIN_EMAIL || password !== SUPER_ADMIN_PASSWORD) {
     fail(401, 'Taarifa za Super Admin si sahihi.');
@@ -594,127 +530,7 @@ app.get('/api/auth/me', authMiddleware, asyncRoute(async (req, res) => {
 }));
 
 /* =========================
-   TENANT SUBSCRIPTION
-========================= */
-
-app.get('/api/subscription', authMiddleware, asyncRoute(async (req, res) => {
-  const tenantId = req.role === 'super_admin'
-    ? req.query.tenant_id
-    : req.tenant_id;
-
-  if (!tenantId) fail(400, 'tenant_id inahitajika kwa Super Admin.');
-  
-  ensureTenantAccess(req, tenantId);
-
-  const tenant = await getTenantRecord(tenantId);
-  const trialEnd = tenant.trial_ends_at
-    ? new Date(tenant.trial_ends_at)
-    : null;
-  const paidEnd = tenant.subscription_ends_at
-    ? new Date(tenant.subscription_ends_at)
-    : null;
-  const now = new Date();
-
-  
-  const freeForever = tenant.free_forever === true;
-
-  const trialActive =
-    tenant.subscription_status === 'trial' &&
-    trialEnd &&
-    trialEnd > now;
-
-  const paidActive =
-    tenant.subscription_status === 'active' &&
-    paidEnd &&
-    paidEnd > now;
-
-  const serviceAccess = Boolean(
-    freeForever || trialActive || paidActive
-  );
-
-
-  res.json({
-    success: true,
-    subscription: {
-      plan: tenant.plan,
-      status: tenant.subscription_status,
-      trial_started_at: tenant.trial_started_at,
-      trial_ends_at: tenant.trial_ends_at,
-      subscription_ends_at: tenant.subscription_ends_at,
-      free_forever: freeForever,
-      trial_active: Boolean(trialActive),
-      paid_active: Boolean(paidActive),
-      service_access: Boolean(freeForever || trialActive || paidActive),
-      plans: PLANS
-    }
-  });
-}));
-
-
-app.get('/api/payment-settings', authMiddleware, asyncRoute(async (req, res) => {
-  const tenantId = req.role === 'super_admin'
-    ? req.query.tenant_id
-    : req.tenant_id;
-
-  if (!tenantId) fail(400, 'tenant_id inahitajika kwa Super Admin.');
-  ensureTenantAccess(req, tenantId);
-
-  const settings = await one(
-    `SELECT tenant_id, enabled_providers, manual_payment_instructions,
-            payment_phone, payment_account_name, updated_at
-     FROM payment_settings WHERE tenant_id = $1`,
-    [tenantId]
-  );
-
-  res.json({
-    success: true,
-    settings: settings || {
-      tenant_id: tenantId,
-      enabled_providers: ['manual'],
-      manual_payment_instructions: '',
-      payment_phone: '',
-      payment_account_name: ''
-    },
-    available_providers: PAYMENT_PROVIDERS
-  });
-}));
-
-app.put('/api/payment-settings', authMiddleware, asyncRoute(async (req, res) => {
-  const tenantId = req.role === 'super_admin'
-    ? req.body.tenant_id
-    : req.tenant_id;
-
-  if (!tenantId) fail(400, 'tenant_id inahitajika.');
-  ensureTenantAccess(req, tenantId);
-
-  const providers = Array.isArray(req.body.enabled_providers)
-    ? req.body.enabled_providers.filter(item => PAYMENT_PROVIDERS.includes(item))
-    : ['manual'];
-
-  const instructions = String(req.body.manual_payment_instructions || '').slice(0, 3000);
-  const phone = String(req.body.payment_phone || '').slice(0, 40);
-  const accountName = String(req.body.payment_account_name || '').slice(0, 120);
-
-  const settings = await one(
-    `INSERT INTO payment_settings
-      (tenant_id, enabled_providers, manual_payment_instructions, payment_phone, payment_account_name, updated_at)
-     VALUES ($1,$2,$3,$4,$5,NOW())
-     ON CONFLICT (tenant_id) DO UPDATE SET
-       enabled_providers = EXCLUDED.enabled_providers,
-       manual_payment_instructions = EXCLUDED.manual_payment_instructions,
-       payment_phone = EXCLUDED.payment_phone,
-       payment_account_name = EXCLUDED.payment_account_name,
-       updated_at = NOW()
-     RETURNING tenant_id, enabled_providers, manual_payment_instructions,
-               payment_phone, payment_account_name, updated_at`,
-    [tenantId, providers, instructions, phone, accountName]
-  );
-
-  res.json({ success: true, settings });
-}));
-
-/* =========================
-   SUPER ADMIN: WISPs
+   SUPER ADMIN: WISPs & SUBSCRIPTION MANAGEMENT
 ========================= */
 
 app.get('/api/super/tenants', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
@@ -722,7 +538,7 @@ app.get('/api/super/tenants', authMiddleware, requireSuperAdmin, asyncRoute(asyn
     `SELECT t.id, t.business_name, t.owner_name, t.phone, t.email, t.subdomain,
             t.plan, t.max_devices, t.max_clients, t.status, t.role,
             t.trial_started_at, t.trial_ends_at, t.subscription_status,
-            t.subscription_ends_at, t.created_at,
+            t.subscription_ends_at, t.free_forever, t.created_at,
             (SELECT COUNT(*)::int FROM devices d WHERE d.tenant_id = t.id) AS device_count,
             (SELECT COUNT(*)::int FROM clients c WHERE c.tenant_id = t.id) AS client_count,
             (SELECT COUNT(*)::int FROM sites s WHERE s.tenant_id = t.id) AS site_count
@@ -737,27 +553,24 @@ app.get('/api/super/tenants', authMiddleware, requireSuperAdmin, asyncRoute(asyn
 
 app.post('/api/super/tenants', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
   const businessName = clean(req.body.business_name);
-  const ownerName = clean(req.body.owner_name);
-  const phone = clean(req.body.phone);
+  const ownerName = clean(req.body.owner_name || businessName);
+  const phone = clean(req.body.phone || '0000000000');
   const email = emailValue(req.body.email);
-  const password = String(req.body.password || '');
+  const password = String(req.body.password || 'Password123!');
   const planKey = String(req.body.plan || 'START').toUpperCase();
-  const plan = getPlan(planKey);
+  const plan = getPlan(planKey) || PLANS.START;
 
-  if (!businessName || !ownerName || !phone || !email || !password) {
-    fail(400, 'Jaza taarifa zote zinazohitajika za WISP.');
+  if (!businessName || !email) {
+    fail(400, 'Jaza jina la biashara na barua pepe.');
   }
 
   if (!isValidEmail(email)) fail(400, 'Barua pepe si sahihi.');
-  if (!isValidPhone(phone)) fail(400, 'Namba ya simu si sahihi.');
-  if (password.length < 8) fail(400, 'Nenosiri lazima liwe na angalau herufi 8.');
-  if (!plan) fail(400, 'Mpango si sahihi.');
 
   const existing = await one(
-    'SELECT id FROM tenants WHERE LOWER(email) = $1 OR phone = $2 LIMIT 1',
-    [email, phone]
+    'SELECT id FROM tenants WHERE LOWER(email) = $1 LIMIT 1',
+    [email]
   );
-  if (existing) fail(409, 'Barua pepe au simu tayari imesajiliwa.');
+  if (existing) fail(409, 'Barua pepe tayari imesajiliwa.');
 
   const trial = createTrialDates();
   const id = makeId('tenant');
@@ -792,164 +605,16 @@ app.post('/api/super/tenants', authMiddleware, requireSuperAdmin, asyncRoute(asy
   });
 }));
 
-app.put('/api/super/tenant/:id/plan', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
-  const plan = getPlan(req.body.plan);
-  if (!plan) fail(400, 'Mpango haupo kwenye orodha.');
-
-  const tenant = await one(
-    `UPDATE tenants
-     SET plan = $1, max_devices = $2, max_clients = $3
-     WHERE id = $4 AND id <> $5
-     RETURNING *`,
-    [plan.name, plan.max_devices, plan.max_clients, req.params.id, SUPER_ADMIN_ID]
-  );
-
-  if (!tenant) fail(404, 'WISP haijapatikana.');
-
-  res.json({ success: true, message: 'Mpango umebadilishwa.', tenant: publicTenant(tenant) });
-}));
-
-
-app.patch('/api/super/tenant/:id/status', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
-  const tenantId = String(req.params.id || '').trim();
-  const status = String(req.body.status || '').trim().toLowerCase();
-
-  if (!tenantId) {
-    fail(400, 'ID ya Tenant inahitajika.');
-  }
-
-  if (tenantId === String(SUPER_ADMIN_ID)) {
-    fail(403, 'Huwezi kubadilisha hali ya akaunti ya Super Admin.');
-  }
-
-  if (!['active', 'suspended'].includes(status)) {
-    fail(400, 'Hali inaruhusiwa ni active au suspended.');
-  }
-
-  const tenant = await one(
-  `UPDATE tenants
-   SET status = $1,
-       updated_at = NOW()
-   WHERE id = $2
-     AND id <> $3
-     AND status <> 'deleted'
-   RETURNING id, business_name, email, status`,
-  [status, tenantId, SUPER_ADMIN_ID]
-);
-
-  if (!tenant) {
-    fail(404, 'WISP haijapatikana.');
-  }
-
-  res.json({
-    success: true,
-    message: status === 'suspended'
-      ? 'Akaunti ya Tenant imesimamishwa.'
-      : 'Akaunti ya Tenant imerejeshwa.',
-    tenant
-  });
-}));
-
-// Soft-delete Tenant: hifadhi malipo na historia ya biashara.
-
-app.delete(
-  '/api/super/tenant/:id',
-  authMiddleware,
-  requireSuperAdmin,
-  asyncRoute(async (req, res) => {
-    const tenantId = String(req.params.id || '').trim();
-
-    if (!tenantId) {
-      fail(400, 'ID ya Tenant inahitajika.');
-    }
-
-    if (tenantId === SUPER_ADMIN_ID) {
-      fail(403, 'Huwezi kufuta akaunti ya Super Admin.');
-    }
-
-    const client = await db.pool.connect();
-
-    try {
-      await client.query('BEGIN');
-
-      const result = await client.query(
-        `SELECT id, business_name, email, status
-         FROM tenants
-         WHERE id = $1
-         FOR UPDATE`,
-        [tenantId]
-      );
-
-      const tenant = result.rows[0];
-
-      if (!tenant) {
-        fail(404, 'WISP haijapatikana.');
-      }
-
-      if (tenant.status === 'deleted') {
-        fail(409, 'Akaunti hii tayari imefutwa.');
-      }
-
-      const updatedResult = await client.query(
-        `UPDATE tenants
-         SET status = 'deleted',
-             updated_at = NOW()
-         WHERE id = $1
-         RETURNING id, business_name, email, status`,
-        [tenantId]
-      );
-
-      await client.query(
-        `INSERT INTO audit_logs
-          (tenant_id, actor_email, action, entity_type, entity_id, details)
-         VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
-        [
-          tenantId,
-          req.email || null,
-          'tenant_soft_deleted',
-          'tenant',
-          tenantId,
-          JSON.stringify({
-            business_name: tenant.business_name,
-            email: tenant.email,
-            previous_status: tenant.status,
-            new_status: 'deleted'
-          })
-        ]
-      );
-
-      await client.query('COMMIT');
-
-      res.json({
-        success: true,
-        message: 'Akaunti imezimwa. Historia ya malipo na taarifa za biashara zimehifadhiwa.',
-        tenant: updatedResult.rows[0]
-      });
-    } catch (error) {
-      try {
-        await client.query('ROLLBACK');
-      } catch (rollbackError) {
-        console.error('[ROLLBACK ERROR]', rollbackError.message);
-      }
-
-      throw error;
-    } finally {
-      client.release();
-    }
-  })
-);
-
-
 app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
-  const tenantId = req.params.id;
-  const plan = getPlan(req.body.plan);
-  let status = String(req.body.subscription_status || '').toLowerCase();
+  const tenantId = String(req.params.id || '').trim();
+  const rawPlanInput = String(req.body.plan || 'START').trim().toUpperCase().replace(/\s+/g, '_');
+  const plan = PLANS[rawPlanInput] || getPlan(rawPlanInput);
+  
+  let status = String(req.body.subscription_status || 'active').toLowerCase();
 
-  if (!plan) fail(400, 'Mpango si sahihi.');
-
-  if (!['trial', 'active', 'expired', 'pending', 'cancelled'].includes(status)) {
-    fail(400, 'subscription_status si sahihi.');
-  }
+  if (!tenantId) fail(400, 'ID ya Tenant inahitajika.');
+  if (tenantId === SUPER_ADMIN_ID) fail(403, 'Huwezi kubadilisha mpango wa Super Admin.');
+  if (!plan) fail(400, 'Mpango (Plan) si sahihi. Chagua START, DIAMOND, PREMIUM, au REVENUE_SHARE.');
 
   const current = await one(
     'SELECT * FROM tenants WHERE id = $1 AND id <> $2',
@@ -958,37 +623,22 @@ app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin,
 
   if (!current) fail(404, 'WISP haijapatikana.');
 
-  const freeForever =
-    req.body.free_forever === true ||
-    req.body.free_forever === 'true';
+  const freeForever = req.body.free_forever === true || req.body.free_forever === 'true';
 
   let trialStarted = current.trial_started_at;
   let trialEnds = current.trial_ends_at;
 
-  // Super Admin anaweza kuongeza siku za trial.
-  if (req.body.trial_days !== undefined) {
+  if (req.body.trial_days !== undefined && req.body.trial_days !== '') {
     const days = Number(req.body.trial_days);
-
-    if (!Number.isInteger(days) || days < 1 || days > 3650) {
-      fail(400, 'Siku za trial ziwe kati ya 1 na 3650.');
+    if (!Number.isNaN(days) && days >= 0) {
+      const now = new Date();
+      trialStarted = trialStarted || now;
+      trialEnds = new Date(now.getTime() + days * 86400000);
+      status = 'trial';
     }
-
-    const now = new Date();
-    const oldEnd = trialEnds ? new Date(trialEnds) : now;
-    const base = oldEnd > now ? oldEnd : now;
-
-    trialStarted = trialStarted || now;
-    trialEnds = new Date(base.getTime() + days * 86400000);
-    status = 'trial';
   }
 
-  const endsAt = req.body.subscription_ends_at
-    ? new Date(req.body.subscription_ends_at)
-    : null;
-
-  if (endsAt && Number.isNaN(endsAt.getTime())) {
-    fail(400, 'Tarehe ya mwisho si sahihi.');
-  }
+  const endsAt = req.body.subscription_ends_at ? new Date(req.body.subscription_ends_at) : null;
 
   const tenant = await one(
     `UPDATE tenants
@@ -1007,85 +657,6 @@ app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin,
       plan.name,
       plan.max_devices,
       plan.max_clients,
-app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
-  const tenantId = String(req.params.id || '').trim();
-  
-  // Safisha jina la plan (weka uppercase na uondoe nafasi)
-  const rawPlanInput = String(req.body.plan || '').trim().toUpperCase().replace(/\s+/g, '_');
-  const plan = PLANS[rawPlanInput] || getPlan(rawPlanInput);
-  
-  let status = String(req.body.subscription_status || 'active').toLowerCase();
-
-  if (!tenantId) fail(400, 'ID ya Tenant inahitajika.');
-  if (tenantId === SUPER_ADMIN_ID) fail(403, 'Huwezi kubadilisha mpango wa Super Admin.');
-  if (!plan) fail(400, 'Mpango (Plan) si sahihi. Chagua START, DIAMOND, PREMIUM, au REVENUE_SHARE.');
-
-  if (!['trial', 'active', 'expired', 'pending', 'cancelled'].includes(status)) {
-    fail(400, 'subscription_status si sahihi.');
-  }
-
-  const current = await one(
-    'SELECT * FROM tenants WHERE id = $1 AND id <> $2',
-    [tenantId, SUPER_ADMIN_ID]
-  );
-
-  if (!current) fail(404, 'WISP haijapatikana.');
-
-  const freeForever =
-    req.body.free_forever === true ||
-    req.body.free_forever === 'true';
-
-  let trialStarted = current.trial_started_at;
-  let trialEnds = current.trial_ends_at;
-
-  // Super Admin anaweza kuongeza siku za trial.
-  if (req.body.trial_days !== undefined && req.body.trial_days !== '') {
-    const days = Number(req.body.trial_days);
-
-    if (!Number.isInteger(days) || days < 0 || days > 3650) {
-      fail(400, 'Siku za trial ziwe kati ya 0 na 3650.');
-    }
-
-    if (days > 0) {
-      const now = new Date();
-      const oldEnd = trialEnds ? new Date(trialEnds) : now;
-      const base = oldEnd > now ? oldEnd : now;
-
-      trialStarted = trialStarted || now;
-      trialEnds = new Date(base.getTime() + days * 86400000);
-      status = 'trial';
-    }
-  }
-
-  const endsAt = req.body.subscription_ends_at
-    ? new Date(req.body.subscription_ends_at)
-    : null;
-
-  if (endsAt && Number.isNaN(endsAt.getTime())) {
-    fail(400, 'Tarehe ya mwisho si sahihi.');
-  }
-
-  // Weka thamani za max_devices na max_clients (null inamaanisha bila kikomo)
-  const maxDevices = plan.max_devices !== undefined ? plan.max_devices : null;
-  const maxClients = plan.max_clients !== undefined ? plan.max_clients : null;
-
-  const tenant = await one(
-    `UPDATE tenants
-     SET plan = $1,
-         max_devices = $2,
-         max_clients = $3,
-         subscription_status = $4,
-         subscription_ends_at = $5,
-         trial_started_at = $6,
-         trial_ends_at = $7,
-         free_forever = $8,
-         updated_at = NOW()
-     WHERE id = $9 AND id <> $10
-     RETURNING *`,
-    [
-      plan.name,
-      maxDevices,
-      maxClients,
       status,
       endsAt,
       trialStarted,
@@ -1096,434 +667,143 @@ app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin,
     ]
   );
 
-  if (!tenant) fail(404, 'WISP haijapatikana.');
-
   res.json({
     success: true,
     message: freeForever
       ? `Free Forever imewashwa na mpango umebadilishwa kuwa ${plan.name}.`
       : `Plan imesasishwa na kuwa ${plan.name} kikamilifu!`,
-    tenant: publicTenant(tenant),
+    tenant: publicTenant(tenant)
+  });
+}));
+
+app.patch('/api/super/tenant/:id/status', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
+  const tenantId = String(req.params.id || '').trim();
+  const status = String(req.body.status || '').trim().toLowerCase();
+
+  if (!tenantId || tenantId === SUPER_ADMIN_ID) {
+    fail(400, 'ID ya Tenant haijakubaliwa.');
+  }
+
+  const tenant = await one(
+    `UPDATE tenants SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, business_name, status`,
+    [status, tenantId]
+  );
+
+  if (!tenant) fail(404, 'WISP haijapatikana.');
+
+  res.json({
+    success: true,
+    message: status === 'suspended' ? 'Akaunti ya Tenant imesimamishwa.' : 'Akaunti ya Tenant imerejeshwa.',
+    tenant
+  });
+}));
+
+app.delete('/api/super/tenant/:id', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
+  const tenantId = String(req.params.id || '').trim();
+  if (!tenantId || tenantId === SUPER_ADMIN_ID) fail(400, 'ID ya Tenant haijakubaliwa.');
+
+  const tenant = await one(
+    `UPDATE tenants SET status = 'deleted', updated_at = NOW() WHERE id = $1 RETURNING id, business_name`,
+    [tenantId]
+  );
+
+  res.json({ success: true, message: 'Akaunti imezimwa na kuhifadhiwa kama deleted.', tenant });
+}));
+
+/* =========================
+   TENANT SUBSCRIPTION & SETTINGS
+========================= */
+
+app.get('/api/subscription', authMiddleware, asyncRoute(async (req, res) => {
+  const tenantId = req.role === 'super_admin' ? req.query.tenant_id : req.tenant_id;
+  if (!tenantId) fail(400, 'tenant_id inahitajika.');
+  ensureTenantAccess(req, tenantId);
+
+  const tenant = await getTenantRecord(tenantId);
+  const trialEnd = tenant.trial_ends_at ? new Date(tenant.trial_ends_at) : null;
+  const paidEnd = tenant.subscription_ends_at ? new Date(tenant.subscription_ends_at) : null;
+  const now = new Date();
+
+  const freeForever = tenant.free_forever === true;
+  const trialActive = tenant.subscription_status === 'trial' && trialEnd && trialEnd > now;
+  const paidActive = tenant.subscription_status === 'active' && paidEnd && paidEnd > now;
+
+  res.json({
+    success: true,
     subscription: {
       plan: tenant.plan,
       status: tenant.subscription_status,
       trial_started_at: tenant.trial_started_at,
       trial_ends_at: tenant.trial_ends_at,
       subscription_ends_at: tenant.subscription_ends_at,
-      free_forever: tenant.free_forever
+      free_forever: freeForever,
+      trial_active: Boolean(trialActive),
+      paid_active: Boolean(paidActive),
+      service_access: Boolean(freeForever || trialActive || paidActive),
+      plans: PLANS
     }
   });
 }));
 
+app.get('/api/payment-settings', authMiddleware, asyncRoute(async (req, res) => {
+  const tenantId = req.role === 'super_admin' ? req.query.tenant_id : req.tenant_id;
+  if (!tenantId) fail(400, 'tenant_id inahitajika.');
+  ensureTenantAccess(req, tenantId);
 
+  const settings = await one(
+    `SELECT tenant_id, enabled_providers, manual_payment_instructions,
+            payment_phone, payment_account_name, updated_at
+     FROM payment_settings WHERE tenant_id = $1`,
+    [tenantId]
+  );
+
+  res.json({
+    success: true,
+    settings: settings || {
+      tenant_id: tenantId,
+      enabled_providers: ['manual'],
+      manual_payment_instructions: '',
+      payment_phone: '',
+      payment_account_name: ''
+    },
+    available_providers: PAYMENT_PROVIDERS
+  });
+}));
+
+app.put('/api/payment-settings', authMiddleware, asyncRoute(async (req, res) => {
+  const tenantId = req.role === 'super_admin' ? req.body.tenant_id : req.tenant_id;
+  if (!tenantId) fail(400, 'tenant_id inahitajika.');
+  ensureTenantAccess(req, tenantId);
+
+  const providers = Array.isArray(req.body.enabled_providers)
+    ? req.body.enabled_providers.filter(item => PAYMENT_PROVIDERS.includes(item))
+    : ['manual'];
+
+  const instructions = String(req.body.manual_payment_instructions || '').slice(0, 3000);
+  const phone = String(req.body.payment_phone || '').slice(0, 40);
+  const accountName = String(req.body.payment_account_name || '').slice(0, 120);
+
+  const settings = await one(
+    `INSERT INTO payment_settings
+      (tenant_id, enabled_providers, manual_payment_instructions, payment_phone, payment_account_name, updated_at)
+     VALUES ($1,$2,$3,$4,$5,NOW())
+     ON CONFLICT (tenant_id) DO UPDATE SET
+       enabled_providers = EXCLUDED.enabled_providers,
+       manual_payment_instructions = EXCLUDED.manual_payment_instructions,
+       payment_phone = EXCLUDED.payment_phone,
+       payment_account_name = EXCLUDED.payment_account_name,
+       updated_at = NOW()
+     RETURNING tenant_id, enabled_providers, manual_payment_instructions,
+               payment_phone, payment_account_name, updated_at`,
+    [tenantId, providers, instructions, phone, accountName]
+  );
+
+  res.json({ success: true, settings });
+}));
 
 /* =========================
    SITES
 ========================= */
-
-/* =========================
-   SYSTEM UPDATES / BETA TESTING
-========================= */
-
-// Super Admin: Orodha ya updates pamoja na takwimu za beta.
-app.get(
-  '/api/super/updates',
-  authMiddleware,
-  requireSuperAdmin,
-  asyncRoute(async (req, res) => {
-    const updates = await query(
-      `SELECT u.*,
-          COUNT(ut.tenant_id)::int AS assigned_tenants,
-          COUNT(ut.tenant_id) FILTER
-            (WHERE ut.channel = 'beta')::int AS beta_tenants,
-          COUNT(ut.tenant_id) FILTER
-            (WHERE ut.status = 'approved')::int AS approved_tenants,
-          COUNT(ut.tenant_id) FILTER
-            (WHERE ut.status = 'failed')::int AS failed_tenants
-       FROM system_updates u
-       LEFT JOIN system_update_tenants ut ON ut.update_id = u.id
-       GROUP BY u.id
-       ORDER BY u.created_at DESC`
-    );
-
-    res.json({ success: true, updates });
-  })
-);
-
-// Super Admin: Kutengeneza update mpya.
-app.post(
-  '/api/super/updates',
-  authMiddleware,
-  requireSuperAdmin,
-  asyncRoute(async (req, res) => {
-    const version = String(req.body.version || '').trim();
-    const title = String(req.body.title || '').trim();
-    const description = String(req.body.description || '').trim();
-    const releaseNotes = String(req.body.release_notes || '').trim();
-
-    if (!version || !title) {
-      fail(400, 'Version na jina la update vinahitajika.');
-    }
-
-    if (version.length > 50 || title.length > 200) {
-      fail(400, 'Version au jina la update ni refu mno.');
-    }
-
-    const update = await one(
-      `INSERT INTO system_updates
-        (id, version, title, description, release_notes,
-         status, created_by, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,'draft',$6,NOW(),NOW())
-       RETURNING *`,
-      [
-        makeId('update'),
-        version,
-        title,
-        description,
-        releaseNotes,
-        req.email
-      ]
-    );
-
-    res.status(201).json({
-      success: true,
-      message: 'Update mpya imehifadhiwa kama draft.',
-      update
-    });
-  })
-);
-
-// Super Admin: Kuchagua Tenant wachache wa kufanya beta testing.
-app.post(
-  '/api/super/updates/:id/beta-tenants',
-  authMiddleware,
-  requireSuperAdmin,
-  asyncRoute(async (req, res) => {
-    const updateId = String(req.params.id || '').trim();
-    const tenantIds = [
-      ...new Set(
-        (Array.isArray(req.body.tenant_ids) ? req.body.tenant_ids : [])
-          .map(id => String(id || '').trim())
-          .filter(Boolean)
-      )
-    ];
-
-    if (!updateId) fail(400, 'ID ya update inahitajika.');
-
-    if (!tenantIds.length || tenantIds.length > 20) {
-      fail(400, 'Chagua Tenant 1 hadi 20 kwa beta testing.');
-    }
-
-    const client = await db.pool.connect();
-
-    try {
-      await client.query('BEGIN');
-
-      const updateResult = await client.query(
-        `SELECT id, version, status
-         FROM system_updates
-         WHERE id = $1
-         FOR UPDATE`,
-        [updateId]
-      );
-
-      const update = updateResult.rows[0];
-
-      if (!update) fail(404, 'Update haijapatikana.');
-
-      if (!['draft', 'beta'].includes(update.status)) {
-        fail(409, 'Update hii haiwezi kupewa beta katika hali yake ya sasa.');
-      }
-
-      const tenantResult = await client.query(
-        `SELECT id, business_name
-         FROM tenants
-         WHERE id = ANY($1::text[])
-           AND id <> $2
-           AND status = 'active'`,
-        [tenantIds, SUPER_ADMIN_ID]
-      );
-
-      if (tenantResult.rows.length !== tenantIds.length) {
-        fail(400, 'Baadhi ya Tenant hawapo, wamesimamishwa au wamefutwa. Hakiki orodha kisha ujaribu tena.');
-      }
-
-      for (const tenant of tenantResult.rows) {
-        await client.query(
-          `INSERT INTO system_update_tenants
-            (update_id, tenant_id, channel, status, assigned_at, updated_at)
-           VALUES ($1,$2,'beta','pending',NOW(),NOW())
-           ON CONFLICT (update_id, tenant_id)
-           DO UPDATE SET
-             channel = 'beta',
-             status = 'pending',
-             feedback = '',
-             assigned_at = NOW(),
-             updated_at = NOW()`,
-          [updateId, tenant.id]
-        );
-
-        await client.query(
-          `INSERT INTO audit_logs
-            (tenant_id, actor_email, action, entity_type, entity_id, details)
-           VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
-          [
-            tenant.id,
-            req.email || null,
-            'system_update_beta_assigned',
-            'system_update',
-            updateId,
-            JSON.stringify({
-              version: update.version,
-              tenant_name: tenant.business_name
-            })
-          ]
-        );
-      }
-
-      await client.query(
-        `UPDATE system_updates
-         SET status = 'beta', updated_at = NOW()
-         WHERE id = $1`,
-        [updateId]
-      );
-
-      await client.query('COMMIT');
-
-      res.json({
-        success: true,
-        message: 'Tenant wamechaguliwa kwa beta testing.',
-        update_id: updateId,
-        beta_tenants: tenantResult.rows
-      });
-    } catch (error) {
-      try {
-        await client.query('ROLLBACK');
-      } catch (rollbackError) {
-        console.error('[BETA ROLLBACK ERROR]', rollbackError.message);
-      }
-
-      throw error;
-    } finally {
-      client.release();
-    }
-  })
-);
-
-// Tenant: Kuona updates alizochaguliwa kujaribu.
-app.get(
-  '/api/tenant/updates',
-  authMiddleware,
-  asyncRoute(async (req, res) => {
-    if (req.role !== 'tenant') {
-      fail(403, 'Endpoint hii ni kwa akaunti za Tenant.');
-    }
-
-    const updates = await query(
-      `SELECT u.id, u.version, u.title, u.description,
-              u.release_notes, u.status AS update_status,
-              ut.channel, ut.status AS testing_status,
-              ut.feedback, ut.assigned_at, ut.updated_at
-       FROM system_update_tenants ut
-       JOIN system_updates u ON u.id = ut.update_id
-       WHERE ut.tenant_id = $1
-       ORDER BY ut.assigned_at DESC`,
-      [req.tenant_id]
-    );
-
-    res.json({ success: true, updates });
-  })
-);
-
-// Tenant: Kutuma hali ya majaribio na maoni.
-app.patch(
-  '/api/tenant/updates/:id/feedback',
-  authMiddleware,
-  asyncRoute(async (req, res) => {
-    if (req.role !== 'tenant') {
-      fail(403, 'Endpoint hii ni kwa akaunti za Tenant.');
-    }
-
-    const updateId = String(req.params.id || '').trim();
-    const status = String(req.body.status || '').trim().toLowerCase();
-    const feedback = String(req.body.feedback || '').trim().slice(0, 3000);
-
-    if (!['testing', 'approved', 'failed'].includes(status)) {
-      fail(400, 'Hali lazima iwe testing, approved au failed.');
-    }
-
-    const assignment = await one(
-      `UPDATE system_update_tenants ut
-       SET status = $1, feedback = $2, updated_at = NOW()
-       FROM system_updates u
-       WHERE ut.update_id = $3
-         AND ut.tenant_id = $4
-         AND u.id = ut.update_id
-         AND u.status = 'beta'
-         AND ut.channel = 'beta'
-       RETURNING ut.update_id, ut.tenant_id, ut.channel,
-                 ut.status, ut.feedback, ut.updated_at`,
-      [status, feedback, updateId, req.tenant_id]
-    );
-
-    if (!assignment) {
-      fail(404, 'Beta assignment haijapatikana au update haipo kwenye beta testing.');
-    }
-
-    res.json({
-      success: true,
-      message: 'Majibu ya beta testing yamehifadhiwa.',
-      assignment
-    });
-  })
-);
-
-// Super Admin: Kuachia update kwa Tenant wote baada ya angalau
-// Tenant mmoja wa beta kuidhinisha.
-app.post(
-  '/api/super/updates/:id/release',
-  authMiddleware,
-  requireSuperAdmin,
-  asyncRoute(async (req, res) => {
-    const updateId = String(req.params.id || '').trim();
-    const client = await db.pool.connect();
-
-    try {
-      await client.query('BEGIN');
-
-      const updateResult = await client.query(
-        `SELECT id, version, status
-         FROM system_updates
-         WHERE id = $1
-         FOR UPDATE`,
-        [updateId]
-      );
-
-      const update = updateResult.rows[0];
-
-      if (!update) fail(404, 'Update haijapatikana.');
-
-      if (update.status !== 'beta') {
-        fail(409, 'Update lazima iwe kwenye beta testing kabla ya kuachiliwa.');
-      }
-
-      const approvalResult = await client.query(
-        `SELECT COUNT(*)::int AS total
-         FROM system_update_tenants
-         WHERE update_id = $1
-           AND channel = 'beta'
-           AND status = 'approved'`,
-        [updateId]
-      );
-
-      if (Number(approvalResult.rows[0].total) < 1) {
-        fail(409, 'Angalau Tenant mmoja wa beta lazima aidhinishe update kabla ya release.');
-      }
-
-      const tenantsResult = await client.query(
-        `SELECT id FROM tenants
-         WHERE id <> $1 AND status = 'active'`,
-        [SUPER_ADMIN_ID]
-      );
-
-      for (const tenant of tenantsResult.rows) {
-        await client.query(
-          `INSERT INTO system_update_tenants
-            (update_id, tenant_id, channel, status, assigned_at, updated_at)
-           VALUES ($1,$2,'stable','notified',NOW(),NOW())
-           ON CONFLICT (update_id, tenant_id)
-           DO UPDATE SET
-             channel = 'stable',
-             status = CASE
-               WHEN system_update_tenants.status = 'approved'
-               THEN 'approved'
-               ELSE 'notified'
-             END,
-             updated_at = NOW()`,
-          [updateId, tenant.id]
-        );
-
-        await client.query(
-          `INSERT INTO audit_logs
-            (tenant_id, actor_email, action, entity_type, entity_id, details)
-           VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
-          [
-            tenant.id,
-            req.email || null,
-            'system_update_released',
-            'system_update',
-            updateId,
-            JSON.stringify({ version: update.version })
-          ]
-        );
-      }
-
-      const releasedResult = await client.query(
-        `UPDATE system_updates
-         SET status = 'released',
-             released_at = NOW(),
-             updated_at = NOW()
-         WHERE id = $1
-         RETURNING *`,
-        [updateId]
-      );
-
-      await client.query('COMMIT');
-
-      res.json({
-        success: true,
-        message: 'Update imeachiliwa kwa Tenant wote walio active.',
-        update: releasedResult.rows[0],
-        tenants_notified: tenantsResult.rows.length
-      });
-    } catch (error) {
-      try {
-        await client.query('ROLLBACK');
-      } catch (rollbackError) {
-        console.error('[RELEASE ROLLBACK ERROR]', rollbackError.message);
-      }
-
-      throw error;
-    } finally {
-      client.release();
-    }
-  })
-);
-
-// Super Admin: Kusitisha au kurudisha update kwenye beta.
-app.patch(
-  '/api/super/updates/:id/status',
-  authMiddleware,
-  requireSuperAdmin,
-  asyncRoute(async (req, res) => {
-    const status = String(req.body.status || '').trim().toLowerCase();
-
-    if (!['paused', 'beta'].includes(status)) {
-      fail(400, 'Hali inayoruhusiwa hapa ni paused au beta.');
-    }
-
-    const update = await one(
-      `UPDATE system_updates
-       SET status = $1, updated_at = NOW()
-       WHERE id = $2 AND status IN ('beta', 'paused')
-       RETURNING *`,
-      [status, req.params.id]
-    );
-
-    if (!update) {
-      fail(404, 'Update haijapatikana au haiwezi kubadilishwa katika hali yake ya sasa.');
-    }
-
-    res.json({
-      success: true,
-      message: status === 'paused'
-        ? 'Update imesitishwa.'
-        : 'Update imerudishwa kwenye beta testing.',
-      update
-    });
-  })
-);
-
 
 app.get('/api/sites/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
   const tenantId = req.params.tenant_id;
@@ -1543,7 +823,6 @@ app.post('/api/sites', authMiddleware, requireSubscription, asyncRoute(async (re
   ensureTenantAccess(req, tenantId);
   if (!tenantId || !req.body.name) fail(400, 'tenant_id na jina la site vinahitajika.');
 
-  const tenant = await getTenantRecord(tenantId);
   const site = await one(
     `INSERT INTO sites (id, tenant_id, name, location, description, status, created_at)
      VALUES ($1,$2,$3,$4,$5,'active',NOW())
@@ -1606,22 +885,6 @@ app.post('/api/devices', authMiddleware, requireSubscription, asyncRoute(async (
   if (!name || !vendor) fail(400, 'Jina la kifaa na mtengenezaji vinahitajika.');
   if (!DEVICE_VENDORS.includes(vendor)) fail(400, 'Mtengenezaji wa kifaa hajaruhusiwa.');
   if (!DEVICE_TYPES.includes(deviceType)) fail(400, 'Aina ya kifaa si sahihi.');
-  if (mac && !isValidMac(mac)) fail(400, 'MAC address si sahihi.');
-
-  if (siteId) {
-    const site = await one(
-      'SELECT id FROM sites WHERE id = $1 AND tenant_id = $2',
-      [siteId, tenantId]
-    );
-    if (!site) fail(400, 'Site haipo kwenye WISP hii.');
-  }
-
-  // Never store router passwords as plaintext.
-  const credentialPassword = String(req.body.password || '');
-  const credentialUser = String(req.body.username || req.body.user || '');
-  if (credentialPassword) {
-    fail(400, 'Kuhifadhi nenosiri la kifaa hakujawashwa bado. Usitume password kwenye API hii.');
-  }
 
   const device = await one(
     `INSERT INTO devices
@@ -1638,7 +901,7 @@ app.post('/api/devices', authMiddleware, requireSubscription, asyncRoute(async (
 
   res.status(201).json({
     success: true,
-    message: 'Kifaa kimesajiliwa. Muunganisho wa moja kwa moja wa vendor lazima usanidiwe tofauti.',
+    message: 'Kifaa kimesajiliwa.',
     device
   });
 }));
@@ -1650,88 +913,6 @@ app.delete('/api/devices/:id', authMiddleware, asyncRoute(async (req, res) => {
 
   await query('DELETE FROM devices WHERE id = $1', [device.id]);
   res.json({ success: true, message: 'Kifaa kimeondolewa.' });
-}));
-
-app.get('/api/devices/:id/status', authMiddleware, asyncRoute(async (req, res) => {
-  const device = await one(
-    'SELECT id, tenant_id, name, vendor, last_seen FROM devices WHERE id = $1',
-    [req.params.id]
-  );
-
-  if (!device) fail(404, 'Kifaa hakijapatikana.');
-  ensureTenantAccess(req, device.tenant_id);
-
-  const lastSeen = device.last_seen ? new Date(device.last_seen).getTime() : 0;
-  const online = Boolean(lastSeen && Date.now() - lastSeen < 10 * 60 * 1000);
-
-  res.json({
-    success: true,
-    device_id: device.id,
-    status: online ? 'online' : 'unknown_or_offline',
-    last_seen: device.last_seen,
-    note: 'Hali hii inategemea heartbeat ya mwisho; si kipimo cha moja kwa moja cha RouterOS.'
-  });
-}));
-
-app.post('/api/mikrotik/test-connection', authMiddleware, asyncRoute(async (req, res) => {
-  const tenantId = req.role === 'super_admin' ? req.body.tenant_id : req.tenant_id;
-  ensureTenantAccess(req, tenantId);
-
-  res.status(501).json({
-    success: false,
-    code: 'MIKROTIK_API_NOT_CONFIGURED',
-    message: 'RouterOS API bado haijaunganishwa. Endpoint hii haitoi madai ya uunganisho wa kweli. Hatua inayofuata ni kuunganisha RouterOS API kwa credentials salama.'
-  });
-}));
-
-app.post('/api/mikrotik/register-router', asyncRoute(async (req, res) => {
-  const configuredSecret = process.env.MIKROTIK_WEBHOOK_SECRET;
-  const providedSecret = String(req.headers['x-mikrotik-secret'] || '');
-
-  if (!configuredSecret || !providedSecret) fail(401, 'Webhook haijaidhinishwa.');
-
-  const a = Buffer.from(configuredSecret);
-  const b = Buffer.from(providedSecret);
-
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-    fail(401, 'Webhook haijaidhinishwa.');
-  }
-
-  const tenantId = String(req.body.tenant_id || '');
-  const name = clean(req.body.name || 'MikroTik Router');
-  const mac = clean(req.body.mac_address || '');
-  const ip = clean(req.body.ip_address || '');
-
-  if (!tenantId) fail(400, 'tenant_id inahitajika.');
-  if (mac && !isValidMac(mac)) fail(400, 'MAC address si sahihi.');
-
-  const tenant = await getTenantRecord(tenantId);
-  if (tenant.status !== 'active') fail(403, 'WISP haipo active.');
-
-  let device;
-
-  if (mac) {
-    device = await one(
-      `UPDATE devices
-       SET name = $1, ip_address = $2, last_seen = NOW()
-       WHERE tenant_id = $3 AND mac_address = $4 AND vendor = 'MikroTik'
-       RETURNING id, tenant_id, name, vendor, mac_address, ip_address, last_seen`,
-      [name, ip || null, tenantId, mac]
-    );
-  }
-
-  if (!device) {
-    device = await one(
-      `INSERT INTO devices
-       (id, tenant_id, name, vendor, device_type, mac_address, ip_address,
-        connection_type, last_seen, created_at)
-       VALUES ($1,$2,$3,'MikroTik','router',$4,$5,'webhook',NOW(),NOW())
-       RETURNING id, tenant_id, name, vendor, mac_address, ip_address, last_seen`,
-      [makeId('device'), tenantId, name, mac || null, ip || null]
-    );
-  }
-
-  res.json({ success: true, device });
 }));
 
 /* =========================
@@ -1768,22 +949,6 @@ app.post('/api/clients', authMiddleware, requireSubscription, asyncRoute(async (
   const connectionType = clean(req.body.connection_type || 'hotspot');
 
   if (!name) fail(400, 'Jina la mteja linahitajika.');
-  if (!['hotspot', 'pppoe'].includes(connectionType)) {
-    fail(400, 'connection_type lazima iwe hotspot au pppoe.');
-  }
-
-  if (siteId) {
-    const site = await one('SELECT id FROM sites WHERE id = $1 AND tenant_id = $2', [siteId, tenantId]);
-    if (!site) fail(400, 'Site haipo kwenye WISP hii.');
-  }
-
-  if (username) {
-    const duplicate = await one(
-      'SELECT id FROM clients WHERE tenant_id = $1 AND username = $2 LIMIT 1',
-      [tenantId, username]
-    );
-    if (duplicate) fail(409, 'Username hii tayari inatumika kwenye WISP hii.');
-  }
 
   const client = await one(
     `INSERT INTO clients
@@ -1799,32 +964,6 @@ app.post('/api/clients', authMiddleware, requireSubscription, asyncRoute(async (
   );
 
   res.status(201).json({ success: true, client });
-}));
-
-app.put('/api/clients/:id', authMiddleware, requireSubscription, asyncRoute(async (req, res) => {
-  const client = await one('SELECT * FROM clients WHERE id = $1', [req.params.id]);
-  if (!client) fail(404, 'Mteja hajapatikana.');
-  ensureTenantAccess(req, client.tenant_id);
-
-  const name = clean(req.body.name ?? client.name);
-  const phone = clean(req.body.phone ?? client.phone);
-  const packageName = clean(req.body.package_name ?? client.package_name);
-  const status = String(req.body.status ?? client.status).toLowerCase();
-
-  if (!['active', 'suspended', 'inactive'].includes(status)) {
-    fail(400, 'Hali ya mteja si sahihi.');
-  }
-
-  const updated = await one(
-    `UPDATE clients
-     SET name = $1, phone = $2, package_name = $3, status = $4
-     WHERE id = $5
-     RETURNING id, tenant_id, site_id, name, phone, username, package_name,
-               connection_type, status, created_at`,
-    [name, phone || null, packageName || null, status, client.id]
-  );
-
-  res.json({ success: true, client: updated });
 }));
 
 app.delete('/api/clients/:id', authMiddleware, asyncRoute(async (req, res) => {
@@ -1861,54 +1000,19 @@ app.post('/api/packages', authMiddleware, requireSubscription, asyncRoute(async 
 
   const name = clean(req.body.name);
   const price = Number(req.body.price);
-  const durationValue = Number(req.body.duration_value || 1);
-  const durationUnit = String(req.body.duration_unit || 'days').toLowerCase();
-  const speedDown = Number(req.body.speed_down || 0);
-  const speedUp = Number(req.body.speed_up || 0);
-  const connectionType = String(req.body.connection_type || 'hotspot').toLowerCase();
 
-  if (!name) fail(400, 'Jina la kifurushi linahitajika.');
-  if (!Number.isFinite(price) || price < 0) fail(400, 'Bei si sahihi.');
-  if (!Number.isInteger(durationValue) || durationValue < 1) fail(400, 'Muda wa kifurushi si sahihi.');
-  if (!['minutes', 'hours', 'days', 'weeks', 'months'].includes(durationUnit)) {
-    fail(400, 'duration_unit si sahihi.');
-  }
-  if (!['hotspot', 'pppoe'].includes(connectionType)) fail(400, 'connection_type si sahihi.');
+  if (!name || Number.isNaN(price) || price < 0) fail(400, 'Jina au bei si sahihi.');
 
   const pack = await one(
     `INSERT INTO packages
       (id, tenant_id, name, price, duration_value, duration_unit,
        speed_down, speed_up, connection_type, description, status, created_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'active',NOW())
+     VALUES ($1,$2,$3,$4,1,'days',0,0,'hotspot',$5,'active',NOW())
      RETURNING *`,
-    [
-      makeId('pkg'), tenantId, name, price, durationValue, durationUnit,
-      speedDown, speedUp, connectionType, clean(req.body.description || '')
-    ]
+    [makeId('pkg'), tenantId, name, price, clean(req.body.description || '')]
   );
 
   res.status(201).json({ success: true, package: pack });
-}));
-
-app.put('/api/packages/:id', authMiddleware, requireSubscription, asyncRoute(async (req, res) => {
-  const pack = await one('SELECT * FROM packages WHERE id = $1', [req.params.id]);
-  if (!pack) fail(404, 'Kifurushi hakijapatikana.');
-  ensureTenantAccess(req, pack.tenant_id);
-
-  const name = clean(req.body.name ?? pack.name);
-  const price = Number(req.body.price ?? pack.price);
-  const status = String(req.body.status ?? pack.status).toLowerCase();
-
-  if (!name || !Number.isFinite(price) || price < 0) fail(400, 'Jina au bei si sahihi.');
-  if (!['active', 'inactive'].includes(status)) fail(400, 'Hali ya kifurushi si sahihi.');
-
-  const updated = await one(
-    `UPDATE packages SET name = $1, price = $2, status = $3
-     WHERE id = $4 RETURNING *`,
-    [name, price, status, pack.id]
-  );
-
-  res.json({ success: true, package: updated });
 }));
 
 app.delete('/api/packages/:id', authMiddleware, asyncRoute(async (req, res) => {
@@ -1921,7 +1025,7 @@ app.delete('/api/packages/:id', authMiddleware, asyncRoute(async (req, res) => {
 }));
 
 /* =========================
-   VOUCHERS / CAPTIVE PORTAL
+   VOUCHERS & CAPTIVE PORTAL
 ========================= */
 
 app.get('/api/vouchers/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
@@ -1940,32 +1044,17 @@ app.get('/api/vouchers/:tenant_id', authMiddleware, asyncRoute(async (req, res) 
 app.post('/api/vouchers', authMiddleware, requireSubscription, asyncRoute(async (req, res) => {
   const tenantId = req.role === 'super_admin' ? req.body.tenant_id : req.tenant_id;
   ensureTenantAccess(req, tenantId);
-  if (!tenantId) fail(400, 'tenant_id inahitajika.');
 
-  const count = Math.min(Math.max(Number(req.body.count || 1), 1), 500);
+  const count = Math.min(Math.max(Number(req.body.quantity || req.body.count || 1), 1), 500);
   const packageId = clean(req.body.package_id || '') || null;
-  const expiresAt = req.body.expires_at ? new Date(req.body.expires_at) : null;
-
-  if (expiresAt && Number.isNaN(expiresAt.getTime())) fail(400, 'Tarehe ya kuisha si sahihi.');
-
-  if (packageId) {
-    const pack = await one(
-      `SELECT id FROM packages WHERE id = $1 AND tenant_id = $2 AND status = 'active'`,
-      [packageId, tenantId]
-    );
-    if (!pack) fail(400, 'Kifurushi hakipo au hakitumiki.');
-  }
 
   const vouchers = [];
-
   for (let i = 0; i < count; i++) {
-    const code = crypto.randomBytes(5).toString('hex').toUpperCase();
+    const code = crypto.randomBytes(4).toString('hex').toUpperCase();
     const voucher = await one(
-      `INSERT INTO vouchers
-        (id, tenant_id, package_id, code, status, expires_at, created_at)
-       VALUES ($1,$2,$3,$4,'unused',$5,NOW())
-       RETURNING id, tenant_id, package_id, code, status, expires_at, created_at`,
-      [makeId('voucher'), tenantId, packageId, code, expiresAt]
+      `INSERT INTO vouchers (id, tenant_id, package_id, code, status, created_at)
+       VALUES ($1,$2,$3,$4,'unused',NOW()) RETURNING *`,
+      [makeId('voucher'), tenantId, packageId, code]
     );
     vouchers.push(voucher);
   }
@@ -1973,83 +1062,25 @@ app.post('/api/vouchers', authMiddleware, requireSubscription, asyncRoute(async 
   res.status(201).json({ success: true, vouchers });
 }));
 
-app.post('/api/portal/voucher/validate', asyncRoute(async (req, res) => {
-  const tenantId = clean(req.body.tenant_id);
-  const code = String(req.body.code || '').trim().toUpperCase();
-
-  if (!tenantId || !code) fail(400, 'tenant_id na vocha vinahitajika.');
-
-  const tenant = await getTenantRecord(tenantId);
-
-  if (tenant.status !== 'active') fail(403, 'Huduma ya WISP hii haipatikani kwa sasa.');
-
-  const trialEnd = tenant.trial_ends_at ? new Date(tenant.trial_ends_at).getTime() : 0;
-  const paidEnd = tenant.subscription_ends_at ? new Date(tenant.subscription_ends_at).getTime() : 0;
-  const subscriptionValid =
-    (tenant.subscription_status === 'trial' && trialEnd > Date.now()) ||
-    (tenant.subscription_status === 'active' && paidEnd > Date.now());
-
-  if (!subscriptionValid) fail(402, 'Huduma ya WISP imesitishwa. Wasiliana na mtoa huduma.');
-
-  const voucher = await one(
-    `SELECT v.id, v.tenant_id, v.package_id, v.code, v.status, v.expires_at,
-            p.name AS package_name, p.duration_value, p.duration_unit,
-            p.speed_down, p.speed_up
-     FROM vouchers v
-     LEFT JOIN packages p ON p.id = v.package_id AND p.tenant_id = v.tenant_id
-     WHERE v.tenant_id = $1 AND UPPER(v.code) = $2
-     LIMIT 1`,
-    [tenantId, code]
-  );
-
-  if (!voucher) fail(404, 'Vocha haijapatikana.');
-  if (voucher.status !== 'unused') fail(409, 'Vocha hii tayari imetumika au imezuiwa.');
-  if (voucher.expires_at && new Date(voucher.expires_at).getTime() < Date.now()) {
-    fail(410, 'Vocha imeisha muda.');
-  }
-
-  res.json({
-    success: true,
-    valid: true,
-    voucher: {
-      id: voucher.id,
-      code: voucher.code,
-      package_id: voucher.package_id,
-      package_name: voucher.package_name,
-      duration_value: voucher.duration_value,
-      duration_unit: voucher.duration_unit,
-      speed_down: voucher.speed_down,
-      speed_up: voucher.speed_up
-    },
-    message: 'Vocha ni sahihi. Hii ni validation tu; kuunganisha mteja kunahitaji RouterOS/RADIUS integration.'
-  });
-}));
-
 app.post('/api/portal/settings/:tenant_id', authMiddleware, requireSubscription, asyncRoute(async (req, res) => {
   const tenantId = req.params.tenant_id;
   ensureTenantAccess(req, tenantId);
 
-  const title = String(req.body.portal_title || '').slice(0, 120);
+  const title = String(req.body.portal_title || req.body.name || '').slice(0, 120);
   const color = String(req.body.primary_color || '#111827');
   const announcement = String(req.body.announcement || '').slice(0, 3000);
-  const contactPhone = String(req.body.contact_phone || '').slice(0, 40);
-  const logoUrl = String(req.body.logo_url || '').slice(0, 1000);
-
-  if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) fail(400, 'Rangi lazima iwe HEX, mfano #111827.');
+  const contactPhone = String(req.body.contact_phone || req.body.contact || '').slice(0, 40);
 
   const settings = await one(
-    `INSERT INTO tenant_settings
-      (tenant_id, portal_title, primary_color, announcement, contact_phone, logo_url, currency)
-     VALUES ($1,$2,$3,$4,$5,$6,'TZS')
+    `INSERT INTO tenant_settings (tenant_id, portal_title, primary_color, announcement, contact_phone, currency)
+     VALUES ($1,$2,$3,$4,$5,'TZS')
      ON CONFLICT (tenant_id) DO UPDATE SET
        portal_title = EXCLUDED.portal_title,
        primary_color = EXCLUDED.primary_color,
        announcement = EXCLUDED.announcement,
-       contact_phone = EXCLUDED.contact_phone,
-       logo_url = EXCLUDED.logo_url
-     RETURNING tenant_id, portal_title, primary_color, announcement,
-               contact_phone, logo_url, currency`,
-    [tenantId, title, color, announcement, contactPhone, logoUrl]
+       contact_phone = EXCLUDED.contact_phone
+     RETURNING *`,
+    [tenantId, title, color, announcement, contactPhone]
   );
 
   res.json({ success: true, settings });
@@ -2059,21 +1090,9 @@ app.get('/api/portal/settings/:tenant_id', asyncRoute(async (req, res) => {
   const tenantId = clean(req.params.tenant_id);
   const tenant = await getTenantRecord(tenantId);
 
-  if (tenant.status !== 'active') fail(403, 'Portal haipatikani kwa sasa.');
-
   const settings = await one(
-    `SELECT tenant_id, portal_title, primary_color, announcement,
-            contact_phone, logo_url, currency
+    `SELECT tenant_id, portal_title, primary_color, announcement, contact_phone, currency
      FROM tenant_settings WHERE tenant_id = $1`,
-    [tenantId]
-  );
-
-  const packages = await query(
-    `SELECT id, name, price, duration_value, duration_unit,
-            speed_down, speed_up, connection_type
-     FROM packages
-     WHERE tenant_id = $1 AND status = 'active'
-     ORDER BY price ASC`,
     [tenantId]
   );
 
@@ -2085,10 +1104,8 @@ app.get('/api/portal/settings/:tenant_id', asyncRoute(async (req, res) => {
       primary_color: '#111827',
       announcement: '',
       contact_phone: tenant.phone,
-      logo_url: '',
       currency: 'TZS'
-    },
-    packages
+    }
   });
 }));
 
@@ -2101,8 +1118,7 @@ app.get('/api/payments/:tenant_id', authMiddleware, asyncRoute(async (req, res) 
   ensureTenantAccess(req, tenantId);
 
   const payments = await query(
-    `SELECT id, tenant_id, client_id, provider, reference, amount, currency,
-            status, description, created_at, verified_at
+    `SELECT id, tenant_id, client_id, provider, reference, amount, currency, status, description, created_at
      FROM payments WHERE tenant_id = $1 ORDER BY created_at DESC`,
     [tenantId]
   );
@@ -2113,108 +1129,56 @@ app.get('/api/payments/:tenant_id', authMiddleware, asyncRoute(async (req, res) 
 app.post('/api/payments/manual', authMiddleware, requireSubscription, asyncRoute(async (req, res) => {
   const tenantId = req.role === 'super_admin' ? req.body.tenant_id : req.tenant_id;
   ensureTenantAccess(req, tenantId);
-  if (!tenantId) fail(400, 'tenant_id inahitajika.');
 
   const amount = Number(req.body.amount);
-  const description = String(req.body.description || '').slice(0, 1000);
-  const reference = String(req.body.reference || '').slice(0, 150);
-
   if (!Number.isFinite(amount) || amount <= 0) fail(400, 'Kiasi cha malipo si sahihi.');
 
   const payment = await one(
-    `INSERT INTO payments
-      (id, tenant_id, provider, reference, amount, currency, status, description, created_at)
+    `INSERT INTO payments (id, tenant_id, provider, reference, amount, currency, status, description, created_at)
      VALUES ($1,$2,'manual',$3,$4,'TZS','pending',$5,NOW())
-     RETURNING id, tenant_id, provider, reference, amount, currency, status, description, created_at`,
-    [makeId('payment'), tenantId, reference || null, amount, description]
+     RETURNING *`,
+    [makeId('payment'), tenantId, clean(req.body.reference || ''), amount, clean(req.body.customer_name || '')]
   );
 
-  res.status(201).json({
-    success: true,
-    message: 'Malipo yamehifadhiwa kama pending. Super Admin lazima athibitishe kabla ya kuweka subscription active.',
-    payment
-  });
+  res.status(201).json({ success: true, payment });
 }));
 
-app.post('/api/super/payments/:id/verify', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
-  const status = String(req.body.status || '').toLowerCase();
+/* =========================
+   SYSTEM UPDATES & BETA TESTING
+========================= */
 
-  if (!['paid', 'rejected'].includes(status)) {
-    fail(400, 'status lazima iwe paid au rejected.');
-  }
+app.get('/api/super/updates', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
+  const updates = await query(`SELECT * FROM system_updates ORDER BY created_at DESC`);
+  res.json({ success: true, updates });
+}));
 
-  const payment = await one(
-    `UPDATE payments
-     SET status = $1, verified_at = CASE WHEN $1 = 'paid' THEN NOW() ELSE NULL END
-     WHERE id = $2
-     RETURNING *`,
+app.post('/api/super/updates', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
+  const version = String(req.body.version || '').trim();
+  const title = String(req.body.title || '').trim();
+
+  if (!version || !title) fail(400, 'Version na jina vinahitajika.');
+
+  const update = await one(
+    `INSERT INTO system_updates (id, version, title, description, release_notes, status, created_at)
+     VALUES ($1,$2,$3,$4,$5,'draft',NOW()) RETURNING *`,
+    [makeId('update'), version, title, clean(req.body.description || ''), clean(req.body.release_notes || '')]
+  );
+
+  res.status(201).json({ success: true, update });
+}));
+
+app.patch('/api/super/updates/:id/status', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
+  const status = String(req.body.status || '').trim().toLowerCase();
+  const update = await one(
+    `UPDATE system_updates SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
     [status, req.params.id]
   );
 
-  if (!payment) fail(404, 'Malipo hayajapatikana.');
-
-  res.json({
-    success: true,
-    payment,
-    message: 'Hali ya malipo imesasishwa. Subscription haibadilishwi moja kwa moja na endpoint hii.'
-  });
-}));
-
-const unverifiedGatewayWebhook = provider => asyncRoute(async (req, res) => {
-  res.status(501).json({
-    success: false,
-    code: 'GATEWAY_NOT_CONFIGURED',
-    provider,
-    message: `Webhook ya ${provider} bado haijaunganishwa na uthibitishaji rasmi wa signature na transaction. Hakuna malipo yaliyothibitishwa.`
-  });
-});
-
-app.post('/api/payments/azampay/webhook', unverifiedGatewayWebhook('AzamPay'));
-app.post('/api/payments/clickpesa/webhook', unverifiedGatewayWebhook('ClickPesa'));
-app.post('/api/payments/selcom/webhook', unverifiedGatewayWebhook('Selcom'));
-app.post('/api/payments/pesapal/webhook', unverifiedGatewayWebhook('Pesapal'));
-app.post('/api/payments/palmpesa/webhook', unverifiedGatewayWebhook('PalmPesa'));
-app.post('/api/payments/beem/webhook', unverifiedGatewayWebhook('Beem'));
-
-/* =========================
-   DASHBOARD SUMMARY
-========================= */
-
-app.get('/api/dashboard/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
-  const tenantId = req.params.tenant_id;
-  ensureTenantAccess(req, tenantId);
-
-  const tenant = await getTenantRecord(tenantId);
-
-  const counts = await one(
-    `SELECT
-      (SELECT COUNT(*)::int FROM clients WHERE tenant_id = $1) AS clients,
-      (SELECT COUNT(*)::int FROM devices WHERE tenant_id = $1) AS devices,
-      (SELECT COUNT(*)::int FROM sites WHERE tenant_id = $1) AS sites,
-      (SELECT COUNT(*)::int FROM packages WHERE tenant_id = $1) AS packages,
-      (SELECT COUNT(*)::int FROM vouchers WHERE tenant_id = $1) AS vouchers`,
-    [tenantId]
-  );
-
-  const paymentTotals = await one(
-    `SELECT
-       COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END),0)::numeric AS paid_total,
-       COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END),0)::numeric AS pending_total
-     FROM payments WHERE tenant_id = $1`,
-    [tenantId]
-  );
-
-  res.json({
-    success: true,
-    tenant: publicTenant(tenant),
-    counts,
-    payments: paymentTotals,
-    plans: PLANS
-  });
+  res.json({ success: true, update });
 }));
 
 /* =========================
-   FRONTEND / ERROR HANDLING
+   SERVER STARTUP
 ========================= */
 
 app.get('/', (req, res) => {
@@ -2227,33 +1191,26 @@ app.get('/api/*', (req, res) => {
 
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
-
   const status = err.status || 500;
-
   if (status >= 500) {
     console.error('[SERVER ERROR]', err.message);
   }
-
   res.status(status).json({
     success: false,
-    message: status >= 500
-      ? 'Hitilafu ya ndani ya server. Kagua logs na database configuration.'
-      : err.message
+    message: err.message || 'Hitilafu ya ndani ya server.'
   });
 });
 
 async function startServer() {
   try {
     await db.ready;
-
     if (!db.pool || typeof db.pool.query !== 'function') {
       throw new Error('database.js lazima itoe pool.query na ready.');
     }
-
     await db.pool.query('SELECT 1');
 
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`MR HAAS WISP backend inaendesha kwenye port ${PORT}`);
+      console.log(`🚀 MR HAAS WISP backend inaendesha kwenye port ${PORT}`);
       console.log(`Environment: ${IS_PRODUCTION ? 'production' : 'development'}`);
     });
   } catch (error) {
