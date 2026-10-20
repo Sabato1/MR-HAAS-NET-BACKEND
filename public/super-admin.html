@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="sw">
 <head>
@@ -176,7 +175,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-xl font-extrabold">Usimamizi wa WISP</h2>
-            <p class="muted mt-1">Sajili, badili, simamisha au washa akaunti.</p>
+            <p class="muted mt-1">Sajili, badili Plan, simamisha au washa akaunti.</p>
           </div>
           <button type="button" class="btn btn-gold" @click="openCreate()">+ Sajili WISP</button>
         </div>
@@ -187,7 +186,7 @@
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>Biashara</th><th>Email</th><th>Mpango</th><th>Status</th><th>Trial inaisha</th><th>Vitendo</th></tr>
+                <tr><th>Biashara</th><th>Email</th><th>Mpango (Plan)</th><th>Status</th><th>Trial inaisha</th><th>Vitendo</th></tr>
               </thead>
               <tbody>
                 <template x-for="t in filteredTenants()" :key="t.id">
@@ -198,14 +197,14 @@
                     </td>
                     <td x-text="t.email || '-'"></td>
                     <td>
-                      <div x-text="planLabel(t.plan || t.plan_name)"></div>
+                      <div class="font-bold gold" x-text="planLabel(t.plan || t.plan_name)"></div>
                       <span x-show="isFreeForever(t)" class="badge gold-badge mt-1">FREE FOREVER</span>
                     </td>
                     <td><span class="badge" :class="statusClass(t.status)" x-text="t.status || 'active'"></span></td>
                     <td x-text="trialDate(t)"></td>
                     <td>
                       <div class="flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-outline" @click="editTenant(t)" :disabled="t.status==='deleted'">Badili</button>
+                        <button type="button" class="btn btn-outline" @click="editTenant(t)" :disabled="t.status==='deleted'">Badili Plan / Taarifa</button>
                         <button type="button" class="btn" :class="t.status==='suspended'?'btn-gold':'btn-dark'"
                                 @click="toggleStatus(t)" :disabled="t.status==='deleted'"
                                 x-text="t.status==='suspended'?'Washa':'Simamisha'"></button>
@@ -353,7 +352,7 @@
        class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/60 p-4">
     <div @click.outside="modal=false" class="my-6 w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
       <div class="flex items-center justify-between gap-3">
-        <h2 class="text-lg font-extrabold" x-text="editing?'Badili Taarifa za WISP':'Sajili WISP Mpya'"></h2>
+        <h2 class="text-lg font-extrabold" x-text="editing?'Badili Plan na Taarifa za WISP':'Sajili WISP Mpya'"></h2>
         <button type="button" class="text-2xl text-gray-500" @click="modal=false">×</button>
       </div>
 
@@ -375,12 +374,12 @@
         </div>
 
         <div>
-          <label class="mb-1 block text-sm font-bold">Mpango</label>
-          <select class="field" x-model="form.plan">
-            <option value="START">START — TSh 10,000/mwezi</option>
-            <option value="DIAMOND">DIAMOND — TSh 15,000/mwezi</option>
-            <option value="PREMIUM">PREMIUM — TSh 20,000/mwezi</option>
-            <option value="REVENUE_SHARE">REVENUE SHARE — TSh 20,000 + 3%</option>
+          <label class="mb-1 block text-sm font-bold gold">Chagua Mfumo wa Plan *</label>
+          <select class="field font-bold" x-model="form.plan">
+            <option value="START">START — TSh 10,000/mwezi (Vifaa 2, Wateja 50)</option>
+            <option value="DIAMOND">DIAMOND — TSh 15,000/mwezi (Vifaa 7, Wateja 500)</option>
+            <option value="PREMIUM">PREMIUM — TSh 20,000/mwezi (Vifaa bila kikomo, Wateja 5,000)</option>
+            <option value="REVENUE_SHARE">REVENUE SHARE — TSh 20,000 + 3% ya mapato</option>
           </select>
         </div>
 
@@ -406,21 +405,21 @@
         </div>
 
         <div x-show="editing">
-          <label class="mb-1 block text-sm font-bold">Trial Days</label>
+          <label class="mb-1 block text-sm font-bold">Trial Days (Siku za Majaribio)</label>
           <input class="field" type="number" min="0" max="3650"
                  x-model.number="form.trial_days" placeholder="Mfano: 30">
           <p class="mt-1 text-xs text-gray-500">
-            Weka siku za majaribio zinazotakiwa. Backend ndiyo huhifadhi tarehe ya mwisho.
+            Weka siku za majaribio zinazotakiwa ikiwa hautumii Free Forever.
           </p>
         </div>
 
         <div class="rounded-lg bg-amber-50 p-3 text-xs text-amber-900" x-show="!editing">
-          Trial ya siku 4 inahitaji kuanzishwa na backend wakati wa usajili.
+          Trial ya siku 4 inamfumo rasmi wa backend wakati wa usajili mpya.
         </div>
 
         <div class="flex flex-wrap gap-2 pt-2">
           <button type="submit" class="btn btn-gold" :disabled="saving"
-                  x-text="saving?'Inahifadhi...':(editing?'Hifadhi Mabadiliko':'Sajili WISP')"></button>
+                  x-text="saving?'Inahifadhi...':(editing?'Hifadhi Plan & Mabadiliko':'Sajili WISP')"></button>
           <button type="button" class="btn btn-outline" @click="modal=false" :disabled="saving">Ghairi</button>
         </div>
       </form>
@@ -566,16 +565,10 @@ function superApp() {
       this.editing = true;
       this.editingId = t.id;
 
-      const trialEnd =
-        t.trial_ends_at || t.trial_end || t.trial_expires_at;
+      const trialEnd = t.trial_ends_at || t.trial_end || t.trial_expires_at;
 
       const remainingDays = trialEnd
-        ? Math.max(
-            0,
-            Math.ceil(
-              (new Date(trialEnd).getTime() - Date.now()) / 86400000
-            )
-          )
+        ? Math.max(0, Math.ceil((new Date(trialEnd).getTime() - Date.now()) / 86400000))
         : 0;
 
       this.form = {
@@ -590,176 +583,124 @@ function superApp() {
 
       this.modal = true;
     },
+
     async saveTenant() {
-    if (this.saving) return;
+      if (this.saving) return;
 
-    this.notice = '';
-    this.error = false;
+      this.notice = '';
+      this.error = false;
 
-    const businessName = String(this.form.name || '').trim();
-    const email = String(this.form.email || '').trim().toLowerCase();
-    const password = String(this.form.password || '');
-    const plan = String(this.form.plan || 'START').trim().toUpperCase();
-    const freeForever = Boolean(this.form.free_forever);
-    const trialDays = Number(this.form.trial_days);
+      const businessName = String(this.form.name || '').trim();
+      const email = String(this.form.email || '').trim().toLowerCase();
+      const password = String(this.form.password || '');
+      const plan = String(this.form.plan || 'START').trim().toUpperCase();
+      const freeForever = Boolean(this.form.free_forever);
+      const trialDays = Number(this.form.trial_days);
 
-    // Hakiki taarifa za msingi
-    if (!businessName) {
+      if (!businessName) {
         this.show('Weka jina la biashara.', true);
         return;
-    }
+      }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         this.show('Weka email sahihi.', true);
         return;
-    }
+      }
 
-    // Password inahitajika kwa tenant mpya pekee
-    if (!this.editing && password.length < 8) {
+      if (!this.editing && password.length < 8) {
         this.show('Password lazima iwe na angalau herufi/namba 8.', true);
         return;
-    }
+      }
 
-    // Hakiki trial days wakati wa kuhariri tenant
-    if (
-        this.editing &&
-        !freeForever &&
-        (!Number.isInteger(trialDays) ||
-         trialDays < 1 ||
-         trialDays > 3650)
-    ) {
-        this.show(
-            'Trial Days lazima ziwe kati ya 1 na 3650. Ikiwa hutaki trial, chagua Free Forever.',
-            true
-        );
-        return;
-    }
+      this.saving = true;
 
-    this.saving = true;
-
-    try {
+      try {
         if (this.editing) {
-            // Tumia ID ya tenant aliyechaguliwa, si ID ya Super Admin
-            if (!this.editingId) {
-                throw new Error('ID ya tenant haijapatikana. Funga fomu na ujaribu tena.');
-            }
+          if (!this.editingId) {
+            throw new Error('ID ya tenant haijapatikana. Funga fomu na ujaribu tena.');
+          }
 
-            const id = encodeURIComponent(this.editingId);
+          const id = encodeURIComponent(this.editingId);
+          const currentTenant = this.tenants.find(t => String(t.id) === String(this.editingId));
 
-            // Tafuta taarifa za tenant anayehaririwa
-            const currentTenant = this.tenants.find(
-                t => String(t.id) === String(this.editingId)
-            );
+          if (!currentTenant) {
+            throw new Error('Tenant huyu hapatikani kwenye orodha. Bonyeza Refresh.');
+          }
 
-            if (!currentTenant) {
-                throw new Error('Tenant huyu hapatikani kwenye orodha. Bonyeza Refresh.');
-            }
+          // Inatuma Plan mpya na Hali ya usajili kwenda Backend
+          const payload = {
+            plan: plan,
+            subscription_status: freeForever ? 'active' : (currentTenant.subscription_status || 'active'),
+            free_forever: freeForever
+          };
 
-            // Hifadhi plan na subscription kupitia route iliyopo backend
-            const payload = {
-                plan: plan,
-                subscription_status: freeForever
-                    ? 'active'
-                    : (currentTenant.subscription_status || 'active'),
-                free_forever: freeForever
-            };
+          if (!freeForever && trialDays >= 1 && trialDays <= 3650) {
+            payload.trial_days = trialDays;
+            payload.subscription_status = 'trial';
+          }
 
-            // Tuma trial_days ikiwa mtumiaji ameweka thamani halali.
-            // Backend yako huweka subscription_status kuwa trial
-            // pale trial_days inapotumwa.
-            if (!freeForever && trialDays >= 1 && trialDays <= 3650) {
-                payload.trial_days = trialDays;
-                payload.subscription_status = 'trial';
-            }
+          const result = await this.api(`/api/super/tenant/${id}/subscription`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+          });
 
-            const result = await this.api(
-                `/api/super/tenant/${id}/subscription`,
-                {
-                    method: 'PUT',
-                    body: JSON.stringify(payload)
-                }
-            );
+          // Badilisha Hali ya Akaunti (active/suspended) ikiwa imebadilishwa
+          const selectedStatus = this.form.status === 'suspended' ? 'suspended' : 'active';
+          if (currentTenant.status !== selectedStatus) {
+            await this.api(`/api/super/tenant/${id}/status`, {
+              method: 'PATCH',
+              body: JSON.stringify({ status: selectedStatus })
+            });
+          }
 
-            // Sasisha hali ya akaunti ikiwa imebadilishwa
-            const selectedStatus =
-                this.form.status === 'suspended' ? 'suspended' : 'active';
+          await this.refresh();
+          this.show(result.message || `Plan ya ${businessName} imehifadhiwa kuwa ${plan}.`);
 
-            if (currentTenant.status !== selectedStatus) {
-                await this.api(
-                    `/api/super/tenant/${id}/status`,
-                    {
-                        method: 'PATCH',
-                        body: JSON.stringify({
-                            status: selectedStatus
-                        })
-                    }
-                );
-            }
-
-            // Pakia tena taarifa kutoka database
-            await this.refresh();
-
-            // Refresh yako hufuta notice, kwa hiyo weka ujumbe baada yake
-            this.show(
-                result.message ||
-                `Plan ya ${businessName} imehifadhiwa kuwa ${plan}.`
-            );
-
-            // Funga dirisha baada ya kuhifadhi
-            this.modal = false;
-            this.editing = false;
-            this.editingId = null;
-            this.page = 'tenants';
+          this.modal = false;
+          this.editing = false;
+          this.editingId = null;
+          this.page = 'tenants';
 
         } else {
-            // Sajili tenant mpya
-            let phone = String(this.form.phone || '').trim();
+          let phone = String(this.form.phone || '').trim();
 
-            if (!phone) {
-                phone = String(
-                    window.prompt('Ingiza namba ya simu ya mmiliki wa biashara:') || ''
-                ).trim();
-            }
+          if (!phone) {
+            phone = String(window.prompt('Ingiza namba ya simu ya mmiliki wa biashara:') || '').trim();
+          }
 
-            if (!phone) {
-                this.show('Namba ya simu inahitajika.', true);
-                return;
-            }
+          if (!phone) {
+            this.show('Namba ya simu inahitajika.', true);
+            return;
+          }
 
-            const result = await this.api('/api/super/tenants', {
-                method: 'POST',
-                body: JSON.stringify({
-                    business_name: businessName,
-                    owner_name: businessName,
-                    phone: phone,
-                    email: email,
-                    password: password,
-                    plan: plan
-                })
-            });
+          const result = await this.api('/api/super/tenants', {
+            method: 'POST',
+            body: JSON.stringify({
+              business_name: businessName,
+              owner_name: businessName,
+              phone: phone,
+              email: email,
+              password: password,
+              plan: plan
+            })
+          });
 
-            await this.refresh();
+          await this.refresh();
+          this.show(result.message || 'Tenant amesajiliwa kikamilifu.');
 
-            this.show(result.message || 'Tenant amesajiliwa kikamilifu.');
-
-            this.modal = false;
-            this.page = 'tenants';
+          this.modal = false;
+          this.page = 'tenants';
         }
 
-    } catch (e) {
+      } catch (e) {
         console.error('saveTenant error:', e);
-
-        this.show(
-            'Imeshindikana kuhifadhi: ' +
-            (e.message || 'Hitilafu isiyojulikana'),
-            true
-        );
-
-    } finally {
+        this.show('Imeshindikana kuhifadhi: ' + (e.message || 'Hitilafu isiyojulikana'), true);
+      } finally {
         this.saving = false;
-    }
-}, 
-  async toggleStatus(t) {
+      }
+    },
+
+    async toggleStatus(t) {
       if (!t || !t.id || t.status === 'deleted') return;
 
       const status = t.status === 'suspended' ? 'active' : 'suspended';
