@@ -1007,6 +1007,85 @@ app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin,
       plan.name,
       plan.max_devices,
       plan.max_clients,
+app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin, asyncRoute(async (req, res) => {
+  const tenantId = String(req.params.id || '').trim();
+  
+  // Safisha jina la plan (weka uppercase na uondoe nafasi)
+  const rawPlanInput = String(req.body.plan || '').trim().toUpperCase().replace(/\s+/g, '_');
+  const plan = PLANS[rawPlanInput] || getPlan(rawPlanInput);
+  
+  let status = String(req.body.subscription_status || 'active').toLowerCase();
+
+  if (!tenantId) fail(400, 'ID ya Tenant inahitajika.');
+  if (tenantId === SUPER_ADMIN_ID) fail(403, 'Huwezi kubadilisha mpango wa Super Admin.');
+  if (!plan) fail(400, 'Mpango (Plan) si sahihi. Chagua START, DIAMOND, PREMIUM, au REVENUE_SHARE.');
+
+  if (!['trial', 'active', 'expired', 'pending', 'cancelled'].includes(status)) {
+    fail(400, 'subscription_status si sahihi.');
+  }
+
+  const current = await one(
+    'SELECT * FROM tenants WHERE id = $1 AND id <> $2',
+    [tenantId, SUPER_ADMIN_ID]
+  );
+
+  if (!current) fail(404, 'WISP haijapatikana.');
+
+  const freeForever =
+    req.body.free_forever === true ||
+    req.body.free_forever === 'true';
+
+  let trialStarted = current.trial_started_at;
+  let trialEnds = current.trial_ends_at;
+
+  // Super Admin anaweza kuongeza siku za trial.
+  if (req.body.trial_days !== undefined && req.body.trial_days !== '') {
+    const days = Number(req.body.trial_days);
+
+    if (!Number.isInteger(days) || days < 0 || days > 3650) {
+      fail(400, 'Siku za trial ziwe kati ya 0 na 3650.');
+    }
+
+    if (days > 0) {
+      const now = new Date();
+      const oldEnd = trialEnds ? new Date(trialEnds) : now;
+      const base = oldEnd > now ? oldEnd : now;
+
+      trialStarted = trialStarted || now;
+      trialEnds = new Date(base.getTime() + days * 86400000);
+      status = 'trial';
+    }
+  }
+
+  const endsAt = req.body.subscription_ends_at
+    ? new Date(req.body.subscription_ends_at)
+    : null;
+
+  if (endsAt && Number.isNaN(endsAt.getTime())) {
+    fail(400, 'Tarehe ya mwisho si sahihi.');
+  }
+
+  // Weka thamani za max_devices na max_clients (null inamaanisha bila kikomo)
+  const maxDevices = plan.max_devices !== undefined ? plan.max_devices : null;
+  const maxClients = plan.max_clients !== undefined ? plan.max_clients : null;
+
+  const tenant = await one(
+    `UPDATE tenants
+     SET plan = $1,
+         max_devices = $2,
+         max_clients = $3,
+         subscription_status = $4,
+         subscription_ends_at = $5,
+         trial_started_at = $6,
+         trial_ends_at = $7,
+         free_forever = $8,
+         updated_at = NOW()
+     WHERE id = $9 AND id <> $10
+     RETURNING *`,
+    [
+      plan.name,
+      maxDevices,
+      maxClients,
       status,
       endsAt,
       trialStarted,
@@ -1022,8 +1101,8 @@ app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin,
   res.json({
     success: true,
     message: freeForever
-      ? 'Free Forever imewashwa.'
-      : 'Subscription imesasishwa.',
+      ? `Free Forever imewashwa na mpango umebadilishwa kuwa ${plan.name}.`
+      : `Plan imesasishwa na kuwa ${plan.name} kikamilifu!`,
     tenant: publicTenant(tenant),
     subscription: {
       plan: tenant.plan,
@@ -1035,6 +1114,7 @@ app.put('/api/super/tenant/:id/subscription', authMiddleware, requireSuperAdmin,
     }
   });
 }));
+
 
 
 /* =========================
