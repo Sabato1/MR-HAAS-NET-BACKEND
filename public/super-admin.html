@@ -590,12 +590,11 @@ function superApp() {
 
       this.modal = true;
     },
-
-async saveTenant() {
+    async saveTenant() {
     if (this.saving) return;
 
-    this.error = '';
     this.notice = '';
+    this.error = false;
 
     const businessName = String(this.form.name || '').trim();
     const email = String(this.form.email || '').trim().toLowerCase();
@@ -606,78 +605,116 @@ async saveTenant() {
 
     // Hakiki taarifa za msingi
     if (!businessName) {
-        this.error = 'Weka jina la biashara.';
+        this.show('Weka jina la biashara.', true);
         return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        this.error = 'Weka email sahihi.';
+        this.show('Weka email sahihi.', true);
         return;
     }
 
-    if (!this.tenantId && password.length < 8) {
-        this.error = 'Password lazima iwe na angalau herufi/namba 8.';
+    // Password inahitajika kwa tenant mpya pekee
+    if (!this.editing && password.length < 8) {
+        this.show('Password lazima iwe na angalau herufi/namba 8.', true);
         return;
     }
 
-    if (!freeForever &&
-        (!Number.isInteger(trialDays) || trialDays < 1 || trialDays > 3650)) {
-        this.error = 'Siku za majaribio ziwe kati ya 1 na 3650.';
+    // Hakiki trial days wakati wa kuhariri tenant
+    if (
+        this.editing &&
+        !freeForever &&
+        (!Number.isInteger(trialDays) ||
+         trialDays < 1 ||
+         trialDays > 3650)
+    ) {
+        this.show(
+            'Trial Days lazima ziwe kati ya 1 na 3650. Ikiwa hutaki trial, chagua Free Forever.',
+            true
+        );
         return;
     }
 
     this.saving = true;
 
     try {
-        // KUREKEBISHA TAARIFA ZA TENANT ALIYEKWISHA USAJILIWA
-        if (this.tenantId) {
-            const tenantId = encodeURIComponent(this.tenantId);
+        if (this.editing) {
+            // Tumia ID ya tenant aliyechaguliwa, si ID ya Super Admin
+            if (!this.editingId) {
+                throw new Error('ID ya tenant haijapatikana. Funga fomu na ujaribu tena.');
+            }
 
-            // Route sahihi ya kubadilisha plan na limits.
-            // Hakuna PATCH /api/super/tenant/:id kwenye server.js yako.
-            await this.api(`/api/super/tenant/${tenantId}/subscription`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    plan: plan,
-                    subscription_status: freeForever ? 'active' : 'trial',
-                    free_forever: freeForever,
-                    ...(freeForever ? {} : { trial_days: trialDays })
-                })
-            });
+            const id = encodeURIComponent(this.editingId);
 
-            // Badilisha hali ya akaunti ikiwa imebadilishwa.
+            // Tafuta taarifa za tenant anayehaririwa
+            const currentTenant = this.tenants.find(
+                t => String(t.id) === String(this.editingId)
+            );
+
+            if (!currentTenant) {
+                throw new Error('Tenant huyu hapatikani kwenye orodha. Bonyeza Refresh.');
+            }
+
+            // Hifadhi plan na subscription kupitia route iliyopo backend
+            const payload = {
+                plan: plan,
+                subscription_status: freeForever
+                    ? 'active'
+                    : (currentTenant.subscription_status || 'active'),
+                free_forever: freeForever
+            };
+
+            // Tuma trial_days ikiwa mtumiaji ameweka thamani halali.
+            // Backend yako huweka subscription_status kuwa trial
+            // pale trial_days inapotumwa.
+            if (!freeForever && trialDays >= 1 && trialDays <= 3650) {
+                payload.trial_days = trialDays;
+                payload.subscription_status = 'trial';
+            }
+
+            const result = await this.api(
+                `/api/super/tenant/${id}/subscription`,
+                {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                }
+            );
+
+            // Sasisha hali ya akaunti ikiwa imebadilishwa
             const selectedStatus =
                 this.form.status === 'suspended' ? 'suspended' : 'active';
 
-            const currentTenant = (this.tenants || []).find(
-                t => String(t.id) === String(this.tenantId)
-            );
-
-            if (currentTenant && currentTenant.status !== selectedStatus) {
-                await this.api(`/api/super/tenant/${tenantId}/status`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({
-                        status: selectedStatus
-                    })
-                });
+            if (currentTenant.status !== selectedStatus) {
+                await this.api(
+                    `/api/super/tenant/${id}/status`,
+                    {
+                        method: 'PATCH',
+                        body: JSON.stringify({
+                            status: selectedStatus
+                        })
+                    }
+                );
             }
 
-            this.notice = freeForever
-                ? 'Mabadiliko yamehifadhiwa. Tenant amewekewa Free Forever.'
-                : 'Mabadiliko ya plan na muda wa majaribio yamehifadhiwa.';
+            // Pakia tena taarifa kutoka database
+            await this.refresh();
+
+            // Refresh yako hufuta notice, kwa hiyo weka ujumbe baada yake
+            this.show(
+                result.message ||
+                `Plan ya ${businessName} imehifadhiwa kuwa ${plan}.`
+            );
+
+            // Funga dirisha baada ya kuhifadhi
+            this.modal = false;
+            this.editing = false;
+            this.editingId = null;
+            this.page = 'tenants';
 
         } else {
-            // USAJILI WA TENANT MPYA
-            // Backend yako inahitaji business_name, owner_name,
-            // phone, email, password na plan.
-
-            const ownerName = String(
-                this.form.owner_name || this.form.name || ''
-            ).trim();
-
+            // Sajili tenant mpya
             let phone = String(this.form.phone || '').trim();
 
-            // Form yako ya sasa haina phone; omba namba ikiwa haijawekwa.
             if (!phone) {
                 phone = String(
                     window.prompt('Ingiza namba ya simu ya mmiliki wa biashara:') || ''
@@ -685,20 +722,15 @@ async saveTenant() {
             }
 
             if (!phone) {
-                this.error = 'Namba ya simu inahitajika kusajili tenant.';
+                this.show('Namba ya simu inahitajika.', true);
                 return;
             }
 
-            if (password.length < 8) {
-                this.error = 'Password lazima iwe na angalau herufi/namba 8.';
-                return;
-            }
-
-            await this.api('/api/super/tenants', {
+            const result = await this.api('/api/super/tenants', {
                 method: 'POST',
                 body: JSON.stringify({
                     business_name: businessName,
-                    owner_name: ownerName,
+                    owner_name: businessName,
                     phone: phone,
                     email: email,
                     password: password,
@@ -706,31 +738,28 @@ async saveTenant() {
                 })
             });
 
-            this.notice = 'Tenant amesajiliwa kikamilifu.';
+            await this.refresh();
 
-            // Backend yako ya POST kwa sasa huanzisha trial ya siku 4.
-            // Free Forever na trial_days hazitumiki kwenye route hiyo
-            // mpaka uongeze msaada wake kwenye server.js.
+            this.show(result.message || 'Tenant amesajiliwa kikamilifu.');
+
+            this.modal = false;
+            this.page = 'tenants';
         }
-
-        // Sasisha orodha ya tenants
-        await this.refresh();
-
-        // Funga fomu ikiwa mfumo wako unatumia page hii.
-        this.page = 'tenants';
 
     } catch (e) {
         console.error('saveTenant error:', e);
-        this.error = e && e.message
-            ? `Imeshindikana kuhifadhi: ${e.message}`
-            : 'Imeshindikana kuhifadhi mabadiliko. Jaribu tena.';
+
+        this.show(
+            'Imeshindikana kuhifadhi: ' +
+            (e.message || 'Hitilafu isiyojulikana'),
+            true
+        );
+
     } finally {
         this.saving = false;
     }
-},
-
-
-    async toggleStatus(t) {
+}, 
+  async toggleStatus(t) {
       if (!t || !t.id || t.status === 'deleted') return;
 
       const status = t.status === 'suspended' ? 'active' : 'suspended';
