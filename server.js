@@ -71,7 +71,6 @@ app.use(express.static(path.join(__dirname, 'public')));
    SYSTEM PLANS DEFINITION
 ========================================================= */
 const PLANS = {
-const PLANS = {
   START: {
     name: 'START',
     monthly_price: 10000,
