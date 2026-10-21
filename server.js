@@ -71,28 +71,25 @@ app.use(express.static(path.join(__dirname, 'public')));
    SYSTEM PLANS DEFINITION
 ========================================================= */
 const PLANS = {
+const PLANS = {
   START: {
     name: 'START',
     monthly_price: 10000,
     max_devices: 2,
     max_clients: 50,
-    device_limit: 2,
-    client_limit: 50,
-    billing_type: 'fixed'
+    // ...
   },
   DIAMOND: {
     name: 'DIAMOND',
     monthly_price: 15000,
     max_devices: 7,
     max_clients: 500,
-    device_limit: 7,
-    client_limit: 500,
-    billing_type: 'fixed'
+    // ...
   },
   PREMIUM: {
     name: 'PREMIUM',
     monthly_price: 20000,
-    max_devices: null,
+    max_devices: 999999, // BADILISHA HAPA, ilikuwa null
     max_clients: 5000,
     device_limit: null,
     client_limit: 5000,
@@ -103,8 +100,8 @@ const PLANS = {
     monthly_price: 20000,
     signup_fee: 20000,
     revenue_share_percent: 3,
-    max_devices: null,
-    max_clients: null,
+    max_devices: 999999, // BADILISHA HAPA, ilikuwa null
+    max_clients: 999999, // NA HAPA
     device_limit: null,
     client_limit: null,
     billing_type: 'revenue_share'
