@@ -26,8 +26,8 @@ const JWT_SECRET = SECRET_KEY;
 const SUPER_ADMIN_ID = 'tenant_super_admin';
 
 app.disable('x-powered-by');
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 const allowedOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
@@ -255,7 +255,7 @@ app.delete('/api/sites/:id', authMiddleware, asyncRoute(async (req, res) => {
 }));
 
 /* =========================================================
-   DEVICES - MR HAAS NET LINK MIKROTIK WIZARD
+   DEVICES - MR HAAS NET LINK MIKROTIK + OMADA EAP
 ========================================================= */
 app.get('/api/devices/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
   const tenantId = req.params.tenant_id; ensureTenantAccess(req, tenantId);
@@ -271,24 +271,30 @@ app.post('/api/devices', authMiddleware, requireSubscription, asyncRoute(async (
   const tenant = await getTenantRecord(tenantId);
   await checkTenantLimit(tenant, 'devices');
 
-  // MR HAAS WIZARD FIELDS
+  // MR HAAS WIZARD - Supports both MikroTik and Omada
   const locationName = clean(req.body.location_name || req.body.name || '');
   const ssid = clean(req.body.ssid || '');
-  const port = clean(req.body.port || req.body.wan_port || 'Port 1');
-  const model = clean(req.body.model || req.body.vendor || 'MikroTik');
-  const vendor = 'MikroTik';
+  const port = clean(req.body.port || req.body.wan_port || req.body.ip_address || 'Port 1');
+  const model = clean(req.body.model || 'RB3011');
+  let vendor = clean(req.body.vendor || '');
+  // Auto-detect vendor
+  if (!vendor) {
+    if (model.toLowerCase().includes('eap') || req.body.mac_address) vendor = 'TP-Link Omada';
+    else vendor = 'MikroTik';
+  }
+  if (vendor.toLowerCase().includes('omada') || vendor.toLowerCase().includes('eap')) vendor = 'TP-Link Omada';
+  else if (vendor.toLowerCase().includes('mikrotik') || vendor.toLowerCase().includes('rb') || vendor.toLowerCase().includes('hap')) vendor = 'MikroTik';
 
   const name = locationName ? `${locationName} - ${ssid || vendor}` : clean(req.body.name || `${model} ${port}`);
-  const deviceType = 'router';
+  const deviceType = vendor === 'TP-Link Omada' ? 'access_point' : 'router';
   const mac = clean(req.body.mac_address || '');
   const ip = clean(req.body.ip_address || port);
   const siteId = clean(req.body.site_id || '') || null;
   const wanPort = port;
-  const connectionType = 'api';
+  const connectionType = vendor === 'TP-Link Omada' ? 'omada' : 'api';
 
   if (!name) fail(400, 'Jina la kifaa linahitajika.');
 
-  // Try to insert with extended columns, fallback to basic
   let device;
   try {
     device = await one(
@@ -299,7 +305,6 @@ app.post('/api/devices', authMiddleware, requireSubscription, asyncRoute(async (
       [makeId('device'), tenantId, siteId, name, vendor, deviceType, model, mac || null, ip || null, wanPort, connectionType]
     );
   } catch (e) {
-    // Fallback if status column doesn't exist
     device = await one(
       `INSERT INTO devices
         (id, tenant_id, site_id, name, vendor, device_type, model, mac_address, ip_address, wan_port, connection_type, last_seen, created_at)
@@ -309,7 +314,7 @@ app.post('/api/devices', authMiddleware, requireSubscription, asyncRoute(async (
     );
   }
 
-  res.status(201).json({ success: true, message: 'Kifaa kimehifadhiwa na MR HAAS NET inasubiri check-in.', device });
+  res.status(201).json({ success: true, message: vendor === 'TP-Link Omada' ? 'Omada EAP imehifadhiwa na MR HAAS NET inasubiri adoption.' : 'Kifaa kimehifadhiwa na MR HAAS NET inasubiri check-in.', device });
 }));
 
 app.delete('/api/devices/:id', authMiddleware, asyncRoute(async (req, res) => {
@@ -321,10 +326,7 @@ app.delete('/api/devices/:id', authMiddleware, asyncRoute(async (req, res) => {
 
 /* =========================================================
    MR HAAS NET - MIKROTIK LIVE CHECKIN & REGISTER
-   Router inaita hizi endpoints moja kwa moja
 ========================================================= */
-
-// 1. Register - Router inapodownload mrhaas.rsc
 app.get('/api/mikrotik/register', asyncRoute(async (req, res) => {
   const tenantId = clean(req.query.tenant || req.query.tenant_id || '');
   const site = clean(req.query.site || '');
@@ -338,7 +340,6 @@ app.get('/api/mikrotik/register', asyncRoute(async (req, res) => {
     } catch (e) { console.log('register update failed', e.message); }
   }
 
-  // Return RouterOS script that the device will import
   const rsc = `# MR HAAS NET - Provisioning payload for ${site}
 # SSID: ${ssid} | Model: ${model} | Port: ${port} | Tenant: ${tenantId}
 /ip hotspot profile set [find] login-by=http-chap,http-pap
@@ -347,12 +348,10 @@ app.get('/api/mikrotik/register', asyncRoute(async (req, res) => {
 /system scheduler add name=mrhaas-checkin interval=2m on-event="/tool fetch url=https://mrhaas-backend.onrender.com/api/mikrotik/checkin?tenant=${encodeURIComponent(tenantId)}&site=${encodeURIComponent(site)}&model=${encodeURIComponent(model)} mode=https check-certificate=no" disabled=no
 :put "MR HAAS NET: ${site} imeunganishwa!"
 `;
-
   res.setHeader('Content-Type', 'text/plain');
   res.send(rsc);
 }));
 
-// 2. Checkin - Router inapiga kila dakika 2 kuonyesha iko online
 app.get('/api/mikrotik/checkin', asyncRoute(async (req, res) => {
   const tenantId = clean(req.query.tenant || req.query.tenant_id || '');
   const site = clean(req.query.site || '');
@@ -368,15 +367,138 @@ app.get('/api/mikrotik/checkin', asyncRoute(async (req, res) => {
       console.log(`[MR HAAS CHECKIN] Tenant ${tenantId} Site ${site} online`);
     } catch (e) { console.error('checkin update failed', e.message); }
   }
-
   res.setHeader('Content-Type', 'text/plain');
   res.send('OK - MR HAAS NET checkin received');
 }));
 
-// 3. Status endpoint for tenant frontend polling
 app.get('/api/mikrotik/status/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
   const tenantId = req.params.tenant_id; ensureTenantAccess(req, tenantId);
   const devices = await query(`SELECT id, name, vendor, model, ip_address, wan_port, status, last_seen FROM devices WHERE tenant_id = $1 ORDER BY last_seen DESC NULLS LAST`, [tenantId]);
+  const online = devices.filter(d => d.status === 'online' || (d.last_seen && (Date.now() - new Date(d.last_seen).getTime()) < 5*60*1000)).length;
+  res.json({ success: true, devices, online_count: online, total: devices.length });
+}));
+
+/* =========================================================
+   MR HAAS NET - OMADA EAP LIVE ADOPT & INFORM
+   Kama UpeSiLipa omada.upesilipa.com
+   EAP inapiga /inform na /api/omada/adopt
+========================================================= */
+
+// In-memory store ya Omada pending (backup kama DB table bado haijajengwa)
+const omadaPending = new Map();
+
+// 1. Adopt - Frontend inaita hii baada ya Step 2 ya Omada
+app.post('/api/omada/adopt', asyncRoute(async (req, res) => {
+  // Inaweza kuitwa bila auth kwa sababu device bado haija-adopt, tunachukua tenant kutoka header au body
+  let tenantId = req.headers['x-tenant-id'] || req.body.tenant_id || req.body.tenantId || '';
+  if (!tenantId && req.headers.authorization) {
+    try {
+      const header = req.headers.authorization || '';
+      const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+      if (token) { const decoded = jwt.verify(token, JWT_SECRET); tenantId = decoded.tenant_id || ''; }
+    } catch(e) {}
+  }
+  const location = clean(req.body.location || req.body.location_name || req.body.omLocation || 'SIZA UKEREWE');
+  const ssid = clean(req.body.ssid || req.body.omSsid || 'FAMI NET');
+  const mac = clean(req.body.mac || req.body.mac_address || req.body.omMac || '').toUpperCase();
+  const adminUser = clean(req.body.adminUser || req.body.admin_user || req.body.omAdminUser || 'admin');
+  const adminPass = String(req.body.adminPass || req.body.admin_pass || req.body.omAdminPass || '');
+
+  if (!mac) fail(400, 'MAC address inahitajika kwa Omada EAP.');
+
+  // Validate MAC
+  const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+  if (!macRegex.test(mac)) fail(400, 'MAC address si sahihi. Mfano: 40:61:86:8C:31:09');
+
+  // Save to pending map
+  omadaPending.set(mac, { tenantId, location, ssid, mac, adminUser, status: 'pending', last_seen: new Date(), created_at: new Date() });
+
+  // Try to update devices table if exists
+  if (tenantId) {
+    try {
+      await query(`UPDATE devices SET last_seen = NOW(), status = 'pending' WHERE tenant_id = $1 AND (mac_address ILIKE $2 OR name ILIKE $3)`, [tenantId, `%${mac}%`, `%${location}%`]);
+    } catch(e) { console.log('omada adopt update failed', e.message); }
+  }
+
+  console.log(`[OMADA ADOPT] Tenant ${tenantId} Location ${location} MAC ${mac} SSID ${ssid}`);
+
+  res.json({ success: true, message: 'Omada EAP imepokelewa. Tunasubiri controller ikamilishe adoption...', mac, status: 'pending', controller_url: 'omada.mrhaas.net' });
+}));
+
+// 2. Inform - EAP inapiga hapa kila 2 min (kama omada.upesilipa.com/inform)
+app.post(['/inform','/api/omada/inform','/api/omada/checkin'], asyncRoute(async (req, res) => {
+  const mac = clean(req.body.mac || req.query.mac || req.body.mac_address || '').toUpperCase() || clean(req.headers['x-mac'] || '').toUpperCase();
+  const tenantId = clean(req.body.tenant_id || req.query.tenant || '');
+  const ip = req.ip || req.headers['x-forwarded-for'] || '';
+
+  // Omada EAPs send JSON like { "mac": "40-61-86-8C-31-09", "model": "EAP245", "firmware": "..." }
+  let bodyMac = '';
+  if (req.body && typeof req.body === 'object') {
+    bodyMac = clean(req.body.mac || req.body.mac_address || req.body['device-mac'] || '').toUpperCase();
+  }
+
+  const finalMac = mac || bodyMac;
+  if (finalMac) {
+    omadaPending.set(finalMac, { ...(omadaPending.get(finalMac)||{}), mac: finalMac, last_seen: new Date(), ip, status: 'online' });
+    if (tenantId) {
+      try {
+        await query(`UPDATE devices SET last_seen = NOW(), status = 'online' WHERE mac_address ILIKE $1 OR (tenant_id = $2 AND mac_address ILIKE $1)`, [`%${finalMac}%`, tenantId]);
+        // Also update by MAC without tenant
+        await query(`UPDATE devices SET last_seen = NOW(), status = 'online' WHERE mac_address ILIKE $1`, [`%${finalMac}%`]);
+      } catch(e) {}
+    } else if (finalMac) {
+      try {
+        await query(`UPDATE devices SET last_seen = NOW(), status = 'online' WHERE mac_address ILIKE $1`, [`%${finalMac}%`]);
+      } catch(e) {}
+    }
+    console.log(`[OMADA INFORM] MAC ${finalMac} online from ${ip}`);
+  }
+
+  // Response expected by Omada EAP - tell it controller is ok
+  res.json({ success: true, result: 'ok', message: 'MR HAAS NET Omada Controller - OK', controller: 'omada.mrhaas.net' });
+}));
+
+// Also GET for simple polling
+app.get(['/inform','/api/omada/inform','/api/omada/checkin'], asyncRoute(async (req, res) => {
+  const mac = clean(req.query.mac || '').toUpperCase();
+  if (mac) {
+    omadaPending.set(mac, { ...(omadaPending.get(mac)||{}), mac, last_seen: new Date(), status: 'online' });
+    try { await query(`UPDATE devices SET last_seen = NOW(), status = 'online' WHERE mac_address ILIKE $1`, [`%${mac}%`]); } catch(e) {}
+  }
+  res.setHeader('Content-Type', 'text/plain');
+  res.send('OK - MR HAAS Omada Controller');
+}));
+
+// 3. Status - Frontend inapoll kila 3 sec kwenye Step 3 ya Omada
+app.get('/api/omada/status/:mac', asyncRoute(async (req, res) => {
+  const mac = clean(req.params.mac || '').toUpperCase();
+  const pending = omadaPending.get(mac) || omadaPending.get(mac.replace(/-/g, ':')) || omadaPending.get(mac.replace(/:/g, '-'));
+  
+  // Also check DB
+  let dbDevice = null;
+  try {
+    dbDevice = await one(`SELECT id, name, vendor, model, mac_address, status, last_seen FROM devices WHERE mac_address ILIKE $1 ORDER BY last_seen DESC LIMIT 1`, [`%${mac}%`]);
+  } catch(e) {}
+
+  if (pending || dbDevice) {
+    const isOnline = (dbDevice && dbDevice.status === 'online') || (pending && pending.status === 'online') || (dbDevice && dbDevice.last_seen && (Date.now() - new Date(dbDevice.last_seen).getTime()) < 5*60*1000);
+    return res.json({ success: true, mac, status: isOnline ? 'online' : (pending?.status || dbDevice?.status || 'pending'), last_seen: pending?.last_seen || dbDevice?.last_seen || null, device: dbDevice || pending });
+  }
+  res.json({ success: false, mac, status: 'not_found', message: 'Bado hatujaona kifaa hiki. Hakikisha Controller Inform URL imehifadhiwa kwenye kifaa, kisha zima na washa kifaa.' });
+}));
+
+// 4. List Omada devices per tenant
+app.get('/api/omada/devices/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
+  const tenantId = req.params.tenant_id; ensureTenantAccess(req, tenantId);
+  const devices = await query(`SELECT id, tenant_id, name, vendor, model, mac_address, ip_address, status, last_seen, created_at FROM devices WHERE tenant_id = $1 AND (vendor ILIKE '%Omada%' OR vendor ILIKE '%EAP%' OR device_type = 'access_point' OR connection_type = 'omada') ORDER BY last_seen DESC NULLS LAST`, [tenantId]);
+  const pendingList = Array.from(omadaPending.values()).filter(d => !d.tenantId || d.tenantId === tenantId);
+  res.json({ success: true, devices, pending: pendingList, total: devices.length });
+}));
+
+// 5. Global Omada status for dashboard
+app.get('/api/omada/status-tenant/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
+  const tenantId = req.params.tenant_id; ensureTenantAccess(req, tenantId);
+  const devices = await query(`SELECT id, name, vendor, model, mac_address, status, last_seen FROM devices WHERE tenant_id = $1 AND (vendor ILIKE '%Omada%' OR connection_type = 'omada')`, [tenantId]);
   const online = devices.filter(d => d.status === 'online' || (d.last_seen && (Date.now() - new Date(d.last_seen).getTime()) < 5*60*1000)).length;
   res.json({ success: true, devices, online_count: online, total: devices.length });
 }));
@@ -488,13 +610,16 @@ async function startServer() {
     await db.ready;
     if (!db.pool || typeof db.pool.query !== 'function') throw new Error('database.js lazima itoe pool.query na ready.');
     await db.pool.query('SELECT 1');
-    // MR HAAS: Ensure status column exists for devices (for online/offline)
+    // MR HAAS: Ensure columns exist for both MikroTik and Omada
     try { await db.pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'offline'`); } catch(e){}
     try { await db.pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ`); } catch(e){}
+    try { await db.pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS wan_port TEXT`); } catch(e){}
+    try { await db.pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS connection_type TEXT DEFAULT 'api'`); } catch(e){}
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 MR HAAS WISP backend inaendesha kwenye port ${PORT}`);
       console.log(`Environment: ${IS_PRODUCTION ? 'production' : 'development'}`);
-      console.log(`MR HAAS MIKROTIK endpoints: /api/mikrotik/register , /api/mikrotik/checkin , /api/mikrotik/status/:tenant_id`);
+      console.log(`MR HAAS MIKROTIK: /api/mikrotik/register , /api/mikrotik/checkin , /api/mikrotik/status/:tenant_id`);
+      console.log(`MR HAAS OMADA: /api/omada/adopt , /api/omada/status/:mac , /inform , /api/omada/devices/:tenant_id`);
     });
   } catch (error) { console.error('Server haikuweza kuanza:', error.message); process.exit(1); }
 }
