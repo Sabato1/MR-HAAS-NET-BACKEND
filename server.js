@@ -255,36 +255,30 @@ app.delete('/api/sites/:id', authMiddleware, asyncRoute(async (req, res) => {
 }));
 
 /* =========================================================
-   DEVICES - MR HAAS NET LINK MIKROTIK + OMADA EAP
+   DEVICES
 ========================================================= */
 app.get('/api/devices/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
   const tenantId = req.params.tenant_id; ensureTenantAccess(req, tenantId);
   const devices = await query(`SELECT id, tenant_id, site_id, name, vendor, device_type, model, mac_address, ip_address, wan_port, connection_type, last_seen, status, created_at FROM devices WHERE tenant_id = $1 ORDER BY created_at DESC`, [tenantId]);
   res.json({ success: true, devices });
 }));
-
 app.post('/api/devices', authMiddleware, requireSubscription, asyncRoute(async (req, res) => {
   const tenantId = req.role === 'super_admin' ? req.body.tenant_id : req.tenant_id;
   ensureTenantAccess(req, tenantId);
   if (!tenantId) fail(400, 'tenant_id inahitajika.');
-
   const tenant = await getTenantRecord(tenantId);
   await checkTenantLimit(tenant, 'devices');
-
-  // MR HAAS WIZARD - Supports both MikroTik and Omada
   const locationName = clean(req.body.location_name || req.body.name || '');
   const ssid = clean(req.body.ssid || '');
   const port = clean(req.body.port || req.body.wan_port || req.body.ip_address || 'Port 1');
   const model = clean(req.body.model || 'RB3011');
   let vendor = clean(req.body.vendor || '');
-  // Auto-detect vendor
   if (!vendor) {
     if (model.toLowerCase().includes('eap') || req.body.mac_address) vendor = 'TP-Link Omada';
     else vendor = 'MikroTik';
   }
   if (vendor.toLowerCase().includes('omada') || vendor.toLowerCase().includes('eap')) vendor = 'TP-Link Omada';
   else if (vendor.toLowerCase().includes('mikrotik') || vendor.toLowerCase().includes('rb') || vendor.toLowerCase().includes('hap')) vendor = 'MikroTik';
-
   const name = locationName ? `${locationName} - ${ssid || vendor}` : clean(req.body.name || `${model} ${port}`);
   const deviceType = vendor === 'TP-Link Omada' ? 'access_point' : 'router';
   const mac = clean(req.body.mac_address || '');
@@ -292,9 +286,7 @@ app.post('/api/devices', authMiddleware, requireSubscription, asyncRoute(async (
   const siteId = clean(req.body.site_id || '') || null;
   const wanPort = port;
   const connectionType = vendor === 'TP-Link Omada' ? 'omada' : 'api';
-
   if (!name) fail(400, 'Jina la kifaa linahitajika.');
-
   let device;
   try {
     device = await one(
@@ -313,10 +305,8 @@ app.post('/api/devices', authMiddleware, requireSubscription, asyncRoute(async (
       [makeId('device'), tenantId, siteId, name, vendor, deviceType, model, mac || null, ip || null, wanPort, connectionType]
     );
   }
-
   res.status(201).json({ success: true, message: vendor === 'TP-Link Omada' ? 'Omada EAP imehifadhiwa na MR HAAS NET inasubiri adoption.' : 'Kifaa kimehifadhiwa na MR HAAS NET inasubiri check-in.', device });
 }));
-
 app.delete('/api/devices/:id', authMiddleware, asyncRoute(async (req, res) => {
   const device = await one('SELECT * FROM devices WHERE id = $1', [req.params.id]);
   if (!device) fail(404, 'Kifaa hakijapatikana.'); ensureTenantAccess(req, device.tenant_id);
@@ -324,22 +314,18 @@ app.delete('/api/devices/:id', authMiddleware, asyncRoute(async (req, res) => {
   res.json({ success: true, message: 'Kifaa kimeondolewa.' });
 }));
 
-/* =========================================================
-   MR HAAS NET - MIKROTIK LIVE CHECKIN & REGISTER
-========================================================= */
+/* MIKROTIK & OMADA */
 app.get('/api/mikrotik/register', asyncRoute(async (req, res) => {
   const tenantId = clean(req.query.tenant || req.query.tenant_id || '');
   const site = clean(req.query.site || '');
   const ssid = clean(req.query.ssid || '');
   const model = clean(req.query.model || '');
   const port = clean(req.query.port || '');
-
   if (tenantId) {
     try {
       await query(`UPDATE devices SET last_seen = NOW(), status = 'online', ip_address = COALESCE($2, ip_address) WHERE tenant_id = $1 AND name ILIKE $3`, [tenantId, port, `%${site}%`]);
     } catch (e) { console.log('register update failed', e.message); }
   }
-
   const rsc = `# MR HAAS NET - Provisioning payload for ${site}
 # SSID: ${ssid} | Model: ${model} | Port: ${port} | Tenant: ${tenantId}
 /ip hotspot profile set [find] login-by=http-chap,http-pap
@@ -351,12 +337,10 @@ app.get('/api/mikrotik/register', asyncRoute(async (req, res) => {
   res.setHeader('Content-Type', 'text/plain');
   res.send(rsc);
 }));
-
 app.get('/api/mikrotik/checkin', asyncRoute(async (req, res) => {
   const tenantId = clean(req.query.tenant || req.query.tenant_id || '');
   const site = clean(req.query.site || '');
   const deviceId = clean(req.query.id || req.query.device_id || '');
-
   if (tenantId) {
     try {
       if (site) {
@@ -364,13 +348,11 @@ app.get('/api/mikrotik/checkin', asyncRoute(async (req, res) => {
       } else {
         await query(`UPDATE devices SET last_seen = NOW(), status = 'online' WHERE tenant_id = $1`, [tenantId]);
       }
-      console.log(`[MR HAAS CHECKIN] Tenant ${tenantId} Site ${site} online`);
-    } catch (e) { console.error('checkin update failed', e.message); }
+    } catch (e) {}
   }
   res.setHeader('Content-Type', 'text/plain');
   res.send('OK - MR HAAS NET checkin received');
 }));
-
 app.get('/api/mikrotik/status/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
   const tenantId = req.params.tenant_id; ensureTenantAccess(req, tenantId);
   const devices = await query(`SELECT id, name, vendor, model, ip_address, wan_port, status, last_seen FROM devices WHERE tenant_id = $1 ORDER BY last_seen DESC NULLS LAST`, [tenantId]);
@@ -378,19 +360,9 @@ app.get('/api/mikrotik/status/:tenant_id', authMiddleware, asyncRoute(async (req
   res.json({ success: true, devices, online_count: online, total: devices.length });
 }));
 
-/* =========================================================
-   MR HAAS NET - OMADA EAP LIVE ADOPT & INFORM
-   Kama UpeSiLipa omada.upesilipa.com
-   EAP inapiga /inform na /api/omada/adopt
-========================================================= */
-
-// In-memory store ya Omada pending (backup kama DB table bado haijajengwa)
 const omadaPending = new Map();
-
-// 1. Adopt - Frontend inaita hii baada ya Step 2 ya Omada
 app.post('/api/omada/adopt', asyncRoute(async (req, res) => {
-  // Inaweza kuitwa bila auth kwa sababu device bado haija-adopt, tunachukua tenant kutoka header au body
-  let tenantId = req.headers['x-tenant-id'] || req.body.tenant_id || req.body.tenantId || '';
+  let tenantId = req.headers['x-tenant-id'] || req.body.tenant_id || '';
   if (!tenantId && req.headers.authorization) {
     try {
       const header = req.headers.authorization || '';
@@ -398,109 +370,25 @@ app.post('/api/omada/adopt', asyncRoute(async (req, res) => {
       if (token) { const decoded = jwt.verify(token, JWT_SECRET); tenantId = decoded.tenant_id || ''; }
     } catch(e) {}
   }
-  const location = clean(req.body.location || req.body.location_name || req.body.omLocation || 'SIZA UKEREWE');
-  const ssid = clean(req.body.ssid || req.body.omSsid || 'FAMI NET');
-  const mac = clean(req.body.mac || req.body.mac_address || req.body.omMac || '').toUpperCase();
-  const adminUser = clean(req.body.adminUser || req.body.admin_user || req.body.omAdminUser || 'admin');
-  const adminPass = String(req.body.adminPass || req.body.admin_pass || req.body.omAdminPass || '');
-
-  if (!mac) fail(400, 'MAC address inahitajika kwa Omada EAP.');
-
-  // Validate MAC
-  const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
-  if (!macRegex.test(mac)) fail(400, 'MAC address si sahihi. Mfano: 40:61:86:8C:31:09');
-
-  // Save to pending map
-  omadaPending.set(mac, { tenantId, location, ssid, mac, adminUser, status: 'pending', last_seen: new Date(), created_at: new Date() });
-
-  // Try to update devices table if exists
-  if (tenantId) {
-    try {
-      await query(`UPDATE devices SET last_seen = NOW(), status = 'pending' WHERE tenant_id = $1 AND (mac_address ILIKE $2 OR name ILIKE $3)`, [tenantId, `%${mac}%`, `%${location}%`]);
-    } catch(e) { console.log('omada adopt update failed', e.message); }
-  }
-
-  console.log(`[OMADA ADOPT] Tenant ${tenantId} Location ${location} MAC ${mac} SSID ${ssid}`);
-
-  res.json({ success: true, message: 'Omada EAP imepokelewa. Tunasubiri controller ikamilishe adoption...', mac, status: 'pending', controller_url: 'omada.mrhaas.net' });
+  const location = clean(req.body.location || '');
+  const ssid = clean(req.body.ssid || '');
+  const mac = clean(req.body.mac || '').toUpperCase();
+  if (!mac) fail(400, 'MAC address inahitajika.');
+  omadaPending.set(mac, { tenantId, location, ssid, mac, status: 'pending', last_seen: new Date() });
+  res.json({ success: true, mac, status: 'pending' });
 }));
-
-// 2. Inform - EAP inapiga hapa kila 2 min (kama omada.upesilipa.com/inform)
-app.post(['/inform','/api/omada/inform','/api/omada/checkin'], asyncRoute(async (req, res) => {
-  const mac = clean(req.body.mac || req.query.mac || req.body.mac_address || '').toUpperCase() || clean(req.headers['x-mac'] || '').toUpperCase();
-  const tenantId = clean(req.body.tenant_id || req.query.tenant || '');
-  const ip = req.ip || req.headers['x-forwarded-for'] || '';
-
-  // Omada EAPs send JSON like { "mac": "40-61-86-8C-31-09", "model": "EAP245", "firmware": "..." }
-  let bodyMac = '';
-  if (req.body && typeof req.body === 'object') {
-    bodyMac = clean(req.body.mac || req.body.mac_address || req.body['device-mac'] || '').toUpperCase();
-  }
-
-  const finalMac = mac || bodyMac;
-  if (finalMac) {
-    omadaPending.set(finalMac, { ...(omadaPending.get(finalMac)||{}), mac: finalMac, last_seen: new Date(), ip, status: 'online' });
-    if (tenantId) {
-      try {
-        await query(`UPDATE devices SET last_seen = NOW(), status = 'online' WHERE mac_address ILIKE $1 OR (tenant_id = $2 AND mac_address ILIKE $1)`, [`%${finalMac}%`, tenantId]);
-        // Also update by MAC without tenant
-        await query(`UPDATE devices SET last_seen = NOW(), status = 'online' WHERE mac_address ILIKE $1`, [`%${finalMac}%`]);
-      } catch(e) {}
-    } else if (finalMac) {
-      try {
-        await query(`UPDATE devices SET last_seen = NOW(), status = 'online' WHERE mac_address ILIKE $1`, [`%${finalMac}%`]);
-      } catch(e) {}
-    }
-    console.log(`[OMADA INFORM] MAC ${finalMac} online from ${ip}`);
-  }
-
-  // Response expected by Omada EAP - tell it controller is ok
-  res.json({ success: true, result: 'ok', message: 'MR HAAS NET Omada Controller - OK', controller: 'omada.mrhaas.net' });
-}));
-
-// Also GET for simple polling
-app.get(['/inform','/api/omada/inform','/api/omada/checkin'], asyncRoute(async (req, res) => {
-  const mac = clean(req.query.mac || '').toUpperCase();
+app.post(['/inform','/api/omada/inform'], asyncRoute(async (req, res) => {
+  const mac = clean(req.body.mac || req.query.mac || '').toUpperCase();
   if (mac) {
     omadaPending.set(mac, { ...(omadaPending.get(mac)||{}), mac, last_seen: new Date(), status: 'online' });
     try { await query(`UPDATE devices SET last_seen = NOW(), status = 'online' WHERE mac_address ILIKE $1`, [`%${mac}%`]); } catch(e) {}
   }
-  res.setHeader('Content-Type', 'text/plain');
-  res.send('OK - MR HAAS Omada Controller');
+  res.json({ success: true, result: 'ok' });
 }));
-
-// 3. Status - Frontend inapoll kila 3 sec kwenye Step 3 ya Omada
 app.get('/api/omada/status/:mac', asyncRoute(async (req, res) => {
   const mac = clean(req.params.mac || '').toUpperCase();
-  const pending = omadaPending.get(mac) || omadaPending.get(mac.replace(/-/g, ':')) || omadaPending.get(mac.replace(/:/g, '-'));
-  
-  // Also check DB
-  let dbDevice = null;
-  try {
-    dbDevice = await one(`SELECT id, name, vendor, model, mac_address, status, last_seen FROM devices WHERE mac_address ILIKE $1 ORDER BY last_seen DESC LIMIT 1`, [`%${mac}%`]);
-  } catch(e) {}
-
-  if (pending || dbDevice) {
-    const isOnline = (dbDevice && dbDevice.status === 'online') || (pending && pending.status === 'online') || (dbDevice && dbDevice.last_seen && (Date.now() - new Date(dbDevice.last_seen).getTime()) < 5*60*1000);
-    return res.json({ success: true, mac, status: isOnline ? 'online' : (pending?.status || dbDevice?.status || 'pending'), last_seen: pending?.last_seen || dbDevice?.last_seen || null, device: dbDevice || pending });
-  }
-  res.json({ success: false, mac, status: 'not_found', message: 'Bado hatujaona kifaa hiki. Hakikisha Controller Inform URL imehifadhiwa kwenye kifaa, kisha zima na washa kifaa.' });
-}));
-
-// 4. List Omada devices per tenant
-app.get('/api/omada/devices/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
-  const tenantId = req.params.tenant_id; ensureTenantAccess(req, tenantId);
-  const devices = await query(`SELECT id, tenant_id, name, vendor, model, mac_address, ip_address, status, last_seen, created_at FROM devices WHERE tenant_id = $1 AND (vendor ILIKE '%Omada%' OR vendor ILIKE '%EAP%' OR device_type = 'access_point' OR connection_type = 'omada') ORDER BY last_seen DESC NULLS LAST`, [tenantId]);
-  const pendingList = Array.from(omadaPending.values()).filter(d => !d.tenantId || d.tenantId === tenantId);
-  res.json({ success: true, devices, pending: pendingList, total: devices.length });
-}));
-
-// 5. Global Omada status for dashboard
-app.get('/api/omada/status-tenant/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
-  const tenantId = req.params.tenant_id; ensureTenantAccess(req, tenantId);
-  const devices = await query(`SELECT id, name, vendor, model, mac_address, status, last_seen FROM devices WHERE tenant_id = $1 AND (vendor ILIKE '%Omada%' OR connection_type = 'omada')`, [tenantId]);
-  const online = devices.filter(d => d.status === 'online' || (d.last_seen && (Date.now() - new Date(d.last_seen).getTime()) < 5*60*1000)).length;
-  res.json({ success: true, devices, online_count: online, total: devices.length });
+  const pending = omadaPending.get(mac);
+  res.json({ success: true, mac, status: pending?.status || 'not_found' });
 }));
 
 /* CLIENTS */
@@ -539,23 +427,172 @@ app.delete('/api/packages/:id', authMiddleware, asyncRoute(async (req, res) => {
   await query('DELETE FROM packages WHERE id = $1', [pack.id]); res.json({ success: true, message: 'Kifurushi kimefutwa.' });
 }));
 
-/* VOUCHERS & PORTAL */
+/* =========================================================
+   >>> VOUCHERS - IMEBORESHWA KAMILI <<<
+   A: 50+QR Page1 | B: 100 bila QR Page1 | C: 32+QR Page1
+   + QR / LAHA toggle + Batch + Prefix + Zimeisha Muda
+========================================================= */
 app.get('/api/vouchers/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
   const tenantId = req.params.tenant_id; ensureTenantAccess(req, tenantId);
-  const vouchers = await query(`SELECT id, tenant_id, package_id, code, status, expires_at, used_at, created_at FROM vouchers WHERE tenant_id = $1 ORDER BY created_at DESC`, [tenantId]);
+  // Auto migrate columns kama bado hazipo
+  try {
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS batch_id TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS package_name TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS price NUMERIC`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS code_type TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS prefix TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS template TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS qr_or_laha TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS device_model TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS mb_used BIGINT DEFAULT 0`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS mb_total BIGINT DEFAULT 0`);
+  } catch(e){}
+
+  const vouchers = await query(`
+    SELECT v.id, v.tenant_id, v.package_id, v.code, v.status, 
+           v.batch_id, v.package_name, v.price, v.code_type, v.prefix, 
+           v.template, v.qr_or_laha, v.device_model, v.mb_used, v.mb_total,
+           v.expires_at, v.used_at, v.created_at
+    FROM vouchers v
+    WHERE v.tenant_id = $1 
+    ORDER BY v.created_at DESC
+  `, [tenantId]);
   res.json({ success: true, vouchers });
 }));
+
+function generateCodeByType(type, length = 6) {
+  const numbers = '0123456789';
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const mixed = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let chars = mixed;
+  if (type === 'numbers') chars = numbers;
+  if (type === 'letters') chars = letters;
+  let code = '';
+  for (let i = 0; i < length; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 app.post('/api/vouchers', authMiddleware, requireSubscription, asyncRoute(async (req, res) => {
-  const tenantId = req.role === 'super_admin' ? req.body.tenant_id : req.tenant_id; ensureTenantAccess(req, tenantId);
-  const count = Math.min(Math.max(Number(req.body.quantity || req.body.count || 1), 1), 500); const packageId = clean(req.body.package_id || '') || null;
+  const tenantId = req.role === 'super_admin' ? req.body.tenant_id : req.tenant_id; 
+  ensureTenantAccess(req, tenantId);
+  
+  const count = Math.min(Math.max(Number(req.body.quantity || req.body.count || 1), 1), 500);
+  const packageId = clean(req.body.package_id || '') || null;
+  const codeType = clean(req.body.code_type || 'mixed'); // numbers, letters, mixed
+  const prefix = clean(req.body.prefix || '').toUpperCase().slice(0, 10);
+  const usePrefix = req.body.use_prefix === true || req.body.usePrefix === true || !!prefix;
+  const template = clean(req.body.template || 'B'); // A, B, C
+  const qrOrLaha = clean(req.body.qr_or_laha || req.body.qrOrLaha || 'QR');
+  
+  const batchId = `BATCH-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+  
+  let pkgName = '', pkgPrice = 0;
+  if (packageId) {
+    const pkg = await one('SELECT name, price FROM packages WHERE id = $1', [packageId]);
+    if (pkg) { pkgName = pkg.name; pkgPrice = pkg.price; }
+  }
+
+  try {
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS batch_id TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS package_name TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS price NUMERIC`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS code_type TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS prefix TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS template TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS qr_or_laha TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS device_model TEXT`);
+    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS mb_used BIGINT DEFAULT 0`);
+  } catch(e){}
+
   const vouchers = [];
   for (let i = 0; i < count; i++) {
-    const code = crypto.randomBytes(4).toString('hex').toUpperCase();
-    const voucher = await one(`INSERT INTO vouchers (id, tenant_id, package_id, code, status, created_at) VALUES ($1,$2,$3,$4,'unused',NOW()) RETURNING *`, [makeId('voucher'), tenantId, packageId, code]);
+    let rawCode = generateCodeByType(codeType, 6);
+    let finalCode = (usePrefix && prefix) ? `${prefix}-${rawCode}` : rawCode;
+    
+    const voucher = await one(`
+      INSERT INTO vouchers 
+        (id, tenant_id, package_id, code, status, batch_id, package_name, price, code_type, prefix, template, qr_or_laha, created_at) 
+      VALUES ($1,$2,$3,$4,'unused',$5,$6,$7,$8,$9,$10,$11,NOW()) 
+      RETURNING *
+    `, [makeId('voucher'), tenantId, packageId, finalCode, batchId, pkgName, pkgPrice, codeType, prefix, template, qrOrLaha]);
     vouchers.push(voucher);
   }
-  res.status(201).json({ success: true, vouchers });
+  
+  res.status(201).json({ 
+    success: true, 
+    message: `Vocha ${count} zimetengenezwa - Batch ${batchId} - Template ${template} - ${qrOrLaha}`,
+    batch_id: batchId,
+    template: template,
+    qr_or_laha: qrOrLaha,
+    count: vouchers.length,
+    vouchers 
+  });
 }));
+
+// >>> MPYA: Zimeisha Muda tracking <<<
+app.get('/api/vouchers/expired/:tenant_id', authMiddleware, asyncRoute(async (req, res) => {
+  const tenantId = req.params.tenant_id; ensureTenantAccess(req, tenantId);
+  const expired = await query(`
+    SELECT code, package_name, price, batch_id, used_at, expires_at, device_model, mb_used, mb_total, status, created_at
+    FROM vouchers 
+    WHERE tenant_id = $1 AND status IN ('used','expired')
+    ORDER BY used_at DESC NULLS LAST
+  `, [tenantId]);
+  res.json({ success: true, expired, total: expired.length });
+}));
+
+// >>> MPYA: Print data kwa ajili ya Page1 A4 Templates A/B/C <<<
+app.get('/api/vouchers/print/:batch_id', authMiddleware, asyncRoute(async (req, res) => {
+  const batchId = req.params.batch_id;
+  const template = (req.query.template || 'B').toUpperCase();
+  const qrMode = (req.query.qr || '1') === '1' ? 'QR' : 'LAHA';
+  
+  const vouchers = await query(`SELECT * FROM vouchers WHERE batch_id = $1 ORDER BY created_at ASC`, [batchId]);
+  if (!vouchers.length) fail(404, 'Batch haijapatikana');
+  
+  const tenant = await getTenantRecord(vouchers[0].tenant_id);
+  
+  res.json({ 
+    success: true, 
+    wisp_name: tenant.business_name,
+    batch_id: batchId,
+    template: template,
+    qr_or_laha: qrMode,
+    vouchers,
+    print_info: {
+      A: { count: 50, grid: '5x10', label: 'Vocha 50 na QR - Page 1 A4' },
+      B: { count: 100, grid: '5x20', label: 'Vocha 100 bila QR - Page 1 A4' },
+      C: { count: 32, grid: '4x8', label: 'Vocha 32 na QR Kubwa - Page 1 A4' }
+    }
+  });
+}));
+
+// >>> MPYA: Track usage kutoka MikroTik Hotspot login <<<
+app.post('/api/vouchers/track-usage', asyncRoute(async (req, res) => {
+  const code = clean(req.body.code || '');
+  const deviceModel = clean(req.body.device_model || req.body.model || '');
+  const mbUsed = Number(req.body.mb_used || 0);
+  const userAgent = String(req.headers['user-agent'] || '');
+
+  // Simple UA to model
+  let model = deviceModel;
+  if (!model && userAgent) {
+    if (/Tecno/i.test(userAgent)) model = 'Tecno Device';
+    else if (/Infinix/i.test(userAgent)) model = 'Infinix Device';
+    else if (/Samsung/i.test(userAgent)) model = 'Samsung Device';
+    else model = userAgent.slice(0, 80);
+  }
+
+  if (code) {
+    try {
+      await query(`UPDATE vouchers SET used_at = COALESCE(used_at, NOW()), device_model = COALESCE($2, device_model), mb_used = GREATEST(COALESCE(mb_used,0), $3), status = CASE WHEN status='unused' THEN 'used' ELSE status END WHERE code = $1`, [code, model, mbUsed]);
+    } catch(e){}
+  }
+  res.json({ success: true });
+}));
+
 app.post('/api/portal/settings/:tenant_id', authMiddleware, requireSubscription, asyncRoute(async (req, res) => {
   const tenantId = req.params.tenant_id; ensureTenantAccess(req, tenantId);
   const title = String(req.body.portal_title || req.body.name || '').slice(0, 120); const color = String(req.body.primary_color || '#111827'); const announcement = String(req.body.announcement || '').slice(0, 3000); const contactPhone = String(req.body.contact_phone || req.body.contact || '').slice(0, 40);
@@ -610,16 +647,25 @@ async function startServer() {
     await db.ready;
     if (!db.pool || typeof db.pool.query !== 'function') throw new Error('database.js lazima itoe pool.query na ready.');
     await db.pool.query('SELECT 1');
-    // MR HAAS: Ensure columns exist for both MikroTik and Omada
     try { await db.pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'offline'`); } catch(e){}
     try { await db.pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ`); } catch(e){}
     try { await db.pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS wan_port TEXT`); } catch(e){}
     try { await db.pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS connection_type TEXT DEFAULT 'api'`); } catch(e){}
+    // Vouchers new columns
+    try { await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS batch_id TEXT`); } catch(e){}
+    try { await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS package_name TEXT`); } catch(e){}
+    try { await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS price NUMERIC`); } catch(e){}
+    try { await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS code_type TEXT`); } catch(e){}
+    try { await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS prefix TEXT`); } catch(e){}
+    try { await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS template TEXT`); } catch(e){}
+    try { await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS qr_or_laha TEXT`); } catch(e){}
+    try { await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS device_model TEXT`); } catch(e){}
+    try { await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS mb_used BIGINT DEFAULT 0`); } catch(e){}
+    try { await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS mb_total BIGINT DEFAULT 0`); } catch(e){}
+
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 MR HAAS WISP backend inaendesha kwenye port ${PORT}`);
-      console.log(`Environment: ${IS_PRODUCTION ? 'production' : 'development'}`);
-      console.log(`MR HAAS MIKROTIK: /api/mikrotik/register , /api/mikrotik/checkin , /api/mikrotik/status/:tenant_id`);
-      console.log(`MR HAAS OMADA: /api/omada/adopt , /api/omada/status/:mac , /inform , /api/omada/devices/:tenant_id`);
+      console.log(`MR HAAS VOUCHERS UPGRADED: Batch + QR/LAHA + Templates A/B/C Page1 A4 + Zimeisha Muda`);
     });
   } catch (error) { console.error('Server haikuweza kuanza:', error.message); process.exit(1); }
 }
