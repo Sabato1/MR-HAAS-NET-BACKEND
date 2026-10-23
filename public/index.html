@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="sw" x-data="app()" x-init="init()" :dir="'ltr'">
+<html lang="sw" x-data="app()" x-init="init()">
 <head><style>
 @font-face {
   font-family: "Optimistic";
@@ -22,346 +22,186 @@
   font-family: "Optimistic Mono", ui-monospace, monospace;
 }
 </style>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0f141e">
-  <title>MR HAAS MULTI-TENANT WISP MANAGEMENT</title>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#111e32">
+  <title>MH WALLET - WISP MANAGEMENT</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <style>
     [x-cloak]{display:none!important}
-    *{box-sizing:border-box}
-    body{margin:0;background:#090a0f;color:#f5f5f5;font-family:Arial,sans-serif}
-    .gold{color:#e8bf58}
-    /* ===== SIDEBAR KAMA UPESELIPA - MUONEKANO MPYA ===== */
-    .sidebar{background:#0f141e;color:#cbd5e1;border-right:1px solid #1f2633}
-    .sidebar-header{background:#0f141e;border-bottom:1px solid #1f2633;padding:16px 20px}
-    .sidebar-business{color:#8a93a8;font-size:10px;letter-spacing:1px;text-transform:uppercase}
-    .sidebar-wisp-name{color:white;font-weight:bold;font-size:14px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .sidebar-subdomain{color:#5a6478;font-size:11px;margin-top:2px}
-    .nav-section-title{color:#5a6478;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;padding:16px 16px 8px 16px;font-weight:600}
-    .nav-item{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border-radius:12px;text-align:left;color:#8a93a8;font-size:14px;transition:.2s;margin:2px 8px;width:calc(100% - 16px);border:1px solid transparent}
-    .nav-item:hover{background:#1a2333;color:#e2e8f0;border-color:#1f2633}
-    .nav-active{background:#1e293b!important;color:white!important;border:1px solid #334155!important;font-weight:600}
-    .nav-active .nav-icon{background:white;color:#0f141e}
-    .nav-icon{width:28px;height:28px;border-radius:8px;background:#1a2333;display:flex;align-items:center;justify-content:center;font-size:14px;transition:.2s}
-    .nav-item:hover .nav-icon{background:#334155}
-    .sidebar-footer{border-top:1px solid #1f2633;padding:14px;background:#0a0e18}
-    .user-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:14px}
-    .sidebar-slide{transition:transform .35s cubic-bezier(0.4, 0, 0.2, 1)}
-    /* UpesiLipa overlay */
-    .sidebar-overlay{background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)}
-    .card{background:linear-gradient(145deg,#171717,#101010);border:1px solid #30291c;border-radius:16px;padding:18px}
-    .field{width:100%;border:1px solid #403827;border-radius:10px;padding:11px 12px;background:#0d0d0d;color:#f7f1e3;outline:none}
-    .btn{padding:10px 15px;border-radius:10px;font-weight:700;font-size:13px;transition:.2s}
-    .btn-gold{background:linear-gradient(135deg,#ffe69a,#d7a633,#aa781b);color:#17120a}
-    .btn-blue{background:#3b82f6;color:white}
-    .btn-dark{background:#262019;color:#f4d989;border:1px solid #59441d}
-    .btn-outline{border:1px solid #4a4030;background:#111;color:#e7dfd0}
-    .badge{display:inline-block;border-radius:20px;padding:4px 9px;font-size:11px;font-weight:700}
-    .badge-green{background:#143522;color:#8bf0ae}
-    .metric{font-size:26px;font-weight:800;color:#f3d27b}
-    .muted{color:#a8a193;font-size:12px}
-    .wizard-card{background:#151a23;border:1px solid #1f2633;border-radius:16px;padding:20px}
-    .type-card{border:1px solid #1f2633;background:#111620;border-radius:14px;padding:16px;cursor:pointer;transition:.2s}
-    .type-card:hover{border-color:#3b82f6;background:#1a2333}
-    /* UPESELIPA VOUCHER */
+    body{margin:0;background:#090b12;color:#f5f5f5;font-family:Arial,sans-serif}
+    /* ===== SIDEBAR KAMA SCREENSHOT YA UPESELIPA - MH WALLET ===== */
+    .sidebar{background:#111e32;color:#8a9ab5;border-right:1px solid #1a2b4a;width:280px}
+    .sidebar-logo{padding:20px 20px 16px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1a2b4a}
+    .logo-icon{width:36px;height:28px;background:linear-gradient(90deg,#3b82f6,#f59e0b);border-radius:4px;display:flex;align-items:end;gap:2px;padding:3px}
+    .logo-bar{width:4px;background:white;border-radius:2px}
+    .nav-item{display:flex;align-items:center;gap:12px;padding:12px 16px;margin:2px 8px;border-radius:12px;color:#8a9ab5;font-size:14px;cursor:pointer;transition:.2s;width:calc(100% - 16px);text-align:left;border:1px solid transparent}
+    .nav-item:hover{background:#1a2b4a;color:#cbd5e1}
+    .nav-active{background:#1e345c!important;color:white!important;border:1px solid #2a4a7a!important}
+    .nav-icon{width:20px;text-align:center;font-size:16px}
+    .account-label{color:#5a6b8a;font-size:11px;letter-spacing:1px;padding:20px 16px 8px 16px;font-weight:600;margin-top:8px}
+    .logout-btn{margin-top:24px;border-top:1px solid #1a2b4a;padding-top:16px}
+    .sidebar-slide{transition:transform .32s cubic-bezier(0.4,0,0.2,1)}
+    .overlay{background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)}
+    /* CONTENT */
     .upesi-card{background:#151a23;border:1px solid #1f2633;border-radius:16px;padding:14px}
     .upesi-stat{border:1px solid #1f2633;background:#111620;border-radius:14px;padding:14px;display:flex;justify-content:space-between;align-items:center}
     .upesi-tab{padding:8px 12px;border-radius:10px;font-size:13px;border:1px solid #1f2633;background:#111620;color:#8a93a8;cursor:pointer}
-    .upesi-tab.active{background:#1e293b;color:white;border-color:#334155}
+    .upesi-tab.active{background:#1e345c;color:white;border-color:#2a4a7a}
     .upesi-input{background:#0f141e;border:1px solid #1f2633;border-radius:12px;padding:12px;color:white;width:100%}
     .upesi-input option{background:#0f141e}
     .haraka-btn{padding:6px 12px;border-radius:20px;font-size:12px;border:1px solid #1f2633;background:#0f141e;color:#8a93a8;cursor:pointer}
     .haraka-btn.active{background:white;color:black;font-weight:bold}
     .voucher-row{background:#0f141e;border:1px solid #1f2633;border-radius:12px;padding:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
     .disable-btn{background:#1a2333;color:#8a93a8;border:1px solid #1f2633;border-radius:20px;padding:6px 14px;font-size:12px;cursor:pointer}
-    .print-preview-card{background:white;color:black;border-radius:8px;overflow:hidden;text-align:center;width:200px;margin:0 auto}
-    .print-preview-header{background:#8b5cf6;color:white;padding:6px;font-weight:bold;font-size:12px}
-    @media print {
-      body * { visibility: hidden; }
-      #printGrid, #printGrid * { visibility: visible; }
-      #printGrid { position: absolute; left: 0; top: 0; width: 210mm; }
-    }
-    .voucher-card { border: 1px dashed #999; background: white; color: black; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
-    .print-grid-A { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(10, 1fr); width: 210mm; height: 277mm; gap: 0; }
-    .print-grid-A .voucher-card { height: 27.7mm; padding: 2mm; }
-    .print-grid-B { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(20, 1fr); width: 210mm; height: 277mm; gap: 0; }
-    .print-grid-B .voucher-card { height: 13.85mm; padding: 1mm; flex-direction: row; justify-content: space-between; }
-    .print-grid-C { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(8, 1fr); width: 210mm; height: 277mm; gap: 0; }
-    .print-grid-C .voucher-card { height: 34.6mm; padding: 2mm; }
+    @media print{body *{visibility:hidden}#printGrid,#printGrid *{visibility:visible}#printGrid{position:absolute;left:0;top:0;width:210mm}}
+    .voucher-card{border:1px dashed #999;background:white;color:black;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+    .print-grid-A{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(10,1fr);width:210mm;height:277mm;gap:0}
+    .print-grid-A .voucher-card{height:27.7mm;padding:2mm}
+    .print-grid-B{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(20,1fr);width:210mm;height:277mm;gap:0}
+    .print-grid-B .voucher-card{height:13.85mm;padding:1mm;flex-direction:row;justify-content:space-between}
+    .print-grid-C{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(8,1fr);width:210mm;height:277mm;gap:0}
+    .print-grid-C .voucher-card{height:34.6mm;padding:2mm}
   </style>
 </head>
 <body x-cloak>
-<div class="min-h-screen">
-  <!-- Overlay kama UpesiLipa -->
-  <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="sidebarOpen=false" class="fixed inset-0 z-40 sidebar-overlay md:hidden"></div>
+<div class="min-h-screen flex">
+  <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" @click="sidebarOpen=false" class="fixed inset-0 z-40 overlay md:hidden"></div>
   
-  <!-- SIDEBAR KAMA UPESELIPA -->
-  <aside class="sidebar fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col sidebar-slide" :class="sidebarOpen?'translate-x-0':'-translate-x-full md:translate-x-0'">
-    <!-- Header kama UpesiLipa -->
-    <div class="sidebar-header">
-      <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white text-lg font-black">MH</div>
-        <div class="min-w-0"><div class="font-extrabold tracking-wide text-white text-[15px]">MR HAAS <span class="text-blue-400">NET</span></div><div class="text-[10px] tracking-wider text-gray-500">WISP MANAGEMENT</div></div>
-        <button @click="sidebarOpen=false" class="ml-auto md:hidden w-8 h-8 rounded-full bg-[#1a2333] flex items-center justify-center">✕</button>
-      </div>
-      <div class="mt-4">
-        <div class="sidebar-business">Biashara yako</div>
-        <div class="sidebar-wisp-name" x-text="tenant.name||tenant.business_name||'MR HAAS WISP'"></div>
-        <div class="sidebar-subdomain" x-text="tenant.subdomain||tenant.id||'wisp.mrhaas.net'"></div>
-      </div>
+  <!-- SIDEBAR KAMA SCREENSHOT - MH WALLET -->
+  <aside class="sidebar fixed inset-y-0 left-0 z-50 flex flex-col sidebar-slide" :class="sidebarOpen?'translate-x-0':'-translate-x-full md:translate-x-0'">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><div class="logo-bar" style="height:8px"></div><div class="logo-bar" style="height:14px"></div><div class="logo-bar" style="height:20px;background:#f59e0b"></div></div>
+      <div class="font-bold text-[17px] tracking-wide"><span style="color:#3b82f6">MH</span> <span class="text-white">Wallet</span></div>
+      <button @click="sidebarOpen=false" class="ml-auto md:hidden w-7 h-7 rounded-full bg-[#1a2b4a] flex items-center justify-center text-white">✕</button>
     </div>
 
-    <nav class="flex-1 overflow-y-auto py-2">
-      <div class="nav-section-title">Menyu kuu</div>
-      <template x-for="item in navItemsMain" :key="item.id">
-        <button class="nav-item" :class="page===item.id?'nav-active':''" @click="go(item.id)">
-          <span class="nav-icon" x-text="item.icon"></span>
-          <span x-text="t(item.key)"></span>
-          <span x-show="page===item.id" class="ml-auto w-2 h-2 rounded-full bg-blue-500"></span>
-        </button>
-      </template>
+    <div class="flex-1 overflow-y-auto py-2">
+      <!-- MPANGILIO KAMA SCREENSHOT -->
+      <button class="nav-item" :class="page==='dashboard'?'nav-active':''" @click="go('dashboard')"><span class="nav-icon">⊞</span><span>Overview</span></button>
       
-      <div class="nav-section-title mt-6">Mipangilio</div>
-      <template x-for="item in navItemsSettings" :key="item.id">
-        <button class="nav-item" :class="page===item.id?'nav-active':''" @click="go(item.id)">
-          <span class="nav-icon" x-text="item.icon"></span>
-          <span x-text="t(item.key)"></span>
-        </button>
-      </template>
-    </nav>
+      <button class="nav-item" :class="page==='devices'?'nav-active':''" @click="go('devices')"><span class="nav-icon">＋</span><span>Add Devices</span><span class="ml-auto text-[10px]">▼</span></button>
+      
+      <button class="nav-item" :class="page==='sites'?'nav-active':''" @click="go('sites')"><span class="nav-icon">📡</span><span>My sites</span><span class="ml-auto text-[10px]">▼</span></button>
+      
+      <button class="nav-item" :class="page==='packages'?'nav-active':''" @click="go('packages')"><span class="nav-icon">📦</span><span>Packages</span></button>
+      
+      <button class="nav-item" :class="page==='clients'?'nav-active':''" @click="go('clients')"><span class="nav-icon">👤</span><span>Customers</span></button>
+      
+      <button class="nav-item" :class="page==='vouchers'?'nav-active':''" @click="go('vouchers')"><span class="nav-icon">🎟️</span><span>Vouchers</span><span x-show="vouchers.length>0" class="ml-auto text-[10px] bg-[#1e345c] px-2 py-0.5 rounded-full text-white" x-text="vouchers.length">0</span></button>
+      
+      <button class="nav-item" :class="page==='payments'?'nav-active':''" @click="go('payments')"><span class="nav-icon">↗</span><span>Sales</span><span class="ml-auto text-[10px]">▼</span></button>
+      
+      <button class="nav-item" :class="page==='reports'?'nav-active':''" @click="go('reports')"><span class="nav-icon">📊</span><span>Reports</span></button>
+      
+      <button class="nav-item" :class="page==='portal'?'nav-active':''" @click="go('portal')"><span class="nav-icon">🎨</span><span>Portal branding</span></button>
+      
+      <button class="nav-item" :class="page==='upesipesa'?'nav-active':''" @click="go('upesipesa')"><span class="nav-icon">💳</span><span>UpesiPesa</span><span class="ml-auto text-[10px] opacity-50">MH Wallet</span></button>
 
-    <div class="sidebar-footer">
-      <div class="flex items-center gap-3">
-        <div class="user-avatar" x-text="(user.email||'M').charAt(0).toUpperCase()">M</div>
-        <div class="min-w-0 flex-1"><div class="truncate text-sm font-semibold text-white" x-text="user.email||'Mtumiaji'"></div><div class="text-xs text-gray-500">Akaunti ya WISP</div></div>
-        <button class="w-8 h-8 rounded-full bg-[#1a2333] flex items-center justify-center text-gray-400 hover:text-white" @click="logout()">🚪</button>
-      </div>
+      <div class="account-label">ACCOUNT</div>
+      
+      <button class="nav-item" :class="page==='subscription'?'nav-active':''" @click="go('subscription')"><span class="nav-icon">🕒</span><span>Subscription</span></button>
+      
+      <button class="nav-item" :class="page==='payment-settings'?'nav-active':''" @click="go('payment-settings')"><span class="nav-icon">💳</span><span>Payment settings</span></button>
+      
+      <button class="nav-item" :class="page==='support'?'nav-active':''" @click="go('support')"><span class="nav-icon">🎧</span><span>Support</span></button>
+      
+      <button class="nav-item" :class="page==='team'?'nav-active':''" @click="go('team')"><span class="nav-icon">👥</span><span>Team</span></button>
+      
+      <button class="nav-item" :class="page==='settings'?'nav-active':''" @click="go('settings')"><span class="nav-icon">⚙️</span><span>Settings</span></button>
+
+      <div class="logout-btn px-2"><button class="nav-item w-full" @click="logout()"><span class="nav-icon"></span><span>Log out</span></button></div>
     </div>
   </aside>
 
-  <div class="min-h-screen md:ml-[280px]">
-    <header class="sticky top-0 z-30 flex min-h-[64px] items-center justify-between gap-3 border-b border-[#1f2633] bg-[#0f141e]/90 backdrop-blur-md px-4 py-3 md:px-7">
-      <div class="flex items-center gap-3">
-        <button @click="sidebarOpen=!sidebarOpen" class="w-10 h-10 rounded-xl bg-[#1a2333] border border-[#1f2633] flex items-center justify-center text-lg md:hidden">☰</button>
-        <div class="hidden md:flex h-9 w-9 items-center justify-center rounded-xl bg-[#1a2333] border border-[#1f2633]"> <span x-text="navItemsMain.concat(navItemsSettings).find(x=>x.id===page)?.icon||'📊'"></span> </div>
-        <div><h1 class="text-[15px] font-bold text-white" x-text="currentTitle()"></h1><p class="hidden text-[11px] text-gray-500 sm:block">MR HAAS WISP • <span x-text="tenant.business_name||'Management'"></span></p></div>
-      </div>
-      <div class="flex items-center gap-2">
-        <div class="hidden md:flex items-center gap-2 bg-[#111620] border border-[#1f2633] rounded-full px-3 py-1.5"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span><span class="text-[11px] text-gray-400">Live</span></div>
-        <button class="w-9 h-9 rounded-xl bg-[#1a2333] border border-[#1f2633] flex items-center justify-center" @click="loadPageData()">🔄</button>
-      </div>
+  <div class="flex-1 md:ml-[280px] min-h-screen bg-[#090b12]">
+    <header class="sticky top-0 z-30 flex min-h-[64px] items-center justify-between gap-3 border-b border-[#1a2b4a] bg-[#0f141e]/90 backdrop-blur-md px-4 md:px-7">
+      <div class="flex items-center gap-3"><button @click="sidebarOpen=!sidebarOpen" class="w-10 h-10 rounded-xl bg-[#1a2b4a] flex items-center justify-center md:hidden">☰</button><h1 class="font-bold text-white" x-text="currentTitle()"></h1><span class="hidden md:flex items-center gap-2 bg-[#111620] border border-[#1f2633] rounded-full px-3 py-1 text-[11px]"><span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Live</span></div>
+      <div class="flex items-center gap-2"><span class="text-[11px] bg-[#1a2b4a] px-3 py-1 rounded-full text-[#8a9ab5]" x-text="tenant.business_name||'MH Wallet'"></span><button class="w-9 h-9 rounded-xl bg-[#1a2b4a] flex items-center justify-center" @click="loadPageData()">🔄</button></div>
     </header>
 
-    <main class="main-content space-y-5 p-4 md:p-6 bg-[#090a0f] min-h-[calc(100vh-64px)]">
+    <main class="p-4 md:p-6 space-y-5">
       <div x-show="notice.text" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-[92%] max-w-2xl flex justify-between gap-4 rounded-xl border p-4" :class="notice.type==='error'?'border-red-900 bg-red-950 text-red-200':'border-green-900 bg-green-950 text-green-200'"><p class="text-sm font-bold" x-text="notice.text"></p><button @click="notice.text=''" class="font-bold">×</button></div>
-      <div x-show="loading" class="rounded-xl border border-[#1f2633] bg-[#111620] p-4 text-sm text-gray-400">⏳ Inapakia...</div>
 
-      <section x-show="page==='dashboard'" class="space-y-5">
-        <div class="flex justify-between"><h2 class="text-xl font-bold">📊 Muhtasari</h2><button class="btn btn-blue" @click="go('vouchers')">🎟️ Vocha</button></div>
-        <div class="grid grid-cols-2 gap-3 xl:grid-cols-4"><div class="upesi-card"><div class="text-[11px] text-gray-400">👥 Wateja</div><div class="text-2xl font-bold mt-2" x-text="clients.length">0</div></div><div class="upesi-card"><div class="text-[11px] text-gray-400">📡 Vifaa</div><div class="text-2xl font-bold mt-2" x-text="devices.length">0</div></div><div class="upesi-card"><div class="text-[11px] text-gray-400">🎟️ Vocha</div><div class="text-2xl font-bold mt-2" x-text="vouchers.length">0</div></div><div class="upesi-card"><div class="text-[11px] text-gray-400">📍 Sites</div><div class="text-2xl font-bold mt-2" x-text="sites.length">0</div></div></div>
-      </section>
+      <section x-show="page==='dashboard'" class="space-y-4"><h2 class="font-bold">Overview</h2><div class="grid grid-cols-2 gap-3"><div class="upesi-card"><div class="text-xs text-gray-400">Wateja</div><div class="text-xl font-bold" x-text="clients.length">0</div></div><div class="upesi-card"><div class="text-xs text-gray-400">Vouchers</div><div class="text-xl font-bold" x-text="vouchers.length">0</div></div></div></section>
 
-      <section x-show="page==='clients'" class="space-y-5"><div class="flex justify-between"><h2 class="text-xl font-bold">👥 Wateja</h2><button class="btn btn-blue" @click="showClientForm=!showClientForm">➕ Ongeza</button></div><form x-show="showClientForm" @submit.prevent="createClient()" class="upesi-card space-y-3"><input class="upesi-input" x-model="clientForm.name" placeholder="Jina" required><input class="upesi-input" x-model="clientForm.phone" placeholder="Simu"><button class="btn btn-blue">Hifadhi</button></form><div class="upesi-card"><template x-for="c in clients" :key="c.id"><div class="voucher-row"><span x-text="c.name||c.full_name"></span><span x-text="c.phone"></span></div></template></div></section>
+      <section x-show="page==='clients'"><h2 class="font-bold mb-4">Customers</h2><div class="upesi-card"><template x-for="c in clients" :key="c.id"><div class="voucher-row"><span x-text="c.name||c.full_name"></span><span x-text="c.phone"></span></div></template><div x-show="clients.length===0" class="text-center text-gray-500 py-6">Hakuna wateja</div></div></section>
 
-      <section x-show="page==='devices'" class="space-y-5">
-        <div x-show="!showLinkWizard"><div class="flex justify-between"><h2 class="text-xl font-bold">📡 Vifaa</h2><button class="btn btn-blue" @click="openLinkWizard()">➕ Add Devices</button></div><div x-show="devices.length===0" class="upesi-card p-10 text-center mt-5"><div class="text-5xl">📡</div><p class="mt-2 text-gray-400">Hakuna kifaa</p><button class="btn btn-blue mt-4" @click="openLinkWizard()">+ Add Devices</button></div><div class="grid gap-4 md:grid-cols-3 mt-5" x-show="devices.length>0"><template x-for="d in devices" :key="d.id"><div class="upesi-card"><h3 class="font-bold" x-text="d.name"></h3><p class="text-xs text-gray-400" x-text="d.model||''"></p><div class="flex gap-2 mt-3"><button class="text-xs text-blue-400" @click="openLinkWizard(d)">⚙️ Link</button><button class="text-xs text-red-400 ml-auto" @click="deleteDevice(d)">Futa</button></div></div></template></div></div>
-        <div x-show="showLinkWizard" class="upesi-card max-w-3xl mx-auto"><div x-show="!deviceType"><h2 class="text-xl font-bold mb-4">Add a device</h2><button class="type-card w-full flex gap-4 mb-3" @click="selectDeviceType('mikrotik')">📡 <div class="text-left"><div class="font-bold">MikroTik</div><div class="text-xs text-gray-400">RB3011, hAP ac²</div></div></button><button class="type-card w-full flex gap-4" @click="selectDeviceType('omada')">📶 <div class="text-left"><div class="font-bold">Omada EAP</div><div class="text-xs text-gray-400">EAP245, EAP610</div></div></button><button class="text-xs mt-4 text-gray-400" @click="closeLinkWizard()">✕ Ondoa</button></div><div x-show="deviceType==='mikrotik'"><h2 class="font-bold">Link a MikroTik</h2><input class="upesi-input mt-3" x-model="linkLocation" placeholder="Location - SIZA UKEREWE"><input class="upesi-input mt-2" x-model="linkSsid" placeholder="SSID - FAMI NET"><div class="mt-3"><button class="btn btn-blue" @click="closeLinkWizard()">Maliza</button><button class="btn btn-outline ml-2" @click="deviceType=null">Nyuma</button></div></div><div x-show="deviceType==='omada'"><h2 class="font-bold">Link an Omada EAP</h2><input class="upesi-input mt-3" x-model="omLocation" placeholder="Location"><input class="upesi-input mt-2" x-model="omMac" placeholder="MAC"><div class="mt-3"><button class="btn btn-blue" @click="finishOmadaWizard()">Maliza</button><button class="btn btn-outline ml-2" @click="deviceType=null">Nyuma</button></div></div></div>
-      </section>
+      <section x-show="page==='devices'"><h2 class="font-bold mb-4">Add Devices</h2><div class="upesi-card"><p class="text-gray-400">MikroTik na Omada EAP</p></div></section>
 
-      <section x-show="page==='sites'" class="space-y-5"><h2 class="text-xl font-bold">📍 Maeneo</h2><div class="upesi-card"><template x-for="s in sites" :key="s.id"><div class="voucher-row" x-text="s.name"></div></template></div></section>
-      <section x-show="page==='packages'" class="space-y-5"><h2 class="text-xl font-bold">📦 Vifurushi</h2><div class="grid gap-3 md:grid-cols-3"><template x-for="p in packages" :key="p.id"><div class="upesi-card"><div class="font-bold" x-text="p.name"></div><div class="text-blue-400" x-text="money(p.price)+' TSh'"></div></div></template></div></section>
-
-      <!-- VOUCHERS KAMA UPESELIPA - MUONEKANO KAMILI -->
       <section x-show="page==='vouchers'" class="space-y-4 max-w-[480px] mx-auto md:max-w-full">
-
-        <div class="flex justify-between items-center"><div><h2 class="font-bold text-[15px]">MR HAAS WISP</h2><p class="text-[11px] text-gray-500" x-text="tenant.business_name||'WISP Management'"></p></div><div class="flex items-center gap-2"><span class="text-[11px] bg-[#1a2333] border border-[#1f2633] px-3 py-1 rounded-full">Active</span><span>🔔</span></div></div>
+        <div class="flex justify-between items-center"><div><h2 class="font-bold">Vouchers</h2><p class="text-[11px] text-gray-500">MH Wallet • Hotspot</p></div><button class="text-[11px] bg-[#1a2b4a] px-3 py-1 rounded-full" @click="loadPageData()">Live • Active</button></div>
 
         <div class="grid grid-cols-2 gap-3">
-          <div class="upesi-stat"><div><div class="text-[11px] text-gray-400 flex items-center gap-1"><span>◧</span> Generated</div><div class="text-xl font-bold mt-1" x-text="vouchers.length">0</div></div><div class="text-gray-500">↗</div></div>
-          <div class="upesi-stat"><div><div class="text-[11px] text-gray-400">☑ Used (in list)</div><div class="text-xl font-bold mt-1" x-text="vouchers.filter(v=>v.status==='used').length">0</div></div><div class="text-yellow-500">☑</div></div>
-          <div class="upesi-stat"><div><div class="text-[11px] text-gray-400">◍ Active</div><div class="text-xl font-bold mt-1 text-green-400" x-text="vouchers.filter(v=>v.status==='unused'||v.status==='active').length">0</div></div><div class="text-green-500">◍</div></div>
-          <div class="upesi-stat"><div><div class="text-[11px] text-gray-400">🗑 Cleared</div><div class="text-xl font-bold mt-1" x-text="stats.cleared||0">0</div><div class="text-[10px] text-blue-400">View →</div></div><div>🗑</div></div>
+          <div class="upesi-stat"><div><div class="text-[11px] text-gray-400">◧ Generated</div><div class="text-xl font-bold" x-text="vouchers.length">0</div></div></div>
+          <div class="upesi-stat"><div><div class="text-[11px] text-gray-400">☑ Used</div><div class="text-xl font-bold" x-text="vouchers.filter(v=>v.status==='used').length">0</div></div></div>
+          <div class="upesi-stat"><div><div class="text-[11px] text-gray-400">◍ Active</div><div class="text-xl font-bold text-green-400" x-text="vouchers.filter(v=>v.status==='unused'||v.status==='active').length">0</div></div></div>
+          <div class="upesi-stat"><div><div class="text-[11px] text-gray-400">🗑 Cleared</div><div class="text-xl font-bold" x-text="stats.cleared||0">0</div></div></div>
         </div>
-        <div class="upesi-card"><div class="flex gap-2 text-[11px] text-gray-400"><span>Used <span x-text="vouchers.filter(v=>v.status==='used').length">0</span></span><span class="text-green-400">Active <span x-text="vouchers.filter(v=>v.status==='unused'||v.status==='active').length">0</span></span><span>Cleared <span x-text="stats.cleared||0">0</span></span><span class="ml-auto">of <span x-text="vouchers.length">0</span> generated</span></div><div class="w-full h-1 bg-[#0f141e] rounded mt-2"><div class="h-1 bg-green-500 rounded" :style="'width:'+(vouchers.length? (vouchers.filter(v=>v.status==='unused'||v.status==='active').length/vouchers.length*100):0)+'%'"></div></div></div>
 
         <div class="upesi-card">
           <h3 class="font-bold mb-3 text-[14px]">Vouchers</h3>
-          <div class="flex gap-2 mb-3">
-            <button class="upesi-tab" :class="voucherTab==='all'?'active':''" @click="voucherTab='all'">All <span class="bg-white text-black px-1.5 rounded-full text-[10px]" x-text="filteredByPackage().length">0</span></button>
-            <button class="upesi-tab" :class="voucherTab==='active'?'active':''" @click="voucherTab='active'">Active</button>
-            <button class="upesi-tab" :class="voucherTab==='used'?'active':''" @click="voucherTab='used'">Used</button>
-            <button class="upesi-tab" :class="voucherTab==='expired'?'active':''" @click="voucherTab='expired'; loadExpired()">Zimeisha Muda</button>
-          </div>
-
-          <div class="relative mb-3">
-            <button class="upesi-input text-left flex justify-between items-center text-[13px]" @click="showPackageFilter=!showPackageFilter">
-              <span x-text="selectedPackageFilter? selectedPackageFilter : 'Vifurushi vyote  All packages ('+vouchers.length+')'">Vifurushi vyote</span><span>▼</span>
-            </button>
-            <div x-show="showPackageFilter" class="absolute z-20 w-full mt-2 bg-[#0f141e] border border-[#1f2633] rounded-xl p-2 max-h-64 overflow-y-auto shadow-2xl">
-              <button class="w-full text-left px-3 py-2 hover:bg-[#1a2333] rounded text-sm" @click="selectedPackageFilter=''; showPackageFilter=false">Vifurushi vyote (<span x-text="vouchers.length"></span>)</button>
-              <template x-for="p in packages" :key="p.id"><button class="w-full text-left px-3 py-2 hover:bg-[#1a2333] rounded text-sm" @click="selectedPackageFilter=p.name; showPackageFilter=false" x-text="p.name"></button></template>
-            </div>
-          </div>
-
+          <div class="flex gap-2 mb-3"><button class="upesi-tab" :class="voucherTab==='all'?'active':''" @click="voucherTab='all'">All <span class="bg-white text-black px-1.5 rounded-full text-[10px]" x-text="filteredByPackage().length">0</span></button><button class="upesi-tab" :class="voucherTab==='active'?'active':''" @click="voucherTab='active'">Active</button><button class="upesi-tab" :class="voucherTab==='used'?'active':''" @click="voucherTab='used'">Used</button><button class="upesi-tab" :class="voucherTab==='expired'?'active':''" @click="voucherTab='expired'; loadExpired()">Zimeisha Muda</button></div>
+          <div class="relative mb-3"><button class="upesi-input text-left flex justify-between items-center text-[13px]" @click="showPackageFilter=!showPackageFilter"><span x-text="selectedPackageFilter? selectedPackageFilter : 'Vifurushi vyote ('+vouchers.length+')'">Vifurushi</span><span>▼</span></button><div x-show="showPackageFilter" class="absolute z-20 w-full mt-2 bg-[#111e32] border border-[#1a2b4a] rounded-xl p-2"><button class="w-full text-left px-3 py-2 hover:bg-[#1a2b4a] rounded text-sm" @click="selectedPackageFilter=''; showPackageFilter=false">Vyote (<span x-text="vouchers.length"></span>)</button><template x-for="p in packages" :key="p.id"><button class="w-full text-left px-3 py-2 hover:bg-[#1a2b4a] rounded text-sm" @click="selectedPackageFilter=p.name; showPackageFilter=false" x-text="p.name"></button></template></div></div>
           <button x-show="voucherTab!=='expired'" class="w-full bg-[#3b82f6] text-white rounded-xl py-3 font-bold text-[13px] mb-3" @click="printVouchers('B')">⬇ Download <span x-text="vouchers.filter(v=>v.status==='unused'||v.status==='active').length">0</span> unused as PDF</button>
-
-          <div x-show="voucherTab!=='expired'">
-            <template x-for="v in filteredVouchers().slice(0, displayLimit)" :key="v.id||v.code">
-              <div class="voucher-row">
-                <div><div class="font-bold text-[13px] tracking-widest text-white" x-text="v.code||v.voucher_code">CODE</div><div class="text-[11px] text-gray-400 mt-1" x-text="v.package_name||packageName(v.package_id)">Package</div><div class="text-[9px] text-gray-500" x-text="v.batch_id||''"></div></div>
-                <div class="text-right"><div class="text-[10px] flex items-center gap-1 justify-end" :class="v.status==='unused'||v.status==='active'?'text-green-400':'text-orange-400'"><span x-text="v.status==='unused'||v.status==='active'?'+ Unused':'• Used'"></span></div><div class="text-[10px] text-gray-500 mt-1" x-text="formatDate(v.created_at)"></div><button class="disable-btn mt-1" @click="disableVoucher(v)">⊘ Disable</button></div>
-              </div>
-            </template>
-            <button x-show="filteredVouchers().length>displayLimit" class="w-full text-center text-xs text-gray-400 mt-2 py-2 border border-[#1f2633] rounded-xl" @click="displayLimit+=50">Read more (<span x-text="filteredVouchers().length-displayLimit"></span> more)</button>
-            <div x-show="filteredVouchers().length===0" class="text-center text-gray-500 text-sm py-10">Hakuna vocha - Tengeneza hapo chini 👇</div>
-          </div>
-
-          <div x-show="voucherTab==='expired'" class="space-y-2">
-            <template x-for="v in expiredVouchers" :key="v.id||v.code">
-              <div class="voucher-row"><div><div class="font-bold text-white" x-text="v.code"></div><div class="text-[11px] text-gray-400" x-text="v.device_model||'Phone'"></div><div class="text-[10px] text-gray-500" x-text="(v.mb_used||0)+' MB'"></div></div><div class="text-right text-[11px]"><div x-text="formatDate(v.used_at)"></div><div class="text-red-400" x-text="formatDate(v.expires_at)"></div></div></div>
-            </template>
-            <div x-show="expiredVouchers.length===0" class="text-center text-gray-500 py-6">Hakuna zimeisha muda</div>
-          </div>
+          <div x-show="voucherTab!=='expired'"><template x-for="v in filteredVouchers().slice(0, displayLimit)" :key="v.id"><div class="voucher-row"><div><div class="font-bold tracking-widest" x-text="v.code||v.voucher_code">CODE</div><div class="text-[11px] text-gray-400" x-text="v.package_name||packageName(v.package_id)">Package</div></div><div class="text-right"><div class="text-[10px]" :class="v.status==='unused'||v.status==='active'?'text-green-400':'text-orange-400'" x-text="v.status==='unused'||v.status==='active'?'+ Unused':'• Used'"></div><button class="disable-btn mt-1" @click="disableVoucher(v)">⊘ Disable</button></div></div></template><div x-show="filteredVouchers().length===0" class="text-center text-gray-500 py-10">Hakuna vocha - Tengeneza hapo chini 👇</div></div>
+          <div x-show="voucherTab==='expired'"><template x-for="v in expiredVouchers" :key="v.id"><div class="voucher-row"><div><div class="font-bold" x-text="v.code"></div><div class="text-[11px] text-gray-400" x-text="v.device_model"></div></div><div class="text-right"><div class="text-[11px]" x-text="formatDate(v.used_at)"></div></div></div></template></div>
         </div>
 
-        <!-- KIPENGELE CHA KUTENGENEZA VOCHA - KAMA VIDEO -->
+        <!-- KIPENGELE CHA KUTENGENEZA VOCHA - WAZI KAMA VIDEO -->
         <div class="upesi-card">
-          <div class="flex justify-between items-center mb-1"><h3 class="font-bold text-[14px]">Tengeneza vocha</h3><span class="text-[10px] bg-green-900/50 text-green-300 border border-green-800 px-2 py-1 rounded-full">Vocha mpya</span></div>
-          <p class="text-[11px] text-gray-500 mb-4">Chagua kifurushi, idadi na muundo wa kuchapisha</p>
-
+          <h3 class="font-bold text-[14px]">Tengeneza vocha</h3><p class="text-[11px] text-gray-500 mb-4">Chagua kifurushi, idadi na muundo wa kuchapisha</p>
           <div class="space-y-4">
             <div><label class="text-[11px] text-gray-400">Kifurushi *</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.package_id"><option value="">Chagua kifurushi</option><template x-for="p in packages" :key="p.id"><option :value="p.id" x-text="p.name+' - '+money(p.price)+' TSh'"></option></template></select></div>
-
-            <div>
-              <label class="text-[11px] text-gray-400">Idadi</label>
-              <div class="flex items-center gap-3 mt-1.5"><button type="button" class="w-10 h-10 rounded-full bg-[#0f141e] border border-[#1f2633] flex items-center justify-center text-lg" @click="voucherForm.quantity=Math.max(1,voucherForm.quantity-1)">−</button><div class="flex-1 text-center bg-[#0f141e] border border-[#1f2633] rounded-xl py-2.5 font-bold text-[15px]" x-text="voucherForm.quantity">10</div><button type="button" class="w-10 h-10 rounded-full bg-[#0f141e] border border-[#1f2633] flex items-center justify-center text-lg" @click="voucherForm.quantity=Math.min(500,voucherForm.quantity+1)">+</button></div>
-              <div class="flex gap-2 mt-3 items-center"><span class="text-[11px] text-gray-400">Haraka:</span><template x-for="n in [10,25,50,100]" :key="n"><button type="button" class="haraka-btn" :class="voucherForm.quantity===n?'active':''" @click="voucherForm.quantity=n" x-text="n">10</button></template></div>
-            </div>
-
-            <div><label class="text-[11px] text-gray-400">Muundo wa kodi</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.code_type"><option value="numbers">Namba tu - 244175 (kama video)</option><option value="letters">Herufi tu - RYCSVD</option><option value="mixed">Herufi na namba - R5C2V1 (Salama zaidi)</option></select><div class="mt-2.5 text-[11px] text-gray-500 bg-[#0f141e] border border-[#1f2633] rounded-xl p-3 leading-relaxed">ⓘ Inahusu vocha mpya tu, kodi zilizokwisha bado hazibadiliki.</div></div>
-
-            <div><label class="text-[11px] text-gray-400">Ukubwa wa kuchapisha - Page1 A4</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.template"><option value="B">B: 100 bila QR - 38×13.8mm - Page1</option><option value="A">A: 50 na QR/LAHA - 38×27.7mm - Page1</option><option value="C">C: 32 na QR Kubwa - 47.5×34.6mm - Page1 Premium</option><option value="small">Ndogo: 54×27mm kama video - Page1</option></select></div>
-
-            <div><label class="text-[11px] text-gray-400">Mitindo</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.qr_or_laha"><option value="QR">Kawaida - QR Code (Scannable)</option><option value="LAHA">Kawaida - LAHA - Kata hapa ✂️</option></select></div>
-
-            <div><label class="text-[11px] text-gray-400">Prefix (FAMI, HAAS)</label><div class="flex gap-2 mt-1.5"><input class="upesi-input flex-1 text-[13px]" x-model="voucherForm.prefix" placeholder="FAMI" maxlength="10"><label class="flex items-center gap-2 text-[11px] bg-[#0f141e] border border-[#1f2633] px-3 rounded-xl"><input type="checkbox" x-model="voucherForm.use_prefix"> Tumia</label></div></div>
-
-            <button class="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-xl py-3.5 font-bold text-[14px] mt-2 transition" @click="createVoucher()" :disabled="saving">+ Tengeneza vocha <span x-text="voucherForm.quantity">10</span></button>
+            <div><label class="text-[11px] text-gray-400">Idadi</label><div class="flex items-center gap-3 mt-1.5"><button type="button" class="w-10 h-10 rounded-full bg-[#0f141e] border border-[#1f2633]" @click="voucherForm.quantity=Math.max(1,voucherForm.quantity-1)">−</button><div class="flex-1 text-center bg-[#0f141e] border border-[#1f2633] rounded-xl py-2.5 font-bold" x-text="voucherForm.quantity">10</div><button type="button" class="w-10 h-10 rounded-full bg-[#0f141e] border border-[#1f2633]" @click="voucherForm.quantity=Math.min(500,voucherForm.quantity+1)">+</button></div><div class="flex gap-2 mt-3 items-center"><span class="text-[11px] text-gray-400">Haraka:</span><template x-for="n in [10,25,50,100]" :key="n"><button type="button" class="haraka-btn" :class="voucherForm.quantity===n?'active':''" @click="voucherForm.quantity=n" x-text="n">10</button></template></div></div>
+            <div><label class="text-[11px] text-gray-400">Muundo wa kodi</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.code_type"><option value="numbers">Namba tu - 244175 (kama video)</option><option value="letters">Herufi tu - RYCSVD</option><option value="mixed">Herufi na namba - R5C2V1</option></select><div class="mt-2 text-[11px] text-gray-500 bg-[#0f141e] border border-[#1f2633] rounded-xl p-3">ⓘ Inahusu vocha mpya tu.</div></div>
+            <div><label class="text-[11px] text-gray-400">Ukubwa wa kuchapisha - Page1 A4</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.template"><option value="B">B: 100 bila QR - Page1 A4</option><option value="A">A: 50 na QR/LAHA - Page1 A4</option><option value="C">C: 32 na QR Kubwa - Page1 A4 Premium</option><option value="small">Ndogo: 54×27mm kama video - Page1</option></select></div>
+            <div><label class="text-[11px] text-gray-400">Mitindo</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.qr_or_laha"><option value="QR">Kawaida - QR Code</option><option value="LAHA">Kawaida - LAHA - Kata hapa ✂️</option></select></div>
+            <div><label class="text-[11px] text-gray-400">Prefix</label><div class="flex gap-2 mt-1.5"><input class="upesi-input flex-1" x-model="voucherForm.prefix" placeholder="FAMI"><label class="flex items-center gap-2 text-[11px] bg-[#0f141e] border border-[#1f2633] px-3 rounded-xl"><input type="checkbox" x-model="voucherForm.use_prefix"> Tumia</label></div></div>
+            <button class="w-full bg-[#3b82f6] text-white rounded-xl py-3.5 font-bold text-[14px]" @click="createVoucher()" :disabled="saving">+ Tengeneza vocha <span x-text="voucherForm.quantity">10</span></button>
           </div>
         </div>
 
-        <div class="upesi-card">
-          <div class="flex justify-between items-center mb-3"><h3 class="text-[13px] font-bold">Hakiki ya vocha</h3><span class="text-[11px] text-gray-500" x-text="voucherForm.template">B</span></div>
-          <div class="print-preview-card"><div class="print-preview-header" x-text="tenant.business_name||'MR HAAS WI-FI'">MR HAAS WI-FI</div><div class="p-3"><div class="text-[11px]" x-text="(selectedPackageName()||'MR HAAS GEN Z')+' - TZS '+(selectedPackagePrice()||'1,000')">MR HAAS GEN Z - TZS 1,000</div><div class="text-2xl font-bold tracking-[0.3em] mt-2" x-text="previewCode()">244175</div><div class="text-[8px] text-gray-500 mt-2" x-text="'Batch: '+(lastBatch?.batch_id||'BATCH')+' | Mr HaasNet'"></div><div x-show="voucherForm.qr_or_laha==='QR'" class="mt-2 text-[8px] border border-dashed p-1">QR CODE</div><div x-show="voucherForm.qr_or_laha==='LAHA'" class="mt-2 text-[8px] border-t border-dashed pt-1">✂️ LAHA - Kata hapa</div></div></div>
-          <div class="mt-4 space-y-2 text-[12px]"><div class="flex justify-between py-2 border-b border-[#1f2633]"><span class="text-gray-400">Muhtasari</span></div><div class="flex justify-between"><span class="text-gray-400">Idadi ya vocha</span><span class="font-bold" x-text="voucherForm.quantity">10</span></div><div class="flex justify-between"><span class="text-gray-400">Kifurushi</span><span class="font-bold" x-text="selectedPackageName()||'-'">-</span></div><div class="flex justify-between"><span class="text-gray-400">Kurasa za A4</span><span class="font-bold" x-text="Math.ceil(voucherForm.quantity / (voucherForm.template==='B'?100:voucherForm.template==='C'?32:50))">1</span></div><div class="flex justify-between"><span class="text-gray-400">Thamani Jumla</span><span class="font-bold" x-text="'TZS '+money((selectedPackagePriceRaw()||1000)*voucherForm.quantity)">TZS 10,000</span></div></div>
-          <div x-show="lastBatch" class="mt-4 p-3 bg-[#111620] rounded-xl border border-[#1f2633]"><div class="text-xs font-bold">Batch: <span class="text-blue-400" x-text="lastBatch?.batch_id"></span></div><div class="flex gap-2 mt-2 flex-wrap"><button class="text-xs bg-[#1f2633] px-3 py-2 rounded-full" @click="printVouchers('B')">B 100</button><button class="text-xs bg-[#1f2633] px-3 py-2 rounded-full" @click="printVouchers('A')">A 50+QR</button><button class="text-xs bg-[#1f2633] px-3 py-2 rounded-full" @click="printVouchers('C')">C 32+QR</button></div></div>
-        </div>
-
-        <div x-show="showPrintPreview" class="fixed inset-0 z-[200] bg-white overflow-auto p-2"><div class="flex justify-between mb-2 bg-black text-white p-3 rounded sticky top-0"><div><h2 class="font-bold">Preview Page1 A4 - <span x-text="printTemplate"></span> - <span x-text="printQrOrLaha"></span></h2><p class="text-xs" x-text="printBatchId"></p></div><div class="flex gap-2"><button class="btn btn-outline text-white text-xs" @click="showPrintPreview=false">Funga</button><button class="btn btn-blue text-xs" @click="doPrint()">🖨️ Chapisha</button></div></div><div id="printGrid" class="mx-auto bg-white"></div></div>
-
+        <div class="upesi-card"><div class="flex justify-between mb-3"><h3 class="text-[13px] font-bold">Hakiki ya vocha</h3><span class="text-[11px] text-gray-500" x-text="voucherForm.template">B</span></div><div class="bg-white text-black rounded-lg p-3 text-center w-[200px] mx-auto"><div class="text-[10px] font-bold bg-[#8b5cf6] text-white -m-3 mb-2 p-1 rounded-t">MH WALLET WI-FI</div><div class="text-[11px]" x-text="(selectedPackageName()||'MR HAAS GEN Z')+' - TZS '+(selectedPackagePrice()||'1,000')">Package</div><div class="text-2xl font-bold tracking-widest mt-2" x-text="previewCode()">244175</div></div></div>
+        <div x-show="showPrintPreview" class="fixed inset-0 z-[200] bg-white overflow-auto p-2"><div class="flex justify-between mb-2 bg-black text-white p-3 rounded sticky top-0"><div><h2 class="font-bold">Preview Page1 A4 - <span x-text="printTemplate"></span></h2><p class="text-xs" x-text="printBatchId"></p></div><div class="flex gap-2"><button class="text-white text-xs border px-3 py-1 rounded" @click="showPrintPreview=false">Funga</button><button class="bg-blue-600 text-white text-xs px-3 py-1 rounded" @click="doPrint()">🖨️ Chapisha</button></div></div><div id="printGrid" class="mx-auto bg-white"></div></div>
       </section>
 
-      <section x-show="page==='payments'" class="space-y-5"><h2 class="text-xl font-bold">💳 Malipo</h2><div class="upesi-card">Malipo</div></section>
-      <section x-show="page==='settings'" class="space-y-5"><h2 class="text-xl font-bold">⚙️ Settings</h2><div class="upesi-card"><div x-text="tenant.business_name||'-'"></div></div></section>
+      <section x-show="page==='sites'"><h2 class="font-bold mb-4">My sites</h2><div class="upesi-card">My sites</div></section>
+      <section x-show="page==='packages'"><h2 class="font-bold mb-4">Packages</h2><div class="upesi-card"><template x-for="p in packages" :key="p.id"><div class="voucher-row" x-text="p.name"></div></template></div></section>
+      <section x-show="page==='payments'"><h2 class="font-bold mb-4">Sales</h2><div class="upesi-card">Sales</div></section>
+      <section x-show="page==='reports'"><h2 class="font-bold mb-4">Reports</h2><div class="upesi-card">Reports</div></section>
+      <section x-show="page==='portal'"><h2 class="font-bold mb-4">Portal branding</h2><div class="upesi-card">Portal branding</div></section>
+      <section x-show="page==='settings'"><h2 class="font-bold mb-4">Settings</h2><div class="upesi-card">Settings - MH Wallet</div></section>
     </main>
   </div>
 </div>
 <script>
 function app(){
   return {
-    api:'', token:localStorage.getItem('mrhaas_token')||'', tenantId:localStorage.getItem('mrhaas_tenant_id')||'', tenant:{},user:{},role:localStorage.getItem('mrhaas_role')||'tenant', lang:localStorage.getItem('mrhaas_language')||'sw',
-    page:'vouchers',sidebarOpen:false,loading:false,saving:false, notice:{text:'',type:'success'},search:'',voucherTab:'all', displayLimit:20, showPackageFilter:false, selectedPackageFilter:'', stats:{cleared:0}, clients:[],devices:[],sites:[],packages:[],vouchers:[],expiredVouchers:[],payments:[], lastBatch:null, showPrintPreview:false, printTemplate:'B', printBatchId:'', printQrOrLaha:'QR',
-    navItemsMain:[{id:'dashboard',key:'dashboard',icon:'📊'},{id:'clients',key:'clients',icon:'👥'},{id:'devices',key:'devices',icon:'📡'},{id:'sites',key:'sites',icon:'📍'},{id:'packages',key:'packages',icon:'📦'},{id:'vouchers',key:'vouchers',icon:'🎟️'},{id:'payments',key:'payments',icon:'💳'}],
-    navItemsSettings:[{id:'settings',key:'accountSettings',icon:'⚙️'},{id:'subscription',key:'subscription',icon:'💎'},{id:'portal',key:'portal',icon:'🎨'}],
-    showClientForm:false,showSiteForm:false,showPackageForm:false,showPaymentForm:false,
-    clientForm:{name:'',phone:'',username:'',package_name:'',connection_type:'hotspot'},
-    siteForm:{name:'',location:'',description:''}, packageForm:{name:'',price:0,duration:'30 days',speed:''}, 
+    api:'', token:localStorage.getItem('mrhaas_token')||'', tenantId:localStorage.getItem('mrhaas_tenant_id')||'', tenant:{},user:{},page:'vouchers',sidebarOpen:false,loading:false,saving:false, notice:{text:'',type:'success'},voucherTab:'all', displayLimit:20, showPackageFilter:false, selectedPackageFilter:'', stats:{cleared:0}, clients:[],devices:[],sites:[],packages:[],vouchers:[],expiredVouchers:[],payments:[], lastBatch:null, showPrintPreview:false, printTemplate:'B', printBatchId:'', printQrOrLaha:'QR',
     voucherForm:{quantity:10,package_id:'',code_type:'numbers',prefix:'FAMI',use_prefix:false,template:'B',qr_or_laha:'QR'},
-    paymentForm:{client_id:'',amount:0,method:'cash',reference:''},
-    showLinkWizard:false, deviceType:null, linkLocation:'', linkSsid:'', linkPort:'Port 1', linkModel:'', omLocation:'SIZA UKEREWE', omSsid:'FAMI NET', omMac:'',
-    translations:{sw:{business:'Biashara yako',main:'Menyu kuu',dashboard:'Dashboard',clients:'Wateja',devices:'Vifaa vya mtandao',sites:'Maeneo ya huduma',packages:'Vifurushi',vouchers:'Vocha za Hotspot',payments:'Malipo',accountSettings:'Mipangilio ya akaunti',subscription:'Usajili na mipango',portal:'Captive Portal',user:'Mtumiaji',wispAccount:'Akaunti ya WISP',logout:'Toka',refresh:'Onyesha upya',loading:'Inapakia...'}, en:{business:'Business',main:'Main',dashboard:'Dashboard',clients:'Clients',devices:'Devices',sites:'Sites',packages:'Packages',vouchers:'Vouchers',payments:'Payments',accountSettings:'Settings',subscription:'Subscription',portal:'Portal',user:'User',wispAccount:'WISP',logout:'Logout',refresh:'Refresh',loading:'Loading...'}},
-    t(k){return (this.translations[this.lang]&&this.translations[this.lang][k])||this.translations.sw[k]||k},
-    setLang(v){this.lang=v==='en'?'en':'sw';localStorage.setItem('mrhaas_language',this.lang)},
     async init(){if(!this.token||!this.tenantId){window.location.replace('/login.html');return}await this.loadMe();await this.loadPageData();},
     headers(j=true){const h={'Authorization':'Bearer '+this.token};if(j)h['Content-Type']='application/json';if(this.tenantId)h['X-Tenant-ID']=this.tenantId;return h;},
     async request(p,o={}){const r=await fetch(this.api+p,{...o,headers:{...this.headers(),...(o.headers||{})}});const d=await r.json().catch(()=>({}));if(r.status===401){this.logout();throw new Error('Session expired')}if(!r.ok)throw new Error(d.message||'Failed');return d;},
     async loadMe(){try{const data=await this.request('/api/auth/me');this.tenant=data.tenant||data;this.user=data.user||{email:this.tenant.email||''};}catch(e){}},
-    async loadPageData(){
-      this.loading=true;
-      const tid=encodeURIComponent(this.tenantId);
-      const jobs=[['stats','/api/dashboard/'+tid],['clients','/api/clients/'+tid],['devices','/api/devices/'+tid],['sites','/api/sites/'+tid],['packages','/api/packages/'+tid],['vouchers','/api/vouchers/'+tid],['payments','/api/payments/'+tid]];
-      await Promise.all(jobs.map(async([k,path])=>{try{const data=await this.request(path);if(k==='stats')this.stats=data.stats||data;else{const v=data[k]||data.items||data.data||data;if(Array.isArray(v))this[k]=v}}catch(e){}}));
-      this.loading=false;
-    },
-    selectDeviceType(t){this.deviceType=t},
-    openLinkWizard(d=null){this.deviceType=null;this.showLinkWizard=true;this.page='devices'},
-    closeLinkWizard(){this.showLinkWizard=false;this.deviceType=null},
-    async finishOmadaWizard(){try{await this.request('/api/devices',{method:'POST',body:JSON.stringify({tenant_id:this.tenantId,name:this.omLocation+' - '+this.omSsid,vendor:'TP-Link Omada',model:'EAP',mac_address:this.omMac})});}catch(e){}this.showLinkWizard=false;this.deviceType=null;await this.loadPageData();},
-    async submit(p,b,s){this.saving=true;try{await this.request(p,{method:'POST',body:JSON.stringify(b)});this.notify('Imehifadhiwa.');await s();}catch(e){this.notify(e.message,'error')}finally{this.saving=false}},
-    async createClient(){await this.submit('/api/clients',this.clientForm,async()=>{this.clientForm={name:'',phone:'',username:'',package_name:'',connection_type:'hotspot'};this.showClientForm=false;await this.loadPageData()})},
-    async createSite(){await this.submit('/api/sites',this.siteForm,async()=>{this.siteForm={name:'',location:'',description:''};this.showSiteForm=false;await this.loadPageData()})},
-    async createPackage(){await this.submit('/api/packages',this.packageForm,async()=>{this.packageForm={name:'',price:0,duration:'30 days',speed:''};this.showPackageForm=false;await this.loadPageData()})},
-    async createPayment(){await this.submit('/api/payments/manual',this.paymentForm,async()=>{this.paymentForm={client_id:'',amount:0,method:'cash',reference:''};this.showPaymentForm=false;await this.loadPageData()})},
+    async loadPageData(){this.loading=true;const tid=encodeURIComponent(this.tenantId);const jobs=[['clients','/api/clients/'+tid],['devices','/api/devices/'+tid],['sites','/api/sites/'+tid],['packages','/api/packages/'+tid],['vouchers','/api/vouchers/'+tid],['payments','/api/payments/'+tid]];await Promise.all(jobs.map(async([k,path])=>{try{const data=await this.request(path);const v=data[k]||data.items||data.data||data;if(Array.isArray(v))this[k]=v}catch(e){}}));this.loading=false;},
     filteredByPackage(){if(!this.selectedPackageFilter)return this.vouchers;return this.vouchers.filter(v=> (v.package_name||this.packageName(v.package_id))===this.selectedPackageFilter)},
-    filteredVouchers(){
-      let list=this.filteredByPackage();
-      if(this.voucherTab==='active') list=list.filter(v=>v.status==='unused'||v.status==='active');
-      if(this.voucherTab==='used') list=list.filter(v=>v.status==='used');
-      return list;
-    },
+    filteredVouchers(){let list=this.filteredByPackage();if(this.voucherTab==='active') list=list.filter(v=>v.status==='unused'||v.status==='active');if(this.voucherTab==='used') list=list.filter(v=>v.status==='used');return list;},
     selectedPackageName(){const p=this.packages.find(x=>String(x.id)===String(this.voucherForm.package_id)); return p?p.name:'';},
     selectedPackagePrice(){const p=this.packages.find(x=>String(x.id)===String(this.voucherForm.package_id)); return p?this.money(p.price):'1,000';},
-    selectedPackagePriceRaw(){const p=this.packages.find(x=>String(x.id)===String(this.voucherForm.package_id)); return p?Number(p.price):1000;},
-    previewCode(){
-      const type=this.voucherForm.code_type;
-      if(type==='numbers') return this.voucherForm.use_prefix? (this.voucherForm.prefix||'FAMI')+'-244175' : '244175';
-      if(type==='letters') return this.voucherForm.use_prefix? (this.voucherForm.prefix||'FAMI')+'-RYCSVD' : 'RYCSVD';
-      return this.voucherForm.use_prefix? (this.voucherForm.prefix||'FAMI')+'-R5C2V1' : 'R5C2V1';
-    },
-    async createVoucher(){
-      this.saving=true;
-      try{
-        const payload={tenant_id:this.tenantId,quantity:this.voucherForm.quantity,package_id:this.voucherForm.package_id,code_type:this.voucherForm.code_type,prefix:this.voucherForm.prefix,use_prefix:this.voucherForm.use_prefix,template:this.voucherForm.template,qr_or_laha:this.voucherForm.qr_or_laha};
-        const data=await this.request('/api/vouchers',{method:'POST',body:JSON.stringify(payload)});
-        this.lastBatch=data; this.notify(data.count+' vocha zimetengenezwa - '+data.batch_id,'success'); await this.loadPageData();
-      }catch(e){this.notify(e.message,'error')}
-      finally{this.saving=false}
-    },
-    async disableVoucher(v){if(!confirm('Disable '+ (v.code||v.voucher_code) +'?'))return; try{await this.request('/api/vouchers/'+encodeURIComponent(v.id)+'/disable',{method:'POST'}); this.notify('Imefungwa','success'); await this.loadPageData();}catch(e){this.notify(e.message,'error')}},
-    async clearUsed(){if(!confirm('Futa zote zilizotumika?'))return; try{await this.request('/api/vouchers/clear-used/'+encodeURIComponent(this.tenantId),{method:'POST'}); await this.loadPageData();}catch(e){this.notify(e.message,'error')}},
+    previewCode(){const type=this.voucherForm.code_type;if(type==='numbers') return this.voucherForm.use_prefix? (this.voucherForm.prefix||'FAMI')+'-244175' : '244175';if(type==='letters') return this.voucherForm.use_prefix? (this.voucherForm.prefix||'FAMI')+'-RYCSVD' : 'RYCSVD';return this.voucherForm.use_prefix? (this.voucherForm.prefix||'FAMI')+'-R5C2V1' : 'R5C2V1';},
+    async createVoucher(){this.saving=true;try{const payload={tenant_id:this.tenantId,quantity:this.voucherForm.quantity,package_id:this.voucherForm.package_id,code_type:this.voucherForm.code_type,prefix:this.voucherForm.prefix,use_prefix:this.voucherForm.use_prefix,template:this.voucherForm.template,qr_or_laha:this.voucherForm.qr_or_laha};const data=await this.request('/api/vouchers',{method:'POST',body:JSON.stringify(payload)});this.lastBatch=data; this.notify(data.count+' vocha - '+data.batch_id,'success'); await this.loadPageData();}catch(e){this.notify(e.message,'error')}finally{this.saving=false}},
+    async disableVoucher(v){if(!confirm('Disable '+ (v.code||v.voucher_code) +'?'))return; try{await this.request('/api/vouchers/'+encodeURIComponent(v.id)+'/disable',{method:'POST'}); await this.loadPageData();}catch(e){this.notify(e.message,'error')}},
     async loadExpired(){try{const tid=encodeURIComponent(this.tenantId);const data=await this.request('/api/vouchers/expired/'+tid);this.expiredVouchers=data.expired||[];}catch(e){this.expiredVouchers=[]}},
-    printVouchers(tpl, qrOrLaha=null){
-      const template=tpl||this.voucherForm.template||'B';
-      const ql=qrOrLaha||this.voucherForm.qr_or_laha||'QR';
-      let limit=template==='B'?100:template==='C'?32:50;
-      let toPrint=this.lastBatch?.vouchers||this.filteredVouchers().filter(v=>v.status==='unused'||v.status==='active').slice(0,limit);
-      toPrint=toPrint.slice(0,limit);
-      this.printTemplate=template; this.printBatchId=this.lastBatch?.batch_id||'BATCH'; this.printQrOrLaha=ql; this.showPrintPreview=true;
-      this.$nextTick(()=>{
-        const grid=document.getElementById('printGrid'); if(!grid) return; grid.innerHTML=''; grid.className='print-grid-'+template+' mx-auto bg-white shadow-2xl';
-        toPrint.forEach((v, idx)=>{
-          const card=document.createElement('div'); card.className='voucher-card';
-          const wisp=this.tenant.business_name||'MR HAAS WI-FI'; const pkg=v.package_name||this.packageName(v.package_id)||''; const code=v.code||v.voucher_code||''; const batch=v.batch_id||this.printBatchId;
-          const isQR=ql==='QR' && template!=='B';
-          card.innerHTML=`<div style="font-size:7px;font-weight:bold">${wisp}</div><div style="font-size:8px">${pkg}</div><div style="font-weight:900;font-size:11px">${code}</div>${isQR?`<div class="qr-box" id="qr-${idx}"></div>`:`<div style="border-top:1px dashed #999;width:90%;font-size:6px;text-align:center;margin-top:2px">✂️ LAHA</div>`}<div style="font-size:6px;color:#888">${batch} | Mr HaasNet</div>`;
-          grid.appendChild(card);
-          if(isQR){ setTimeout(()=>{ const el=document.getElementById(`qr-${idx}`); if(el){ el.innerHTML=''; new QRCode(el, {text:code, width:56, height:56}); } }, 100); }
-        });
-      });
-    },
+    printVouchers(tpl){const template=tpl||this.voucherForm.template||'B';let limit=template==='B'?100:template==='C'?32:50;let toPrint=this.lastBatch?.vouchers||this.filteredVouchers().filter(v=>v.status==='unused'||v.status==='active').slice(0,limit);toPrint=toPrint.slice(0,limit);this.printTemplate=template; this.printBatchId=this.lastBatch?.batch_id||'BATCH'; this.showPrintPreview=true;this.$nextTick(()=>{const grid=document.getElementById('printGrid'); if(!grid) return; grid.innerHTML=''; grid.className='print-grid-'+template+' mx-auto bg-white';toPrint.forEach(v=>{const card=document.createElement('div'); card.className='voucher-card';const code=v.code||v.voucher_code||'';card.innerHTML=`<div style="font-size:7px;font-weight:bold">MH WALLET WI-FI</div><div style="font-weight:900;font-size:11px">${code}</div><div style="font-size:6px">${this.printBatchId}</div>`;grid.appendChild(card);});});},
     doPrint(){window.print()},
-    async deleteDevice(device){if(!confirm('Futa kifaa hiki?'))return;try{await this.request('/api/devices/'+encodeURIComponent(device.id),{method:'DELETE'});await this.loadPageData()}catch(e){this.notify(e.message,'error')}},
-    currentTitle(){const all=[...this.navItemsMain,...this.navItemsSettings];const found=all.find(x=>x.id===this.page);if(found)return this.t(found.key);return 'MR HAAS NET';},
-    go(page){this.page=page;this.sidebarOpen=false;if(page!=='devices'){this.showLinkWizard=false;}},
-    notify(text,type='success'){this.notice={text,type};setTimeout(()=>{this.notice.text=''}, 10000);},
+    currentTitle(){const map={dashboard:'Overview',devices:'Add Devices',sites:'My sites',packages:'Packages',clients:'Customers',vouchers:'Vouchers',payments:'Sales',reports:'Reports',portal:'Portal branding',upesipesa:'MH Wallet',subscription:'Subscription',support:'Support',team:'Team',settings:'Settings'};return map[this.page]||'MH Wallet';},
+    go(page){this.page=page;this.sidebarOpen=false;},
+    notify(text,type='success'){this.notice={text,type};setTimeout(()=>{this.notice.text=''}, 8000);},
     logout(){['mrhaas_token','mrhaas_tenant_id','mrhaas_tenant','mrhaas_role'].forEach(k=>localStorage.removeItem(k));window.location.replace('/login.html')},
     money(value){return Number(value||0).toLocaleString('en-TZ')},
     formatDate(value){if(!value)return '-';const d=new Date(value);return isNaN(d.getTime())?'-':d.toLocaleDateString('sw-TZ')},
     packageName(id){const p=this.packages.find(x=>String(x.id)===String(id));return p?p.name:'-'},
-    filteredClients(){const q=this.search.toLowerCase().trim();if(!q)return this.clients;return this.clients.filter(c=>[c.name,c.full_name,c.phone].some(v=>String(v||'').toLowerCase().includes(q)));},
   };
 }
 </script>
