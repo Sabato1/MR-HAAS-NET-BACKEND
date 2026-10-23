@@ -47,6 +47,21 @@ const PLANS = {
 };
 const PAYMENT_PROVIDERS=['AzamPay','ClickPesa','Selcom','Pesapal','PalmPesa','Beem','manual'];
 
+/* =========================================================
+   PALMPESA CONFIG - LIPA NAMBA 54826224 VODACOM DIRECT
+   User: USR-5C910F926C88
+   Base: https://palmpesa.drmlelwa.co.tz
+   Token via ENV: PALMPESA_API_TOKEN
+   Vendor via ENV: PALMPESA_VENDOR=54826224
+========================================================= */
+const PALMPESA_BASE_URL = (process.env.PALMPESA_BASE_URL || 'https://palmpesa.drmlelwa.co.tz').replace(/\/$/,'');
+const PALMPESA_USER_ID = process.env.PALMPESA_USER_ID || 'USR-5C910F926C88';
+const PALMPESA_API_TOKEN = process.env.PALMPESA_API_TOKEN || '';
+const PALMPESA_VENDOR = process.env.PALMPESA_VENDOR || process.env.VODACOM_LIPA_NAMBA || process.env.PALMPESA_LIPA_NAMBA || '54826224';
+const PALMPESA_CALLBACK_URL = process.env.PALMPESA_CALLBACK_URL || (process.env.BACKEND_URL ? process.env.BACKEND_URL + '/api/subscription/palmpesa-callback' : 'https://mrhaas-backend.onrender.com/api/subscription/palmpesa-callback');
+
+console.log('[PALMPESA] Config:', { baseUrl: PALMPESA_BASE_URL, userId: PALMPESA_USER_ID, hasToken: !!PALMPESA_API_TOKEN, vendor: PALMPESA_VENDOR, callback: PALMPESA_CALLBACK_URL });
+
 class HttpError extends Error{constructor(s,m){super(m); this.status=s;}}
 const fail=(s,m)=>{throw new HttpError(s,m);};
 const asyncRoute=h=>(req,res,next)=>Promise.resolve(h(req,res,next)).catch(next);
@@ -88,7 +103,96 @@ const makeSubdomain=bn=>{const base=String(bn||'wisp').toLowerCase().normalize('
 const issueTenantToken=t=>signToken({tenant_id:t.id,email:t.email,role:'tenant'});
 const issueSuperAdminToken=()=>signToken({tenant_id:SUPER_ADMIN_ID,email:SUPER_ADMIN_EMAIL,role:'super_admin'});
 
-app.get('/api/health',asyncRoute(async(req,res)=>{await db.ready; await query('SELECT 1'); res.json({success:true,service:'MR HAAS MULTI-TENANT WISP MANAGEMENT',database:'connected',timestamp:new Date().toISOString()});}));
+/* ================= PALMPESA PUSH FUNCTION - VODACOM TILL 54826224 ================= */
+async function sendPalmPesaPush({phone, amount, transactionId, planName, tenantId}){
+  if(!PALMPESA_API_TOKEN){
+    throw new Error('PALMPESA_API_TOKEN haijawekwa ENV - weka kwenye Render: PALMPESA_API_TOKEN');
+  }
+  let msisdn = String(phone).replace(/\s+/g,'');
+  if(msisdn.startsWith('0')) msisdn = '255'+msisdn.slice(1);
+  msisdn = msisdn.replace(/^\+/,'');
+  
+  const orderId = transactionId;
+  
+  const attempts = [
+    {
+      path: '/api/v1/money-request',
+      payload: {
+        user_id: PALMPESA_USER_ID,
+        amount: Number(amount),
+        phone: msisdn,
+        phone_number: msisdn,
+        reference: orderId,
+        order_id: orderId,
+        description: `MH NET ${planName} - ${amount} TZS`,
+        vendor: PALMPESA_VENDOR,
+        till: PALMPESA_VENDOR,
+        business_number: PALMPESA_VENDOR,
+        till_number: PALMPESA_VENDOR,
+        callback_url: PALMPESA_CALLBACK_URL,
+        remark: `MH NET ${planName} Till ${PALMPESA_VENDOR}`
+      }
+    },
+    {
+      path: '/api/request-funds',
+      payload: {
+        user_id: PALMPESA_USER_ID,
+        amount: Number(amount),
+        phone_number: msisdn,
+        reference: orderId,
+        description: `MH NET ${planName} - Till ${PALMPESA_VENDOR}`,
+        till_number: PALMPESA_VENDOR,
+        callback: PALMPESA_CALLBACK_URL
+      }
+    }
+  ];
+  
+  let lastError = null;
+  for(const attempt of attempts){
+    try{
+      Object.keys(attempt.payload).forEach(k=> attempt.payload[k]===undefined && delete attempt.payload[k]);
+      const url = PALMPESA_BASE_URL + attempt.path;
+      console.log(`[PALMPESA TRY ${PALMPESA_VENDOR}] ${attempt.path}`, attempt.payload);
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${PALMPESA_API_TOKEN}`,
+          'X-API-TOKEN': PALMPESA_API_TOKEN,
+          'api-token': PALMPESA_API_TOKEN,
+          'User-ID': PALMPESA_USER_ID,
+          'x-user-id': PALMPESA_USER_ID
+        },
+        body: JSON.stringify(attempt.payload)
+      });
+      const text = await resp.text();
+      let data; try{ data = JSON.parse(text); }catch(e){ data = { raw: text }; }
+      console.log(`[PALMPESA RESP ${attempt.path} Till ${PALMPESA_VENDOR}] ${resp.status}`, data);
+      if(resp.ok || data.success || data.status === 'success'){
+        return { success:true, endpoint: attempt.path, response: data, order_id: orderId, till: PALMPESA_VENDOR };
+      } else {
+        lastError = `${attempt.path} ${resp.status}: ${text.substring(0,400)}`;
+        continue;
+      }
+    }catch(e){
+      lastError = e.message;
+      console.error(`[PALMPESA ERROR ${attempt.path}]`, e.message);
+      continue;
+    }
+  }
+  throw new Error(lastError || `PalmPesa push failed - angalia Token na Till ${PALMPESA_VENDOR}`);
+}
+
+async function checkPalmPesaStatus(orderId){
+  try{
+    const url = `${PALMPESA_BASE_URL}/api/v1/transaction/${orderId}`;
+    const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${PALMPESA_API_TOKEN}` } });
+    const data = await resp.json().catch(()=>({}));
+    return data;
+  }catch(e){ return { error: e.message }; }
+}
+
+app.get('/api/health',asyncRoute(async(req,res)=>{await db.ready; await query('SELECT 1'); res.json({success:true,service:'MR HAAS MULTI-TENANT WISP MANAGEMENT',database:'connected',palmPesa:{configured:!!PALMPESA_API_TOKEN, vendor:PALMPESA_VENDOR, baseUrl:PALMPESA_BASE_URL},timestamp:new Date().toISOString()});}));
 app.get('/api/plans',(req,res)=>{res.json({success:true,plans:PLANS,trial_days:4});});
 
 app.post('/api/auth/register',asyncRoute(async(req,res)=>{
@@ -165,7 +269,7 @@ app.get('/api/packages/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{co
 app.post('/api/packages',authMiddleware,requireSubscription,asyncRoute(async(req,res)=>{const tenantId=req.role==='super_admin'?req.body.tenant_id:req.tenant_id; ensureTenantAccess(req,tenantId); if(!tenantId) fail(400,'tenant_id inahitajika.'); const name=clean(req.body.name); const price=Number(req.body.price); if(!name||Number.isNaN(price)||price<0) fail(400,'Jina au bei si sahihi.'); const pack=await one(`INSERT INTO packages (id,tenant_id,name,price,duration_value,duration_unit,speed_down,speed_up,connection_type,description,status,created_at) VALUES ($1,$2,$3,$4,1,'days',0,0,'hotspot',$5,'active',NOW()) RETURNING *`,[makeId('pkg'),tenantId,name,price,clean(req.body.description||'')]); res.status(201).json({success:true,package:pack});}));
 app.delete('/api/packages/:id',authMiddleware,asyncRoute(async(req,res)=>{const pack=await one('SELECT * FROM packages WHERE id=$1',[req.params.id]); if(!pack) fail(404,'Kifurushi hakijapatikana.'); ensureTenantAccess(req,pack.tenant_id); await query('DELETE FROM packages WHERE id=$1',[pack.id]); res.json({success:true,message:'Kifurushi kimefutwa.'});}));
 
-/* ========== VOUCHERS KAMILI ========== */
+/* ========== VOUCHERS KAMILI - DELETE FIX + BATCH + TEMPLATES + ZIMEISHA MUDA ========== */
 app.get('/api/vouchers/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{
   const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId);
   try{
@@ -188,13 +292,13 @@ app.post('/api/vouchers',authMiddleware,requireSubscription,asyncRoute(async(req
   const tenantId=req.role==='super_admin'?req.body.tenant_id:req.tenant_id; ensureTenantAccess(req,tenantId);
   const count=Math.min(Math.max(Number(req.body.quantity||req.body.count||1),1),500);
   const packageId=clean(req.body.package_id||'')||null;
-  const codeType=clean(req.body.code_type||'mixed'); const prefix=clean(req.body.prefix||'').toUpperCase().slice(0,10); const usePrefix=req.body.use_prefix===true||req.body.usePrefix===true||!!prefix;
+  const codeType=clean(req.body.code_type||'mixed'); const prefix=clean(req.body.prefix||'MH NET').toUpperCase().slice(0,10); const usePrefix=req.body.use_prefix===true||req.body.usePrefix===true||!!prefix;
   const template=clean(req.body.template||'B'); const qrOrLaha=clean(req.body.qr_or_laha||req.body.qrOrLaha||'QR');
   const batchId=`BATCH-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
   let pkgName='',pkgPrice=0; if(packageId){const pkg=await one('SELECT name,price FROM packages WHERE id=$1',[packageId]); if(pkg){pkgName=pkg.name; pkgPrice=pkg.price;}}
   try{await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS batch_id TEXT`); await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS package_name TEXT`); await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS price NUMERIC`); await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS code_type TEXT`); await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS prefix TEXT`); await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS template TEXT`); await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS qr_or_laha TEXT`); await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS device_model TEXT`); await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS mb_used BIGINT DEFAULT 0`);}catch(e){}
   const vouchers=[]; for(let i=0;i<count;i++){let rawCode=generateCodeByType(codeType,6); let finalCode=(usePrefix&&prefix)?`${prefix}-${rawCode}`:rawCode; const voucher=await one(`INSERT INTO vouchers (id,tenant_id,package_id,code,status,batch_id,package_name,price,code_type,prefix,template,qr_or_laha,created_at) VALUES ($1,$2,$3,$4,'unused',$5,$6,$7,$8,$9,$10,$11,NOW()) RETURNING *`,[makeId('voucher'),tenantId,packageId,finalCode,batchId,pkgName,pkgPrice,codeType,prefix,template,qrOrLaha]); vouchers.push(voucher);}
-  res.status(201).json({success:true,message:`Vocha ${count} - Batch ${batchId} - Template ${template}`,batch_id:batchId,template:template,qr_or_laha:qrOrLaha,count:vouchers.length,vouchers});
+  res.status(201).json({success:true,message:`Vocha ${count} - Batch ${batchId} - Template ${template} - Till ${PALMPESA_VENDOR}`,batch_id:batchId,template:template,qr_or_laha:qrOrLaha,count:vouchers.length,vouchers});
 }));
 app.delete('/api/vouchers/:id',authMiddleware,asyncRoute(async(req,res)=>{
   const rawId=String(req.params.id||'').trim(); if(!rawId) fail(400,'ID inahitajika');
@@ -215,8 +319,81 @@ app.get('/api/vouchers/expired/:tenant_id',authMiddleware,asyncRoute(async(req,r
 app.get('/api/vouchers/print/:batch_id',authMiddleware,asyncRoute(async(req,res)=>{const batchId=req.params.batch_id; const template=(req.query.template||'B').toUpperCase(); const qrMode=(req.query.qr||'1')==='1'?'QR':'LAHA'; const vouchers=await query(`SELECT * FROM vouchers WHERE batch_id=$1 ORDER BY created_at ASC`,[batchId]); if(!vouchers.length) fail(404,'Batch haijapatikana'); const tenant=await getTenantRecord(vouchers[0].tenant_id); res.json({success:true,wisp_name:tenant.business_name,batch_id:batchId,template:template,qr_or_laha:qrMode,vouchers,print_info:{A:{count:50,grid:'5x10',label:'50 na QR Page1'},B:{count:100,grid:'5x20',label:'100 bila QR Page1'},C:{count:32,grid:'4x8',label:'32 na QR Kubwa Page1'}}});}));
 app.post('/api/vouchers/track-usage',asyncRoute(async(req,res)=>{const code=clean(req.body.code||''); const deviceModel=clean(req.body.device_model||req.body.model||''); const mbUsed=Number(req.body.mb_used||0); const userAgent=String(req.headers['user-agent']||''); let model=deviceModel; if(!model&&userAgent){if(/Tecno/i.test(userAgent)) model='Tecno Device'; else if(/Infinix/i.test(userAgent)) model='Infinix Device'; else if(/Samsung/i.test(userAgent)) model='Samsung Device'; else model=userAgent.slice(0,80);} if(code){try{await query(`UPDATE vouchers SET used_at=COALESCE(used_at,NOW()),device_model=COALESCE($2,device_model),mb_used=GREATEST(COALESCE(mb_used,0),$3),status=CASE WHEN status='unused' THEN 'used' ELSE status END WHERE code=$1`,[code,model,mbUsed]);}catch(e){}} res.json({success:true});}));
 
-app.post('/api/portal/settings/:tenant_id',authMiddleware,requireSubscription,asyncRoute(async(req,res)=>{const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId); const title=String(req.body.portal_title||req.body.name||'').slice(0,120); const color=String(req.body.primary_color||'#111827'); const announcement=String(req.body.announcement||'').slice(0,3000); const contactPhone=String(req.body.contact_phone||req.body.contact||'').slice(0,40); const settings=await one(`INSERT INTO tenant_settings (tenant_id,portal_title,primary_color,announcement,contact_phone,currency) VALUES ($1,$2,$3,$4,$5,'TZS') ON CONFLICT (tenant_id) DO UPDATE SET portal_title=EXCLUDED.portal_title,primary_color=EXCLUDED.primary_color,announcement=EXCLUDED.announcement,contact_phone=EXCLUDED.contact_phone RETURNING *`,[tenantId,title,color,announcement,contactPhone]); res.json({success:true,settings});}));
+/* ========== SUBSCRIPTION - PALMPESA + VODACOM TILL 54826224 - PAY FIRST ========== */
+app.get('/api/subscription/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{
+  const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId);
+  const tenant=await getTenantRecord(tenantId);
+  const payments=await query(`SELECT id, amount, status, reference, transaction_id, provider, created_at, fail_reason FROM payments WHERE tenant_id = $1 AND (provider LIKE 'subscription%' OR description LIKE '%SUBSCRIPTION%' OR description LIKE '%PalmPesa%' OR provider LIKE '%PalmPesa%') ORDER BY created_at DESC LIMIT 50`, [tenantId]);
+  const history = payments.map(p=>({
+    id: p.id, amount: p.amount, status: p.status, reference: p.reference || p.transaction_id, transaction_id: p.transaction_id,
+    date: p.created_at ? new Date(p.created_at).toLocaleString('sw-TZ') : '-', created_at: p.created_at,
+    failReason: p.fail_reason || (p.status!=='paid'?'Malipo hayakukamilika. Jaribu tena.':'')
+  }));
+  res.json({ success:true, plan_code: tenant.plan||'diamond', plan_name: (tenant.plan||'DIAMOND').toUpperCase(), price: PLANS[(tenant.plan||'diamond').toUpperCase()]?.monthly_price || 15000, status: tenant.status||'active', expiry_date: tenant.subscription_ends_at || tenant.trial_ends_at, history });
+}));
+
+app.post('/api/subscription/pay',authMiddleware,asyncRoute(async(req,res)=>{
+  const tenantId=req.body.tenant_id || req.tenant_id; ensureTenantAccess(req,tenantId);
+  const phone=clean(req.body.phone); if(!isValidPhone(phone)) fail(400,'Namba ya simu si sahihi MH NET - andika kama 07XXXXXXXX');
+  const amount=Number(req.body.amount); if(!Number.isFinite(amount)||amount<=0) fail(400,'Kiasi si sahihi');
+  const planCode=(clean(req.body.plan_code)||'diamond').toLowerCase();
+  const plan=PLANS[planCode.toUpperCase()]; if(!plan) fail(400,'Kifurushi hakipo MH NET');
+  const transactionId='SUB_'+Date.now()+'_'+crypto.randomBytes(3).toString('hex').toUpperCase();
+  const payment=await one(`INSERT INTO payments (id, tenant_id, provider, reference, transaction_id, amount, currency, status, description, fail_reason, created_at) VALUES ($1,$2,$3,$4,$5,$6,'TZS','pending',$7,$8,NOW()) RETURNING *`, [makeId('payment'), tenantId, 'subscription_'+planCode, transactionId, transactionId, amount, `SUBSCRIPTION ${planCode.toUpperCase()} PalmPesa ${phone} Vendor:${PALMPESA_VENDOR} Till:${PALMPESA_VENDOR}`, 'Inasubiri - Push PalmPesa Vodacom Lipa Namba '+PALMPESA_VENDOR]);
+  let pushResult=null; let pushError=null;
+  try{ pushResult=await sendPalmPesaPush({phone, amount, transactionId, planName: planCode.toUpperCase(), tenantId}); }
+  catch(e){ pushError=e.message; await query(`UPDATE payments SET fail_reason = $1 WHERE id = $2`, [pushError, payment.id]); console.error('[PALMPESA PUSH ERROR]', e.message); }
+  if(pushError && !pushResult){
+    return res.json({ success:true, status:'pending', transaction_id: transactionId, message: `⚠️ ${pushError} - Ombi limehifadhiwa pending. Pesa itaingia moja kwa moja kwenye Till yako ${PALMPESA_VENDOR}. Kifurushi hakitawezeshwa bila malipo.`, reference: transactionId });
+  }
+  res.json({ success:true, status:'pending', transaction_id: transactionId, message: `✅ Ombi limetumwa - Angalia simu yako ${phone} utapokea USSD Push ya PalmPesa - Lipa Namba Vodacom ${PALMPESA_VENDOR} - Weka PIN. Pesa inaingia moja kwa moja kwenye till yako ${PALMPESA_VENDOR}. Kifurushi kitawezeshwa tu baada ya kulipa.`, reference: transactionId, push: pushResult, till: PALMPESA_VENDOR });
+}));
+
+app.post('/api/subscription/palmpesa-callback',asyncRoute(async(req,res)=>{
+  const body=req.body||{}; console.log(`[PALMPESA CALLBACK Till ${PALMPESA_VENDOR}]`, JSON.stringify(body));
+  const orderId=body.order_id || body.reference || body.orderId || body.transid || body.transactionId || body.externalId || body.data?.reference || body.data?.order_id;
+  const statusRaw=(body.status || body.result || body.payment_status || body.transaction_status || body.data?.status || '').toString().toLowerCase();
+  const success=['success','completed','paid','successful','complete','approved','succeeded'].some(s=> statusRaw.includes(s)) || body.resultcode==='000' || body.success===true || body.data?.status==='success';
+  if(!orderId) return res.json({ success:false, message:'No orderId in callback' });
+  const payment=await one(`SELECT * FROM payments WHERE transaction_id = $1 OR reference = $1`, [orderId]);
+  if(!payment){ console.error('[PALMPESA CALLBACK] Payment not found', orderId); return res.json({ success:false, message:'Payment not found' }); }
+  if(success){
+    await query(`UPDATE payments SET status = 'paid', fail_reason = '' WHERE id = $1`, [payment.id]);
+    const planCode=(payment.provider||'').replace('subscription_','') || 'diamond';
+    const expiry=new Date(Date.now() + 30*24*3600*1000);
+    await query(`UPDATE tenants SET plan = $1, subscription_status = 'active', subscription_ends_at = $2, status = 'active' WHERE id = $3`, [planCode, expiry.toISOString(), payment.tenant_id]);
+    console.log(`[PALMPESA PAID Till ${PALMPESA_VENDOR}] ${payment.tenant_id} -> ${planCode} enabled - Lipa Namba ${PALMPESA_VENDOR}`);
+  }else if(['failed','cancelled','failure','declined','rejected'].some(s=> statusRaw.includes(s))){
+    await query(`UPDATE payments SET status = 'failed', fail_reason = $1 WHERE id = $2`, [body.message||body.fail_reason||'Malipo hayakukamilika PalmPesa', payment.id]);
+  }
+  res.json({ success:true, received:true, till: PALMPESA_VENDOR });
+}));
+
+app.post('/api/subscription/callback',asyncRoute(async(req,res)=>{
+  const body=req.body||{}; const transactionId=body.externalId || body.orderReference || body.transactionId || body.reference || body.order_id;
+  const status=(body.status || body.transactionStatus || body.result || '').toLowerCase(); const success=['success','completed','paid','successful','approved'].includes(status);
+  if(!transactionId) return res.json({ success:false });
+  const payment=await one(`SELECT * FROM payments WHERE transaction_id = $1 OR reference = $1`, [transactionId]);
+  if(!payment) return res.json({ success:false });
+  if(success){ await query(`UPDATE payments SET status = 'paid', fail_reason = '' WHERE id = $1`, [payment.id]); const planCode=(payment.provider||'').replace('subscription_','') || 'diamond'; const expiry=new Date(Date.now() + 30*24*3600*1000); await query(`UPDATE tenants SET plan = $1, subscription_status = 'active', subscription_ends_at = $2, status = 'active' WHERE id = $3`, [planCode, expiry.toISOString(), payment.tenant_id]); console.log(`[SUBSCRIPTION PAID Till ${PALMPESA_VENDOR}] ${payment.tenant_id} -> ${planCode}`); }
+  else if(['failed','cancelled'].includes(status)){ await query(`UPDATE payments SET status = 'failed', fail_reason = $1 WHERE id = $2`, [body.message||'Malipo hayakukamilika', payment.id]); }
+  res.json({ success:true });
+}));
+
+app.post('/api/subscription/change',authMiddleware,asyncRoute(async(req,res)=>{
+  const tenantId=req.body.tenant_id || req.tenant_id; ensureTenantAccess(req,tenantId);
+  const planCode=(clean(req.body.plan_code)||'').toLowerCase(); if(!PLANS[planCode.toUpperCase()]) fail(400,'Kifurushi hakipo MH NET');
+  res.json({ success:true, message: `Umechagua ${planCode.toUpperCase()} - Lipa sasa ili kiwezeshwa moja kwa moja kwenye till yako ya Vodacom ${PALMPESA_VENDOR}. Hakitawezeshwa bila malipo - MH NET.`, pending_plan: planCode, till: PALMPESA_VENDOR });
+}));
+
+app.get('/api/subscription/status/:order_id',authMiddleware,asyncRoute(async(req,res)=>{
+  const orderId=req.params.order_id; let statusData=null; try{ statusData=await checkPalmPesaStatus(orderId); }catch(e){ statusData={ error: e.message }; }
+  res.json({ success:true, order_id: orderId, till: PALMPESA_VENDOR, palmpesa: statusData });
+}));
+
+/* PAYMENTS */
 app.get('/api/portal/settings/:tenant_id',asyncRoute(async(req,res)=>{const tenantId=clean(req.params.tenant_id); const tenant=await getTenantRecord(tenantId); const settings=await one(`SELECT tenant_id,portal_title,primary_color,announcement,contact_phone,currency FROM tenant_settings WHERE tenant_id=$1`,[tenantId]); res.json({success:true,portal:settings||{tenant_id:tenantId,portal_title:tenant.business_name,primary_color:'#111827',announcement:'',contact_phone:tenant.phone,currency:'TZS'}});}));
+app.post('/api/portal/settings/:tenant_id',authMiddleware,requireSubscription,asyncRoute(async(req,res)=>{const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId); const title=String(req.body.portal_title||req.body.name||'').slice(0,120); const color=String(req.body.primary_color||'#111827'); const announcement=String(req.body.announcement||'').slice(0,3000); const contactPhone=String(req.body.contact_phone||req.body.contact||'').slice(0,40); const settings=await one(`INSERT INTO tenant_settings (tenant_id,portal_title,primary_color,announcement,contact_phone,currency) VALUES ($1,$2,$3,$4,$5,'TZS') ON CONFLICT (tenant_id) DO UPDATE SET portal_title=EXCLUDED.portal_title,primary_color=EXCLUDED.primary_color,announcement=EXCLUDED.announcement,contact_phone=EXCLUDED.contact_phone RETURNING *`,[tenantId,title,color,announcement,contactPhone]); res.json({success:true,settings});}));
 
 app.get('/api/payments/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId); const payments=await query(`SELECT id,tenant_id,client_id,provider,reference,amount,currency,status,description,created_at FROM payments WHERE tenant_id=$1 ORDER BY created_at DESC`,[tenantId]); res.json({success:true,payments});}));
 app.post('/api/payments/manual',authMiddleware,requireSubscription,asyncRoute(async(req,res)=>{const tenantId=req.role==='super_admin'?req.body.tenant_id:req.tenant_id; ensureTenantAccess(req,tenantId); const amount=Number(req.body.amount); if(!Number.isFinite(amount)||amount<=0) fail(400,'Kiasi si sahihi.'); const payment=await one(`INSERT INTO payments (id,tenant_id,provider,reference,amount,currency,status,description,created_at) VALUES ($1,$2,'manual',$3,$4,'TZS','pending',$5,NOW()) RETURNING *`,[makeId('payment'),tenantId,clean(req.body.reference||''),amount,clean(req.body.customer_name||'')]); res.status(201).json({success:true,payment});}));
@@ -247,7 +424,8 @@ async function startServer(){
     try{await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS device_model TEXT`);}catch(e){}
     try{await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS mb_used BIGINT DEFAULT 0`);}catch(e){}
     try{await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS mb_total BIGINT DEFAULT 0`);}catch(e){}
-    app.listen(PORT,'0.0.0.0',()=>{console.log(`🚀 MR HAAS backend port ${PORT}`); console.log(`✅ DELETE fixed + ALL upgrades: Batch+QR/LAHA+Templates A/B/C+Zimeisha Muda+Real 0 values`);});
+    try{await db.pool.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS fail_reason TEXT`);}catch(e){}
+    app.listen(PORT,'0.0.0.0',()=>{console.log(`🚀 MR HAAS backend port ${PORT} - Till ${PALMPESA_VENDOR} Vodacom Direct`); console.log(`✅ DELETE fixed + Batch+QR/LAHA+Templates A/B/C+Zimeisha Muda+Real 0 + PalmPesa ${PALMPESA_VENDOR}`);});
   }catch(error){console.error('Server haikuweza kuanza:',error.message); process.exit(1);}
 }
 startServer();
