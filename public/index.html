@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="sw" x-data="app()" x-init="init()">
+<html lang="sw" x-data="wizardApp()" x-init="init()">
 <head><style>
 @font-face {
   font-family: "Optimistic";
@@ -22,240 +22,240 @@
   font-family: "Optimistic Mono", ui-monospace, monospace;
 }
 </style>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#080808">
-  <title>MR HAAS NET - VOUCHER DELETE</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <style>
-    [x-cloak]{display:none!important}
-    body{margin:0;background:#090909;color:#f5f5f5;font-family:Arial,sans-serif}
-    .sidebar{background:#080808;color:#eee;border-right:1px solid #292218}
-    .nav-item{display:flex;align-items:center;gap:12px;width:calc(100% - 16px);margin:2px 8px;padding:11px 12px;border-radius:10px;color:#a39e94;font-size:14px;transition:.2s;border:1px solid transparent;text-align:left}
-    .nav-item:hover{background:#1a150a;color:#f5d78a;border-color:#3a2e1a}
-    .nav-active{background:linear-gradient(90deg,#332712,#18130a)!important;color:#ffdc80!important;border:1px solid #5d471f!important;font-weight:700}
-    .nav-icon{width:28px;height:28px;border-radius:8px;background:#141009;border:1px solid #2a2214;display:flex;align-items:center;justify-content:center;font-size:14px}
-    .nav-active .nav-icon{background:linear-gradient(135deg,#ffe69a,#d7a633)!important;color:#111!important}
-    .sidebar-slide{transition:transform .35s cubic-bezier(0.4,0,0.2,1)}
-    .sidebar-overlay{background:rgba(0,0,0,0.7);backdrop-filter:blur(5px)}
-    .account-label{color:#6b6560;font-size:10px;letter-spacing:1.2px;padding:18px 16px 6px 16px;font-weight:700;text-transform:uppercase}
-    .card{background:linear-gradient(145deg,#171717,#101010);border:1px solid #30291c;border-radius:16px;padding:16px}
-    .stat-card{background:#121212;border:1px solid #2a2214;border-radius:14px;padding:16px}
-    .upesi-card{background:#121212;border:1px solid #30291c;border-radius:16px;padding:14px}
-    .upesi-stat{border:1px solid #30291c;background:#111;border-radius:14px;padding:14px;display:flex;justify-content:space-between;align-items:center}
-    .upesi-tab{padding:8px 12px;border-radius:10px;font-size:13px;border:1px solid #30291c;background:#111;color:#8a93a8;cursor:pointer}
-    .upesi-tab.active{background:#332712;color:#ffdc80;border-color:#5d471f}
-    .upesi-input{background:#0d0d0d;border:1px solid #403827;border-radius:12px;padding:12px;color:white;width:100%}
-    .haraka-btn{padding:6px 14px;border-radius:20px;font-size:12px;border:1px solid #30291c;background:#0d0d0d;color:#8a93a8;cursor:pointer}
-    .haraka-btn.active{background:#e8bf58;color:#111;font-weight:bold;border-color:#e8bf58}
-    .voucher-row{background:#0d0d0d;border:1px solid #30291c;border-radius:12px;padding:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-    .delete-btn{background:#2a0a0a;color:#ff6b6b;border:1px solid #4a1a1a;border-radius:20px;padding:6px 14px;font-size:12px;cursor:pointer;transition:.2s}
-    .delete-btn:hover{background:#ff4444;color:white;border-color:#ff4444}
-    .field{width:100%;border:1px solid #403827;border-radius:10px;padding:11px 12px;background:#0d0d0d;color:#f7f1e3}
-    .btn{padding:10px 15px;border-radius:10px;font-weight:700;font-size:13px}
-    .btn-gold{background:linear-gradient(135deg,#ffe69a,#d7a633,#aa781b);color:#17120a}
-    .btn-blue{background:#3b82f6;color:white}
-    .wizard-card{background:linear-gradient(145deg,#171717,#101010);border:1px solid #30291c;border-radius:16px;padding:20px}
-    .type-card{border:1px solid #30291c;background:#111;border-radius:14px;padding:16px;cursor:pointer}
-    .type-card:hover{border-color:#5d471f;background:#1a150a}
-    @media print{body *{visibility:hidden}#printGrid,#printGrid *{visibility:visible}#printGrid{position:absolute;left:0;top:0;width:210mm}}
-    .voucher-card{border:1px dashed #999;background:white;color:black;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
-    .print-grid-B{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(20,1fr);width:210mm;height:277mm;gap:0}
-    .print-grid-B .voucher-card{height:13.85mm;padding:1mm;flex-direction:row;justify-content:space-between}
-    .greeting-card{background:linear-gradient(135deg,#1a150a,#121212);border:1px solid #3a2e1a;border-radius:16px;padding:20px;position:relative;overflow:hidden}
-    .pulse-dot{width:8px;height:8px;background:#22c55e;border-radius:50%;animation:pulse 2s infinite}
-    @keyframes pulse{0%{box-shadow:0 0 0 0 #22c55e88}70%{box-shadow:0 0 0 6px #22c55e00}100%{box-shadow:0 0 0 0 #22c55e00}}
-  </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MR HAAS - MH NET ONLY</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+[x-cloak]{display:none!important} body{margin:0;background:#080808;color:#e5e7eb;font-family:Inter,Arial,sans-serif}
+.sidebar{background:#080808;color:#eee;border-right:1px solid #292218}
+.nav-item{display:flex;align-items:center;gap:12px;width:calc(100% - 16px);margin:2px 8px;padding:11px 12px;border-radius:10px;color:#a39e94;font-size:14px;border:1px solid transparent;text-align:left}
+.nav-item:hover{background:#1a150a;color:#f5d78a;border-color:#3a2e1a}
+.nav-active{background:linear-gradient(90deg,#332712,#18130a)!important;color:#ffdc80!important;border:1px solid #5d471f!important;font-weight:700}
+.nav-icon{width:28px;height:28px;border-radius:8px;background:#141009;border:1px solid #2a2214;display:flex;align-items:center;justify-content:center;font-size:14px}
+.field{width:100%;border:1px solid #2a2e3a;border-radius:12px;padding:14px;background:#11131a;color:#f7f1e3}
+.field:focus{border-color:#e8bf58;outline:none}
+.btn{padding:12px 18px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer}
+.btn-blue{background:#3b82f6;color:white;width:100%}
+.btn-gold{background:linear-gradient(135deg,#ffe69a,#d7a633);color:#111;width:100%}
+.btn-ghost{background:#1a1c25;border:1px solid #2a2e3a;color:#9ca3af}
+.wizard-container{background:#11131a;border:1px solid #1e2230;border-radius:20px;padding:24px;max-width:560px;margin:0 auto}
+.step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid #2a2e3a;color:#6b7280}
+.step-dot.active{background:#3b82f6;color:white;border-color:#3b82f6}
+.step-dot.done{background:#22c55e;color:white;border-color:#22c55e}
+.step-line{height:2px;flex:1;background:#2a2e3a;margin:0 6px}
+.step-line.done{background:#22c55e}
+.model-option{padding:12px 14px;border-radius:10px;border:1px solid #2a2e3a;background:#0f111a;display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:8px}
+.model-option:hover{border-color:#3b82f6;background:#1a1d2b}
+.model-option.selected{border-color:#3b82f6;background:#1e2235}
+.port-btn{padding:10px 16px;border-radius:20px;border:1px solid #2a2e3a;background:#0f111a;color:#9ca3af;cursor:pointer}
+.port-btn.active{background:#3b82f6;color:white;border-color:#3b82f6}
+.code-box{background:#080a0f;border:1px solid #1e2230;border-radius:12px;padding:14px;font-family:monospace;font-size:11px;color:#22c55e;white-space:pre-wrap;word-break:break-all;max-height:260px;overflow-y:auto}
+.copy-btn{background:#1a1d2b;border:1px solid #2a2e3a;color:#e5e7eb;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer}
+.card{background:#11131a;border:1px solid #1e2230;border-radius:16px;padding:16px}
+</style>
 </head>
 <body x-cloak>
-<div class="min-h-screen">
-  <div x-show="sidebarOpen" @click="sidebarOpen=false" class="fixed inset-0 z-40 sidebar-overlay md:hidden"></div>
-  <aside class="sidebar fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col sidebar-slide" :class="sidebarOpen?'translate-x-0':'-translate-x-full md:translate-x-0'">
-    <div class="border-b border-[#292218] p-4">
-      <div class="flex items-center gap-3"><div class="flex h-11 w-11 items-center justify-center rounded-xl border border-yellow-700/60 bg-black text-lg font-black" style="color:#e8bf58">MH</div><div class="min-w-0"><div class="font-extrabold tracking-wide text-white">MR HAAS <span style="color:#e8bf58">NET</span></div><div class="mt-1 text-[10px] tracking-wider text-gray-500">WISP MANAGEMENT 🚀</div></div><button @click="sidebarOpen=false" class="ml-auto md:hidden w-8 h-8 rounded-full bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-[#e8bf58]">✕</button></div>
-      <div class="mt-4"><div class="text-[10px] uppercase tracking-widest text-gray-500">Biashara yako</div><div class="mt-2 truncate text-sm font-bold text-white" x-text="tenant.name||tenant.business_name||'MR HAAS WI-FI'"></div><div class="text-[11px] text-gray-500" x-text="tenant.subdomain||'mr-haas-wi-fi-5dd687'"></div></div>
-    </div>
-    <nav class="flex-1 overflow-y-auto py-2">
-      <button class="nav-item" :class="page==='dashboard'?'nav-active':''" @click="go('dashboard')"><span class="nav-icon">⊞</span><span>Overview</span></button>
-      <button class="nav-item" :class="page==='devices'?'nav-active':''" @click="goDirectAddDevices()"><span class="nav-icon">＋</span><span>Add Devices</span></button>
-      <button class="nav-item" :class="page==='sites'?'nav-active':''" @click="go('sites')"><span class="nav-icon">📡</span><span>My sites</span></button>
-      <button class="nav-item" :class="page==='packages'?'nav-active':''" @click="go('packages')"><span class="nav-icon">📦</span><span>Packages</span></button>
-      <button class="nav-item" :class="page==='clients'?'nav-active':''" @click="go('clients')"><span class="nav-icon">👤</span><span>Customers</span></button>
-      <button class="nav-item" :class="page==='vouchers'?'nav-active':''" @click="go('vouchers')"><span class="nav-icon">🎟️</span><span>Vouchers</span><span x-show="vouchers.length>0" class="ml-auto text-[10px] bg-[#e8bf58] text-black px-2 py-0.5 rounded-full font-bold" x-text="vouchers.length">0</span></button>
-      <button class="nav-item" :class="page==='payments'?'nav-active':''" @click="go('payments')"><span class="nav-icon">↗</span><span>Sales</span></button>
-      <button class="nav-item" :class="page==='reports'?'nav-active':''" @click="go('reports')"><span class="nav-icon">📊</span><span>Reports</span></button>
-      <button class="nav-item" :class="page==='portal'?'nav-active':''" @click="go('portal')"><span class="nav-icon">🎨</span><span>Portal branding</span></button>
-      <button class="nav-item" :class="page==='wallet'?'nav-active':''" @click="go('wallet')"><span class="nav-icon">💳</span><span>MH Wallet</span></button>
-      <div class="account-label">ACCOUNT</div>
-      <button class="nav-item" :class="page==='subscription'?'nav-active':''" @click="go('subscription')"><span class="nav-icon">🕒</span><span>Subscription</span></button>
-      <button class="nav-item" :class="page==='payment-settings'?'nav-active':''" @click="go('payment-settings')"><span class="nav-icon">💳</span><span>Payment settings</span></button>
-      <button class="nav-item" :class="page==='support'?'nav-active':''" @click="go('support')"><span class="nav-icon">🎧</span><span>Support</span></button>
-      <button class="nav-item" :class="page==='team'?'nav-active':''" @click="go('team')"><span class="nav-icon">👥</span><span>Team</span></button>
-      <button class="nav-item" :class="page==='settings'?'nav-active':''" @click="go('settings')"><span class="nav-icon">⚙️</span><span>Settings</span></button>
-      <div class="mt-6 border-t border-[#292218] pt-4 px-2"><button class="nav-item w-full" @click="logout()"><span class="nav-icon">🚪</span><span>Log out</span></button></div>
-    </nav>
-    <div class="border-t border-[#292218] p-4 bg-[#060606]"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#ffe69a] to-[#aa781b] flex items-center justify-center text-[#111] font-black" x-text="(user.email||'H').charAt(0).toUpperCase()">H</div><div class="min-w-0 flex-1"><div class="truncate text-[13px] font-bold text-white" x-text="user.email||'haasparkjong@gmail.com'"></div><div class="text-[11px] text-gray-500">Akaunti ya WISP</div></div></div></div>
-  </aside>
-
-  <div class="min-h-screen md:ml-[280px]">
-    <header class="sticky top-0 z-30 flex min-h-[64px] items-center justify-between gap-3 border-b border-[#292218] bg-[#0c0c0c]/90 backdrop-blur-md px-4 md:px-7">
-      <div class="flex items-center gap-3"><button @click="sidebarOpen=!sidebarOpen" class="w-10 h-10 rounded-xl bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-[#e8bf58] md:hidden">☰</button><h1 class="text-[15px] font-bold text-white" x-text="currentTitle()"></h1><span class="hidden md:flex items-center gap-2 bg-[#1a150a] border border-[#3a2e1a] rounded-full px-3 py-1 text-[11px] text-[#a39e94]"><span class="pulse-dot"></span> Live • <span x-text="timeAgo">14s ago</span></span></div>
-      <div class="flex items-center gap-2"><span class="text-[10px] bg-[#1a150a] border border-[#3a2e1a] px-2 py-1 rounded-full text-[#e8bf58]" x-text="'Refresh: '+refreshCountdown+'s'">15s</span><button class="w-9 h-9 rounded-xl bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-[#e8bf58]" @click="loadPageData()">🔄</button></div>
-    </header>
-
-    <main class="space-y-5 p-4 md:p-6 bg-[#090909] min-h-[calc(100vh-64px)]">
-      <div x-show="notice.text" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-[92%] max-w-2xl flex justify-between gap-4 rounded-xl border p-4" :class="notice.type==='error'?'border-red-900 bg-red-950 text-red-200':'border-green-900 bg-green-950 text-green-200'"><p class="text-sm font-bold" x-text="notice.text"></p><button @click="notice.text=''" class="font-bold">×</button></div>
-
-      <section x-show="page==='dashboard'" class="space-y-4 max-w-[700px] mx-auto md:max-w-full">
-        <div class="greeting-card"><div class="relative z-10"><div class="text-[13px] text-[#e8bf58] font-bold" x-text="greetingEmoji()+' '+greetingText()">🌅 Habari ya asubuhi</div><h2 class="text-[22px] font-extrabold text-white mt-1" x-text="'Karibu, '+(tenant.business_name||tenant.name||'MR HAAS WI-FI')+'!'">Karibu!</h2><p class="text-[12px] text-gray-400 mt-1" x-text="greetingSubText()">Asubuhi njema!</p><div class="mt-3 flex items-center gap-2 text-[11px] text-gray-500"><span class="pulse-dot"></span> Live • <span x-text="timeAgo">14s ago</span> • Auto-refresh 15s</div></div></div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div class="stat-card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">📡 Devices Online</span><span class="text-[10px] text-gray-500">Live</span></div><div class="flex items-end gap-2 mt-3"><div class="text-[26px] font-extrabold" style="color:#e8bf58" x-text="devicesOnlineReal">0</div><div class="text-[12px] text-gray-500 mb-1">/ <span x-text="devices.length">0</span> total</div></div><div class="text-[11px] text-gray-500 mt-1"><span x-text="devices.length - devicesOnlineReal">0</span> offline</div></div>
-          <div class="stat-card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">👥 User Online</span><span class="text-[10px] text-gray-500">Active now</span></div><div class="flex items-end gap-2 mt-3"><div class="text-[26px] font-extrabold text-gray-300" x-text="usersOnlineReal">0</div><div class="text-[12px] text-gray-500 mb-1">watumiaji</div></div><div class="text-[11px] text-gray-500 mt-1">Hakuna mtumiaji online sasa</div></div>
-          <div class="stat-card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">📊 Data In Use Now</span><span class="text-[10px] text-gray-500">Real-time</span></div><div class="flex items-end gap-2 mt-3"><div class="text-[26px] font-extrabold text-gray-300">0 GB</div></div><div class="text-[11px] text-gray-500 mt-1">Hakuna data inayotumika sasa</div></div>
-        </div>
-        <div class="space-y-3"><h3 class="font-bold text-[14px]">💰 Revenue</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3"><div class="card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">Today</span><span class="text-[10px] bg-[#1a150a] text-gray-400 px-2 py-0.5 rounded-full">TZS</span></div><div class="text-[18px] font-extrabold text-gray-300 mt-2" x-text="revToday">0 TZS</div><div class="text-[10px] text-gray-500 mt-1" x-text="revTodayCount+' miamala leo'">0 miamala</div></div><div class="card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">Yesterday</span><span class="text-[10px] bg-[#1a150a] text-gray-400 px-2 py-0.5 rounded-full">TZS</span></div><div class="text-[18px] font-extrabold text-gray-300 mt-2" x-text="revYesterday">0 TZS</div><div class="text-[10px] text-gray-500 mt-1" x-text="revYesterdayCount+' miamala jana'">0</div></div><div class="card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">This Week</span><span class="text-[10px] bg-[#1a150a] text-gray-400 px-2 py-0.5 rounded-full">TZS</span></div><div class="text-[18px] font-extrabold text-gray-300 mt-2" x-text="revWeek">0 TZS</div><div class="text-[10px] text-gray-500 mt-1" x-text="revWeekCount+' miamala wiki hii'">0</div></div><div class="card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">This Year</span><span class="text-[10px] bg-[#1a150a] text-gray-400 px-2 py-0.5 rounded-full">TZS</span></div><div class="text-[18px] font-extrabold text-gray-300 mt-2" x-text="revYear">0 TZS</div><div class="text-[10px] text-gray-500 mt-1" x-text="revYearCount+' miamala mwaka huu'">0</div></div></div></div>
-        <div class="card"><div class="flex justify-between items-center mb-4"><h3 class="font-bold text-[14px]">📋 Recent Activity's (30 days)</h3><span class="text-[11px] text-gray-400" x-text="recentReal.length>0 ? 'Showing '+(activityStart+1)+'-'+Math.min(activityStart+15, recentReal.length)+' of '+recentReal.length : ''"></span></div><div class="space-y-2"><template x-for="(act, idx) in paginatedReal()" :key="idx"><div class="flex items-center gap-3 py-2.5 px-3 bg-[#0d0d0d] border border-[#2a2214] rounded-xl"><div class="w-8 h-8 rounded-full flex items-center justify-center text-[14px] bg-[#1a150a] border border-[#3a2e1a]" x-text="act.type==='online'?'💳':'🎟️'"></div><div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="font-bold text-[13px]" x-text="act.code">CODE</span><span class="text-[10px] px-2 py-0.5 rounded-full bg-[#1a150a] text-[#e8bf58] border border-[#3a2e1a]" x-text="act.type==='online'?'Online Purchase':'Voucher'">Voucher</span></div><div class="text-[11px] text-gray-400 truncate" x-text="act.package+' • '+act.method">Package • Method</div></div><div class="text-right"><div class="text-[12px] font-bold" style="color:#e8bf58" x-text="act.amount">1,000 TZS</div><div class="text-[10px] text-gray-500" x-text="act.time">2m ago</div></div></div></template><div x-show="recentReal.length===0" class="text-center py-12"><div class="text-[40px] mb-2">📭</div><div class="text-[13px] text-gray-400">Hakuna miamala ya siku 30 zilizopita</div><div class="text-[11px] text-gray-500 mt-1">Vocha zilizoingizwa au kununuliwa online zitaonekana hapa</div></div></div><div x-show="recentReal.length>15" class="flex justify-between items-center mt-4 pt-3 border-t border-[#2a2214]"><button class="text-[12px] bg-[#1a150a] border border-[#3a2e1a] px-4 py-2 rounded-full text-[#e8bf58] disabled:opacity-30" :disabled="activityStart===0" @click="activityStart=Math.max(0, activityStart-15)">‹ Previous</button><div class="flex gap-1"><template x-for="p in Math.ceil(recentReal.length/15)" :key="p"><button class="w-7 h-7 rounded-full text-[11px] border" :class="(activityStart/15)+1===p?'bg-[#e8bf58] text-black border-[#e8bf58]':'bg-[#1a150a] border-[#3a2e1a] text-gray-400'" @click="activityStart=(p-1)*15" x-text="p">1</button></template></div><button class="text-[12px] bg-[#1a150a] border border-[#3a2e1a] px-4 py-2 rounded-full text-[#e8bf58] disabled:opacity-30" :disabled="activityStart+15>=recentReal.length" @click="activityStart=Math.min(recentReal.length-15, activityStart+15)">Next ›</button></div></div>
-      </section>
-
-      <section x-show="page==='devices'" class="space-y-4 max-w-[600px] mx-auto md:max-w-full">
-        <div class="wizard-card">
-          <div x-show="!deviceType">
-            <h2 class="text-[18px] font-extrabold">Add a device</h2><p class="text-[13px] text-gray-400 mt-1">Chagua aina ya kifaa unachotaka kuunganisha</p>
-            <div class="mt-6 space-y-3">
-              <button class="type-card w-full flex items-center gap-4 text-left" @click="selectDeviceType('mikrotik')"><div class="w-10 h-10 rounded-xl bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-lg">📡</div><div class="flex-1"><div class="font-bold text-[14px]">MikroTik</div><div class="text-[11px] text-gray-400">RB3011, hAP ac², hAP ax² · RouterOS</div></div><div class="text-gray-500">›</div></button>
-              <button class="type-card w-full flex items-center gap-4 text-left" @click="selectDeviceType('omada')"><div class="w-10 h-10 rounded-xl bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-lg">📶</div><div class="flex-1"><div class="font-bold text-[14px]">Omada EAP</div><div class="text-[11px] text-gray-400">EAP245, EAP610, EAP650 · TP-Link Omada</div></div><div class="text-gray-500">›</div></button>
-            </div>
-            <div x-show="devices.length>0" class="mt-8 border-t border-[#2a2214] pt-4"><h3 class="font-bold text-[13px] mb-3">Vifaa vyako (<span x-text="devices.length"></span>)</h3><template x-for="d in devices" :key="d.id"><div class="flex justify-between items-center py-2 text-[13px]"><span x-text="d.name"></span><button class="text-red-400 text-xs" @click="deleteDevice(d)">Futa</button></div></template></div>
-          </div>
-          <div x-show="deviceType==='mikrotik'">
-            <div class="flex items-center gap-2 mb-4"><button class="w-8 h-8 rounded-full bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center" @click="deviceType=null">‹</button><h2 class="font-bold">Link a MikroTik</h2></div>
-            <div class="space-y-3"><div><label class="text-[11px] text-gray-400">Location *</label><input class="field mt-1" x-model="linkLocation" placeholder="SIZA UKEREWE - FAMI NET"></div><div><label class="text-[11px] text-gray-400">SSID *</label><input class="field mt-1" x-model="linkSsid" placeholder="FAMI NET"></div><div><label class="text-[11px] text-gray-400">Port</label><select class="field mt-1" x-model="linkPort"><option>Port 1</option><option>Port 2</option><option>Port 3</option><option>Port 4</option><option>Port 5</option></select></div><div><label class="text-[11px] text-gray-400">Model</label><input class="field mt-1" x-model="linkModel" placeholder="RB3011"></div></div>
-            <div class="mt-6 flex gap-2"><button class="btn btn-gold flex-1" @click="saveMikroTik()">Hifadhi MikroTik</button><button class="btn" style="background:#1a150a;border:1px solid #3a2e1a" @click="deviceType=null">Nyuma</button></div>
-          </div>
-          <div x-show="deviceType==='omada'">
-            <div class="flex items-center gap-2 mb-4"><button class="w-8 h-8 rounded-full bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center" @click="deviceType=null">‹</button><h2 class="font-bold">Link an Omada EAP</h2></div>
-            <div class="space-y-3"><div><label class="text-[11px] text-gray-400">Location *</label><input class="field mt-1" x-model="omLocation" placeholder="SIZA UKEREWE"></div><div><label class="text-[11px] text-gray-400">SSID *</label><input class="field mt-1" x-model="omSsid" placeholder="FAMI NET"></div><div><label class="text-[11px] text-gray-400">MAC Address</label><input class="field mt-1" x-model="omMac" placeholder="AA:BB:CC:DD:EE:FF"></div></div>
-            <div class="mt-6 flex gap-2"><button class="btn btn-blue flex-1" @click="finishOmadaWizard()">Hifadhi Omada EAP</button><button class="btn" style="background:#1a150a;border:1px solid #3a2e1a" @click="deviceType=null">Nyuma</button></div>
-          </div>
-        </div>
-      </section>
-
-      <section x-show="page==='vouchers'" class="space-y-4 max-w-[480px] mx-auto md:max-w-full">
-        <div class="flex justify-between items-center"><h2 class="font-bold">Vouchers</h2><span class="text-[11px] bg-[#1a150a] border border-[#3a2e1a] px-3 py-1 rounded-full text-[#e8bf58]">Active • <span x-text="vouchers.length">0</span></span></div>
-        <div class="grid grid-cols-2 gap-3"><div class="upesi-stat"><div><div class="text-[11px] text-gray-400">◧ Generated</div><div class="text-xl font-bold mt-1" style="color:#f3d27b" x-text="vouchers.length">0</div></div></div><div class="upesi-stat"><div><div class="text-[11px] text-gray-400">☑ Used</div><div class="text-xl font-bold mt-1" x-text="vouchers.filter(v=>v.status==='used').length">0</div></div></div><div class="upesi-stat"><div><div class="text-[11px] text-gray-400">◍ Active</div><div class="text-xl font-bold mt-1 text-green-400" x-text="vouchers.filter(v=>v.status==='unused'||v.status==='active').length">0</div></div></div><div class="upesi-stat"><div><div class="text-[11px] text-gray-400">🗑 Cleared</div><div class="text-xl font-bold mt-1" x-text="stats.cleared||0">0</div></div></div></div>
-        <div class="upesi-card">
-          <h3 class="font-bold mb-3 text-[14px]">Vouchers</h3>
-          <div class="flex gap-2 mb-3"><button class="upesi-tab" :class="voucherTab==='all'?'active':''" @click="voucherTab='all'">All <span class="bg-[#e8bf58] text-black px-1.5 rounded-full text-[10px]" x-text="filteredByPackage().length">0</span></button><button class="upesi-tab" :class="voucherTab==='active'?'active':''" @click="voucherTab='active'">Active</button><button class="upesi-tab" :class="voucherTab==='used'?'active':''" @click="voucherTab='used'">Used</button><button class="upesi-tab" :class="voucherTab==='expired'?'active':''" @click="voucherTab='expired'; loadExpired()">Zimeisha Muda</button></div>
-          <div class="relative mb-3"><button class="upesi-input text-left flex justify-between items-center text-[13px]" @click="showPackageFilter=!showPackageFilter"><span x-text="selectedPackageFilter? selectedPackageFilter : 'Vifurushi vyote ('+vouchers.length+')'">Vifurushi</span><span>▼</span></button><div x-show="showPackageFilter" class="absolute z-20 w-full mt-2 bg-[#080808] border border-[#3a2e1a] rounded-xl p-2 max-h-64 overflow-y-auto"><button class="w-full text-left px-3 py-2 hover:bg-[#1a150a] rounded text-sm" @click="selectedPackageFilter=''; showPackageFilter=false">Vyote (<span x-text="vouchers.length"></span>)</button><template x-for="p in packages" :key="p.id"><button class="w-full text-left px-3 py-2 hover:bg-[#1a150a] rounded text-sm" @click="selectedPackageFilter=p.name; showPackageFilter=false" x-text="p.name"></button></template></div></div>
-          <button x-show="voucherTab!=='expired'" class="w-full rounded-xl py-3 font-bold text-[13px] mb-3" style="background:linear-gradient(135deg,#ffe69a,#d7a633);color:#111" @click="printVouchers('B')">⬇ Download <span x-text="vouchers.filter(v=>v.status==='unused'||v.status==='active').length">0</span> unused as PDF</button>
-          <div x-show="voucherTab!=='expired'">
-            <template x-for="v in filteredVouchers().slice(0, displayLimit)" :key="v.id||v.code">
-              <div class="voucher-row">
-                <div><div class="font-bold tracking-widest" style="color:#e8bf58" x-text="v.code||v.voucher_code">CODE</div><div class="text-[11px] text-gray-400" x-text="v.package_name||packageName(v.package_id)">Package</div></div>
-                <div class="text-right"><div class="text-[10px]" :class="v.status==='unused'||v.status==='active'?'text-green-400':'text-orange-400'" x-text="v.status==='unused'||v.status==='active'?'+ Unused':'• Used'"></div><button class="delete-btn mt-1" @click="deleteVoucher(v)">🗑️ Delete</button></div>
-              </div>
-            </template>
-            <div x-show="filteredVouchers().length===0" class="text-center text-gray-500 py-10">Hakuna vocha - Tengeneza hapo chini 👇</div>
-          </div>
-          <div x-show="voucherTab==='expired'"><template x-for="v in expiredVouchers" :key="v.id"><div class="voucher-row"><div><div class="font-bold" x-text="v.code"></div><div class="text-[11px] text-gray-400" x-text="v.device_model"></div></div><div class="text-right"><div class="text-[11px]" x-text="formatDate(v.used_at)"></div><button class="delete-btn" @click="deleteVoucher(v)">🗑️ Delete</button></div></div></template></div>
-        </div>
-
-        <div class="upesi-card" style="border-color:#3a2e1a"><h3 class="font-bold text-[14px]">🎟️ Tengeneza vocha</h3><p class="text-[11px] text-gray-500 mb-4">Chagua kifurushi, idadi na muundo</p><div class="space-y-4"><div><label class="text-[11px] text-gray-400">Kifurushi *</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.package_id"><option value="">Chagua kifurushi</option><template x-for="p in packages" :key="p.id"><option :value="p.id" x-text="p.name+' - '+money(p.price)+' TSh'"></option></template></select></div><div><label class="text-[11px] text-gray-400">Idadi</label><div class="flex items-center gap-3 mt-1.5"><button type="button" class="w-10 h-10 rounded-full bg-[#080808] border border-[#3a2e1a] text-[#e8bf58]" @click="voucherForm.quantity=Math.max(1,voucherForm.quantity-1)">−</button><div class="flex-1 text-center bg-[#080808] border border-[#3a2e1a] rounded-xl py-2.5 font-bold" x-text="voucherForm.quantity">10</div><button type="button" class="w-10 h-10 rounded-full bg-[#080808] border border-[#3a2e1a] text-[#e8bf58]" @click="voucherForm.quantity=Math.min(500,voucherForm.quantity+1)">+</button></div><div class="flex gap-2 mt-3 items-center"><span class="text-[11px] text-gray-400">Haraka:</span><template x-for="n in [10,25,50,100]" :key="n"><button type="button" class="haraka-btn" :class="voucherForm.quantity===n?'active':''" @click="voucherForm.quantity=n" x-text="n">10</button></template></div></div><div><label class="text-[11px] text-gray-400">Muundo wa kodi</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.code_type"><option value="numbers">Namba tu - 244175</option><option value="letters">Herufi tu - RYCSVD</option><option value="mixed">Herufi na namba - R5C2V1</option></select></div><div><label class="text-[11px] text-gray-400">Ukubwa wa kuchapisha - Page1 A4</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.template"><option value="B">B: 100 bila QR - 38×13.8mm</option><option value="A">A: 50 na QR/LAHA</option><option value="C">C: 32 na QR Kubwa</option></select></div><div><label class="text-[11px] text-gray-400">Mitindo</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.qr_or_laha"><option value="QR">Kawaida - QR Code</option><option value="LAHA">Kawaida - LAHA - Kata hapa ✂️</option></select></div><div><label class="text-[11px] text-gray-400">Prefix</label><div class="flex gap-2 mt-1.5"><input class="upesi-input flex-1" x-model="voucherForm.prefix" placeholder="FAMI"><label class="flex items-center gap-2 text-[11px] bg-[#080808] border border-[#3a2e1a] px-3 rounded-xl"><input type="checkbox" x-model="voucherForm.use_prefix"> Tumia</label></div></div><button class="w-full rounded-xl py-3.5 font-bold text-[14px]" style="background:linear-gradient(135deg,#ffe69a,#d7a633);color:#111" @click="createVoucher()" :disabled="saving">+ Tengeneza vocha <span x-text="voucherForm.quantity">10</span></button></div></div>
-        <div class="upesi-card"><div class="flex justify-between mb-3"><h3 class="text-[13px] font-bold">Hakiki ya vocha</h3><span class="text-[11px] text-[#e8bf58]" x-text="voucherForm.template">B</span></div><div class="bg-white text-black rounded-lg p-3 text-center w-[200px] mx-auto"><div class="text-[10px] font-bold bg-[#d7a633] text-black -m-3 mb-2 p-1 rounded-t">MR HAAS WI-FI</div><div class="text-[11px]" x-text="(selectedPackageName()||'MR HAAS GEN Z')+' - TZS '+(selectedPackagePrice()||'1,000')">Package</div><div class="text-2xl font-bold tracking-widest mt-2" style="color:#aa781b" x-text="previewCode()">244175</div></div></div>
-        <div x-show="showPrintPreview" class="fixed inset-0 z-[200] bg-white overflow-auto p-2"><div class="flex justify-between mb-2 bg-black text-white p-3 rounded sticky top-0"><div><h2 class="font-bold">Preview Page1 A4 - <span x-text="printTemplate"></span></h2><p class="text-xs" x-text="printBatchId"></p></div><div class="flex gap-2"><button class="text-white text-xs border px-3 py-1 rounded" @click="showPrintPreview=false">Funga</button><button class="bg-[#d7a633] text-black text-xs px-3 py-1 rounded font-bold" @click="doPrint()">🖨️ Chapisha</button></div></div><div id="printGrid" class="mx-auto bg-white"></div></div>
-      </section>
-
-      <section x-show="page==='sites'"><h2 class="font-bold mb-4">My sites</h2><div class="card">My sites</div></section>
-      <section x-show="page==='packages'"><h2 class="font-bold mb-4">Packages</h2><div class="card">Packages</div></section>
-      <section x-show="page==='clients'"><h2 class="font-bold mb-4">Customers</h2><div class="card">Customers</div></section>
-      <section x-show="page==='payments'"><h2 class="font-bold mb-4">Sales</h2><div class="card">Sales</div></section>
-      <section x-show="page==='reports'"><h2 class="font-bold mb-4">Reports</h2><div class="card">Reports</div></section>
-      <section x-show="page==='portal'"><h2 class="font-bold mb-4">Portal branding</h2><div class="card">Portal branding</div></section>
-      <section x-show="page==='wallet'"><h2 class="font-bold mb-4">MH Wallet</h2><div class="card">MH Wallet</div></section>
-      <section x-show="page==='subscription'"><h2 class="font-bold mb-4">Subscription</h2><div class="card">Subscription</div></section>
-      <section x-show="page==='payment-settings'"><h2 class="font-bold mb-4">Payment settings</h2><div class="card">Payment settings</div></section>
-      <section x-show="page==='support'"><h2 class="font-bold mb-4">Support</h2><div class="card">Support</div></section>
-      <section x-show="page==='team'"><h2 class="font-bold mb-4">Team</h2><div class="card">Team</div></section>
-      <section x-show="page==='settings'"><h2 class="font-bold mb-4">Settings</h2><div class="card">Settings</div></section>
-    </main>
-  </div>
+<div class="min-h-screen flex">
+<aside class="sidebar fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col" :class="sidebarOpen?'translate-x-0':'-translate-x-full md:translate-x-0'">
+<div class="border-b border-[#292218] p-4">
+<div class="flex items-center gap-3"><div class="flex h-11 w-11 items-center justify-center rounded-xl border border-yellow-700/60 bg-black text-lg font-black" style="color:#e8bf58">MH</div><div><div class="font-extrabold tracking-wide">MR HAAS <span style="color:#e8bf58">NET</span></div><div class="mt-1 text-[10px] tracking-wider text-gray-500">WISP MANAGEMENT 🚀</div></div></div>
 </div>
-<script src="data:application/javascript;base64,ZnVuY3Rpb24gYXBwKCl7CiAgcmV0dXJuIHsKICAgIGFwaTonJywgdG9rZW46bG9jYWxTdG9yYWdlLmdldEl0ZW0oJ21yaGFhc190b2tlbicpfHwnJywgdGVuYW50SWQ6bG9jYWxTdG9yYWdlLmdldEl0ZW0oJ21yaGFhc190ZW5hbnRfaWQnKXx8JycsIHRlbmFudDp7fSx1c2VyOnt9LHBhZ2U6J2Rhc2hib2FyZCcsc2lkZWJhck9wZW46ZmFsc2UsbG9hZGluZzpmYWxzZSxzYXZpbmc6ZmFsc2UsIG5vdGljZTp7dGV4dDonJyx0eXBlOidzdWNjZXNzJ30sdm91Y2hlclRhYjonYWxsJywgZGlzcGxheUxpbWl0OjIwLCBzaG93UGFja2FnZUZpbHRlcjpmYWxzZSwgc2VsZWN0ZWRQYWNrYWdlRmlsdGVyOicnLCBzdGF0czp7Y2xlYXJlZDowfSwgY2xpZW50czpbXSxkZXZpY2VzOltdLHNpdGVzOltdLHBhY2thZ2VzOltdLHZvdWNoZXJzOltdLGV4cGlyZWRWb3VjaGVyczpbXSxwYXltZW50czpbXSwgbGFzdEJhdGNoOm51bGwsIHNob3dQcmludFByZXZpZXc6ZmFsc2UsIHByaW50VGVtcGxhdGU6J0InLCBwcmludEJhdGNoSWQ6JycsIHRpbWVBZ286JzE0cyBhZ28nLCByZWZyZXNoQ291bnRkb3duOjE1LCBhY3Rpdml0eVN0YXJ0OjAsCiAgICB2b3VjaGVyRm9ybTp7cXVhbnRpdHk6MTAscGFja2FnZV9pZDonJyxjb2RlX3R5cGU6J251bWJlcnMnLHByZWZpeDonRkFNSScsdXNlX3ByZWZpeDpmYWxzZSx0ZW1wbGF0ZTonQicscXJfb3JfbGFoYTonUVInfSwKICAgIHNob3dMaW5rV2l6YXJkOmZhbHNlLCBkZXZpY2VUeXBlOm51bGwsIGxpbmtMb2NhdGlvbjonJywgbGlua1NzaWQ6JycsIGxpbmtQb3J0OidQb3J0IDEnLCBsaW5rTW9kZWw6JycsIG9tTG9jYXRpb246J1NJWkEgVUtFUkVXRScsIG9tU3NpZDonRkFNSSBORVQnLCBvbU1hYzonJywKICAgIGdldCBkZXZpY2VzT25saW5lUmVhbCgpe3JldHVybiB0aGlzLmRldmljZXMuZmlsdGVyKGQ9PmQuc3RhdHVzPT09J29ubGluZSd8fGQuaXNfb25saW5lKS5sZW5ndGh9LAogICAgZ2V0IHVzZXJzT25saW5lUmVhbCgpe3JldHVybiB0aGlzLmNsaWVudHMuZmlsdGVyKGM9PmMuaXNfb25saW5lfHxjLnN0YXR1cz09PSdvbmxpbmUnKS5sZW5ndGh9LAogICAgZ2V0IGRhdGFJblVzZVJlYWwoKXtyZXR1cm4gJzAgR0InfSwKICAgIGdldCByZXZUb2RheSgpe2NvbnN0IHA9dGhpcy5wYXltZW50cy5maWx0ZXIoeD0+dGhpcy5pc1RvZGF5KHguY3JlYXRlZF9hdHx8eC5kYXRlKSk7IGNvbnN0IHN1bT1wLnJlZHVjZSgoYSxiKT0+YStOdW1iZXIoYi5hbW91bnR8fDApLDApOyByZXR1cm4gdGhpcy5tb25leShzdW0pKycgVFpTJ30sCiAgICBnZXQgcmV2WWVzdGVyZGF5KCl7Y29uc3QgeT1uZXcgRGF0ZSgpOyB5LnNldERhdGUoeS5nZXREYXRlKCktMSk7IGNvbnN0IHA9dGhpcy5wYXltZW50cy5maWx0ZXIoeD0+e2NvbnN0IGQ9bmV3IERhdGUoeC5jcmVhdGVkX2F0fHx4LmRhdGUpOyByZXR1cm4gZC50b0RhdGVTdHJpbmcoKT09PXkudG9EYXRlU3RyaW5nKCl9KTsgY29uc3Qgc3VtPXAucmVkdWNlKChhLGIpPT5hK051bWJlcihiLmFtb3VudHx8MCksMCk7IHJldHVybiB0aGlzLm1vbmV5KHN1bSkrJyBUWlMnfSwKICAgIGdldCByZXZXZWVrKCl7Y29uc3Qgbm93PW5ldyBEYXRlKCk7IGNvbnN0IHdlZWtBZ289bmV3IERhdGUoKTsgd2Vla0Fnby5zZXREYXRlKG5vdy5nZXREYXRlKCktNyk7IGNvbnN0IHA9dGhpcy5wYXltZW50cy5maWx0ZXIoeD0+e2NvbnN0IGQ9bmV3IERhdGUoeC5jcmVhdGVkX2F0fHx4LmRhdGUpOyByZXR1cm4gZD49d2Vla0Fnb30pOyBjb25zdCBzdW09cC5yZWR1Y2UoKGEsYik9PmErTnVtYmVyKGIuYW1vdW50fHwwKSwwKTsgcmV0dXJuIHRoaXMubW9uZXkoc3VtKSsnIFRaUyd9LAogICAgZ2V0IHJldlllYXIoKXtjb25zdCBub3c9bmV3IERhdGUoKTsgY29uc3QgcD10aGlzLnBheW1lbnRzLmZpbHRlcih4PT57Y29uc3QgZD1uZXcgRGF0ZSh4LmNyZWF0ZWRfYXR8fHguZGF0ZSk7IHJldHVybiBkLmdldEZ1bGxZZWFyKCk9PT1ub3cuZ2V0RnVsbFllYXIoKX0pOyBjb25zdCBzdW09cC5yZWR1Y2UoKGEsYik9PmErTnVtYmVyKGIuYW1vdW50fHwwKSwwKTsgcmV0dXJuIHRoaXMubW9uZXkoc3VtKSsnIFRaUyd9LAogICAgZ2V0IHJldlRvZGF5Q291bnQoKXtyZXR1cm4gdGhpcy5wYXltZW50cy5maWx0ZXIoeD0+dGhpcy5pc1RvZGF5KHguY3JlYXRlZF9hdHx8eC5kYXRlKSkubGVuZ3RofSwKICAgIGdldCByZXZZZXN0ZXJkYXlDb3VudCgpe2NvbnN0IHk9bmV3IERhdGUoKTsgeS5zZXREYXRlKHkuZ2V0RGF0ZSgpLTEpOyByZXR1cm4gdGhpcy5wYXltZW50cy5maWx0ZXIoeD0+e2NvbnN0IGQ9bmV3IERhdGUoeC5jcmVhdGVkX2F0fHx4LmRhdGUpOyByZXR1cm4gZC50b0RhdGVTdHJpbmcoKT09PXkudG9EYXRlU3RyaW5nKCl9KS5sZW5ndGh9LAogICAgZ2V0IHJldldlZWtDb3VudCgpe2NvbnN0IG5vdz1uZXcgRGF0ZSgpOyBjb25zdCB3ZWVrQWdvPW5ldyBEYXRlKCk7IHdlZWtBZ28uc2V0RGF0ZShub3cuZ2V0RGF0ZSgpLTcpOyByZXR1cm4gdGhpcy5wYXltZW50cy5maWx0ZXIoeD0+e2NvbnN0IGQ9bmV3IERhdGUoeC5jcmVhdGVkX2F0fHx4LmRhdGUpOyByZXR1cm4gZD49d2Vla0Fnb30pLmxlbmd0aH0sCiAgICBnZXQgcmV2WWVhckNvdW50KCl7Y29uc3Qgbm93PW5ldyBEYXRlKCk7IHJldHVybiB0aGlzLnBheW1lbnRzLmZpbHRlcih4PT57Y29uc3QgZD1uZXcgRGF0ZSh4LmNyZWF0ZWRfYXR8fHguZGF0ZSk7IHJldHVybiBkLmdldEZ1bGxZZWFyKCk9PT1ub3cuZ2V0RnVsbFllYXIoKX0pLmxlbmd0aH0sCiAgICBnZXQgcmVjZW50UmVhbCgpewogICAgICBjb25zdCBub3c9bmV3IERhdGUoKTsgY29uc3QgdGhpcnR5PW5ldyBEYXRlKCk7IHRoaXJ0eS5zZXREYXRlKG5vdy5nZXREYXRlKCktMzApOwogICAgICBjb25zdCBhY3RzPVtdOwogICAgICB0aGlzLnBheW1lbnRzLmZpbHRlcihwPT57Y29uc3QgZD1uZXcgRGF0ZShwLmNyZWF0ZWRfYXR8fHAuZGF0ZSk7IHJldHVybiBkPj10aGlydHl9KS5mb3JFYWNoKHA9PnsKICAgICAgICBhY3RzLnB1c2goe2NvZGU6cC52b3VjaGVyX2NvZGV8fHAuY29kZXx8Jy0nLCBwYWNrYWdlOnAucGFja2FnZV9uYW1lfHwnUGFja2FnZScsIGFtb3VudDp0aGlzLm1vbmV5KHAuYW1vdW50fHwwKSsnIFRaUycsIHR5cGU6cC50eXBlfHwnb25saW5lJywgbWV0aG9kOnAubWV0aG9kfHxwLnBheW1lbnRfbWV0aG9kfHwnTS1QZXNhJywgdGltZTp0aGlzLnRpbWVBZ29Gb3JtYXQobmV3IERhdGUocC5jcmVhdGVkX2F0fHxwLmRhdGUpKSwgZGF0ZTpuZXcgRGF0ZShwLmNyZWF0ZWRfYXR8fHAuZGF0ZSl9KTsKICAgICAgfSk7CiAgICAgIHRoaXMudm91Y2hlcnMuZmlsdGVyKHY9Pntjb25zdCBkPW5ldyBEYXRlKHYuY3JlYXRlZF9hdHx8di51c2VkX2F0fHx2LmRhdGUpOyByZXR1cm4gIWlzTmFOKGQpICYmIGQ+PXRoaXJ0eX0pLnNsaWNlKDAsMTUpLmZvckVhY2godj0+ewogICAgICAgIGlmKHYuc3RhdHVzPT09J3VzZWQnIHx8IHYudXNlZF9hdCl7CiAgICAgICAgICBhY3RzLnB1c2goe2NvZGU6di5jb2RlfHx2LnZvdWNoZXJfY29kZSwgcGFja2FnZTp2LnBhY2thZ2VfbmFtZXx8dGhpcy5wYWNrYWdlTmFtZSh2LnBhY2thZ2VfaWQpLCBhbW91bnQ6dGhpcy5tb25leSh0aGlzLnBhY2thZ2VQcmljZSh2LnBhY2thZ2VfaWQpKSsnIFRaUycsIHR5cGU6J3ZvdWNoZXInLCBtZXRob2Q6J01hbnVhbCcsIHRpbWU6dGhpcy50aW1lQWdvRm9ybWF0KG5ldyBEYXRlKHYudXNlZF9hdHx8di5jcmVhdGVkX2F0KSksIGRhdGU6bmV3IERhdGUodi51c2VkX2F0fHx2LmNyZWF0ZWRfYXQpfSk7CiAgICAgICAgfQogICAgICB9KTsKICAgICAgcmV0dXJuIGFjdHMuc29ydCgoYSxiKT0+Yi5kYXRlLWEuZGF0ZSk7CiAgICB9LAogICAgaXNUb2RheShkYXRlU3RyKXtpZighZGF0ZVN0cikgcmV0dXJuIGZhbHNlOyBjb25zdCBkPW5ldyBEYXRlKGRhdGVTdHIpOyBjb25zdCBub3c9bmV3IERhdGUoKTsgcmV0dXJuIGQudG9EYXRlU3RyaW5nKCk9PT1ub3cudG9EYXRlU3RyaW5nKCk7fSwKICAgIHRpbWVBZ29Gb3JtYXQoZCl7Y29uc3QgZGlmZj1NYXRoLmZsb29yKChuZXcgRGF0ZSgpLWQpLzYwMDAwKTsgaWYoZGlmZjwxKSByZXR1cm4gJ0p1c3Qgbm93JzsgaWYoZGlmZjw2MCkgcmV0dXJuIGRpZmYrJ20gYWdvJzsgaWYoZGlmZjwxNDQwKSByZXR1cm4gTWF0aC5mbG9vcihkaWZmLzYwKSsnaCBhZ28nOyByZXR1cm4gTWF0aC5mbG9vcihkaWZmLzE0NDApKydkIGFnbyc7fSwKICAgIHBhZ2luYXRlZFJlYWwoKXtyZXR1cm4gdGhpcy5yZWNlbnRSZWFsLnNsaWNlKHRoaXMuYWN0aXZpdHlTdGFydCwgdGhpcy5hY3Rpdml0eVN0YXJ0KzE1KX0sCiAgICBwYWNrYWdlUHJpY2UoaWQpe2NvbnN0IHA9dGhpcy5wYWNrYWdlcy5maW5kKHg9PlN0cmluZyh4LmlkKT09PVN0cmluZyhpZCkpOyByZXR1cm4gcD9OdW1iZXIocC5wcmljZSk6MH0sCiAgICBncmVldGluZ1RleHQoKXtjb25zdCBoPW5ldyBEYXRlKCkuZ2V0SG91cnMoKTsgaWYoaD49NSYmaDwxMikgcmV0dXJuICdIYWJhcmkgeWEgYXN1YnVoaSc7IGlmKGg+PTEyJiZoPDE1KSByZXR1cm4gJ0hhYmFyaSB5YSBtY2hhbmEnOyBpZihoPj0xNSYmaDwxOSkgcmV0dXJuICdIYWJhcmkgeWEgamlvbmknOyByZXR1cm4gJ0hhYmFyaSB5YSB1c2lrdSc7fSwKICAgIGdyZWV0aW5nRW1vamkoKXtjb25zdCBoPW5ldyBEYXRlKCkuZ2V0SG91cnMoKTsgaWYoaD49NSYmaDwxMikgcmV0dXJuICfwn4yFJzsgaWYoaD49MTImJmg8MTUpIHJldHVybiAn4piA77iPJzsgaWYoaD49MTUmJmg8MTkpIHJldHVybiAn8J+Mhyc7IHJldHVybiAn8J+MmSc7fSwKICAgIGdyZWV0aW5nU3ViVGV4dCgpe2NvbnN0IGg9bmV3IERhdGUoKS5nZXRIb3VycygpOyBpZihoPj01JiZoPDEyKSByZXR1cm4gJ0FzdWJ1aGkgbmplbWEhIFRheWFyaSBrd2Egc2lrdSBtcHlhIHlhIGthemk/IPCfmoAnOyBpZihoPj0xMiYmaDwxNSkgcmV0dXJuICdNY2hhbmEgbXdlbWEhIEVuZGVsZWEga3VzaW1hbWlhIG10YW5kYW8gd2FrbyDimIDvuI8nOyBpZihoPj0xNSYmaDwxOSkgcmV0dXJuICdKaW9uaSBuamVtYSEgVW1lZmFueWEga2F6aSBuenVyaSBsZW8g8J+Mhyc7IHJldHVybiAnVXNpa3UgbXdlbWEhIFB1bXppa2EsIGtlc2hvIG5pIHNpa3UgbnlpbmdpbmUg8J+MmSc7fSwKICAgIGFzeW5jIGluaXQoKXsKICAgICAgaWYoIXRoaXMudG9rZW58fCF0aGlzLnRlbmFudElkKXt3aW5kb3cubG9jYXRpb24ucmVwbGFjZSgnL2xvZ2luLmh0bWwnKTtyZXR1cm59CiAgICAgIGF3YWl0IHRoaXMubG9hZE1lKCk7YXdhaXQgdGhpcy5sb2FkUGFnZURhdGEoKTsKICAgICAgc2V0SW50ZXJ2YWwoKCk9Pnt0aGlzLnRpbWVBZ289TWF0aC5mbG9vcihNYXRoLnJhbmRvbSgpKjMwKSsncyBhZ28nO30sIDUwMDApOwogICAgICBzZXRJbnRlcnZhbCgoKT0+e3RoaXMucmVmcmVzaENvdW50ZG93bi0tOyBpZih0aGlzLnJlZnJlc2hDb3VudGRvd248PTApe3RoaXMucmVmcmVzaENvdW50ZG93bj0xNTsgaWYodGhpcy5wYWdlPT09J2Rhc2hib2FyZCcpe3RoaXMubG9hZFBhZ2VEYXRhKCk7fX19LCAxMDAwKTsKICAgICAgc2V0SW50ZXJ2YWwoKCk9PntpZih0aGlzLnBhZ2U9PT0nZGFzaGJvYXJkJyl7dGhpcy5sb2FkUGFnZURhdGEoKTsgdGhpcy5yZWZyZXNoQ291bnRkb3duPTE1O319LCAxNTAwMCk7CiAgICB9LAogICAgaGVhZGVycyhqPXRydWUpe2NvbnN0IGg9eydBdXRob3JpemF0aW9uJzonQmVhcmVyICcrdGhpcy50b2tlbn07aWYoailoWydDb250ZW50LVR5cGUnXT0nYXBwbGljYXRpb24vanNvbic7aWYodGhpcy50ZW5hbnRJZCloWydYLVRlbmFudC1JRCddPXRoaXMudGVuYW50SWQ7cmV0dXJuIGg7fSwKICAgIGFzeW5jIHJlcXVlc3QocCxvPXt9KXtjb25zdCByPWF3YWl0IGZldGNoKHRoaXMuYXBpK3Asey4uLm8saGVhZGVyczp7Li4udGhpcy5oZWFkZXJzKCksLi4uKG8uaGVhZGVyc3x8e30pfX0pO2NvbnN0IGQ9YXdhaXQgci5qc29uKCkuY2F0Y2goKCk9Pih7fSkpO2lmKHIuc3RhdHVzPT09NDAxKXt0aGlzLmxvZ291dCgpO3Rocm93IG5ldyBFcnJvcignU2Vzc2lvbiBleHBpcmVkJyl9aWYoIXIub2spdGhyb3cgbmV3IEVycm9yKGQubWVzc2FnZXx8J0ZhaWxlZCcpO3JldHVybiBkO30sCiAgICBhc3luYyBsb2FkTWUoKXt0cnl7Y29uc3QgZGF0YT1hd2FpdCB0aGlzLnJlcXVlc3QoJy9hcGkvYXV0aC9tZScpO3RoaXMudGVuYW50PWRhdGEudGVuYW50fHxkYXRhO3RoaXMudXNlcj1kYXRhLnVzZXJ8fHtlbWFpbDp0aGlzLnRlbmFudC5lbWFpbHx8Jyd9O31jYXRjaChlKXt9fSwKICAgIGFzeW5jIGxvYWRQYWdlRGF0YSgpe3RoaXMubG9hZGluZz10cnVlO2NvbnN0IHRpZD1lbmNvZGVVUklDb21wb25lbnQodGhpcy50ZW5hbnRJZCk7Y29uc3Qgam9icz1bWydjbGllbnRzJywnL2FwaS9jbGllbnRzLycrdGlkXSxbJ2RldmljZXMnLCcvYXBpL2RldmljZXMvJyt0aWRdLFsnc2l0ZXMnLCcvYXBpL3NpdGVzLycrdGlkXSxbJ3BhY2thZ2VzJywnL2FwaS9wYWNrYWdlcy8nK3RpZF0sWyd2b3VjaGVycycsJy9hcGkvdm91Y2hlcnMvJyt0aWRdLFsncGF5bWVudHMnLCcvYXBpL3BheW1lbnRzLycrdGlkXV07YXdhaXQgUHJvbWlzZS5hbGwoam9icy5tYXAoYXN5bmMoW2sscGF0aF0pPT57dHJ5e2NvbnN0IGRhdGE9YXdhaXQgdGhpcy5yZXF1ZXN0KHBhdGgpO2NvbnN0IHY9ZGF0YVtrXXx8ZGF0YS5pdGVtc3x8ZGF0YS5kYXRhfHxkYXRhO2lmKEFycmF5LmlzQXJyYXkodikpdGhpc1trXT12fWNhdGNoKGUpe319KSk7dGhpcy5sb2FkaW5nPWZhbHNlOyB0aGlzLnJlZnJlc2hDb3VudGRvd249MTU7fSwKICAgIHNlbGVjdERldmljZVR5cGUodCl7dGhpcy5kZXZpY2VUeXBlPXR9LAogICAgZ29EaXJlY3RBZGREZXZpY2VzKCl7dGhpcy5wYWdlPSdkZXZpY2VzJzsgdGhpcy5kZXZpY2VUeXBlPW51bGw7IHRoaXMuc2hvd0xpbmtXaXphcmQ9dHJ1ZTsgdGhpcy5zaWRlYmFyT3Blbj1mYWxzZTt9LAogICAgYXN5bmMgc2F2ZU1pa3JvVGlrKCl7dHJ5e2F3YWl0IHRoaXMucmVxdWVzdCgnL2FwaS9kZXZpY2VzJyx7bWV0aG9kOidQT1NUJyxib2R5OkpTT04uc3RyaW5naWZ5KHt0ZW5hbnRfaWQ6dGhpcy50ZW5hbnRJZCxuYW1lOnRoaXMubGlua0xvY2F0aW9uKycgLSAnK3RoaXMubGlua1NzaWQsdmVuZG9yOidNaWtyb1RpaycsbW9kZWw6dGhpcy5saW5rTW9kZWx8fCdSQicsc3NpZDp0aGlzLmxpbmtTc2lkLGxvY2F0aW9uOnRoaXMubGlua0xvY2F0aW9uLHBvcnQ6dGhpcy5saW5rUG9ydH0pfSk7dGhpcy5ub3RpZnkoJ01pa3JvVGlrIGltZWhpZmFkaGl3YScsJ3N1Y2Nlc3MnKTt9Y2F0Y2goZSl7dGhpcy5ub3RpZnkoZS5tZXNzYWdlLCdlcnJvcicpfXRoaXMuc2hvd0xpbmtXaXphcmQ9ZmFsc2U7dGhpcy5kZXZpY2VUeXBlPW51bGw7YXdhaXQgdGhpcy5sb2FkUGFnZURhdGEoKTt9LAogICAgYXN5bmMgZmluaXNoT21hZGFXaXphcmQoKXt0cnl7YXdhaXQgdGhpcy5yZXF1ZXN0KCcvYXBpL2RldmljZXMnLHttZXRob2Q6J1BPU1QnLGJvZHk6SlNPTi5zdHJpbmdpZnkoe3RlbmFudF9pZDp0aGlzLnRlbmFudElkLG5hbWU6dGhpcy5vbUxvY2F0aW9uKycgLSAnK3RoaXMub21Tc2lkLHZlbmRvcjonVFAtTGluayBPbWFkYScsbW9kZWw6J0VBUCcsbWFjX2FkZHJlc3M6dGhpcy5vbU1hYyxzc2lkOnRoaXMub21Tc2lkLGxvY2F0aW9uOnRoaXMub21Mb2NhdGlvbn0pfSk7dGhpcy5ub3RpZnkoJ09tYWRhIEVBUCBpbWVoaWZhZGhpd2EnLCdzdWNjZXNzJyk7fWNhdGNoKGUpe3RoaXMubm90aWZ5KGUubWVzc2FnZSwnZXJyb3InKX10aGlzLnNob3dMaW5rV2l6YXJkPWZhbHNlO3RoaXMuZGV2aWNlVHlwZT1udWxsO2F3YWl0IHRoaXMubG9hZFBhZ2VEYXRhKCk7fSwKICAgIGFzeW5jIGRlbGV0ZURldmljZShkKXtpZighY29uZmlybSgnRnV0YSBraWZhYSAnK2QubmFtZSsnID8nKSlyZXR1cm47dHJ5e2F3YWl0IHRoaXMucmVxdWVzdCgnL2FwaS9kZXZpY2VzLycrZW5jb2RlVVJJQ29tcG9uZW50KGQuaWQpLHttZXRob2Q6J0RFTEVURSd9KTthd2FpdCB0aGlzLmxvYWRQYWdlRGF0YSgpO31jYXRjaChlKXt0aGlzLm5vdGlmeShlLm1lc3NhZ2UsJ2Vycm9yJyl9fSwKICAgIGZpbHRlcmVkQnlQYWNrYWdlKCl7aWYoIXRoaXMuc2VsZWN0ZWRQYWNrYWdlRmlsdGVyKXJldHVybiB0aGlzLnZvdWNoZXJzO3JldHVybiB0aGlzLnZvdWNoZXJzLmZpbHRlcih2PT4gKHYucGFja2FnZV9uYW1lfHx0aGlzLnBhY2thZ2VOYW1lKHYucGFja2FnZV9pZCkpPT09dGhpcy5zZWxlY3RlZFBhY2thZ2VGaWx0ZXIpfSwKICAgIGZpbHRlcmVkVm91Y2hlcnMoKXtsZXQgbGlzdD10aGlzLmZpbHRlcmVkQnlQYWNrYWdlKCk7aWYodGhpcy52b3VjaGVyVGFiPT09J2FjdGl2ZScpIGxpc3Q9bGlzdC5maWx0ZXIodj0+di5zdGF0dXM9PT0ndW51c2VkJ3x8di5zdGF0dXM9PT0nYWN0aXZlJyk7aWYodGhpcy52b3VjaGVyVGFiPT09J3VzZWQnKSBsaXN0PWxpc3QuZmlsdGVyKHY9PnYuc3RhdHVzPT09J3VzZWQnKTtyZXR1cm4gbGlzdDt9LAogICAgc2VsZWN0ZWRQYWNrYWdlTmFtZSgpe2NvbnN0IHA9dGhpcy5wYWNrYWdlcy5maW5kKHg9PlN0cmluZyh4LmlkKT09PVN0cmluZyh0aGlzLnZvdWNoZXJGb3JtLnBhY2thZ2VfaWQpKTsgcmV0dXJuIHA/cC5uYW1lOicnO30sCiAgICBzZWxlY3RlZFBhY2thZ2VQcmljZSgpe2NvbnN0IHA9dGhpcy5wYWNrYWdlcy5maW5kKHg9PlN0cmluZyh4LmlkKT09PVN0cmluZyh0aGlzLnZvdWNoZXJGb3JtLnBhY2thZ2VfaWQpKTsgcmV0dXJuIHA/dGhpcy5tb25leShwLnByaWNlKTonMSwwMDAnO30sCiAgICBwcmV2aWV3Q29kZSgpe2NvbnN0IHQ9dGhpcy52b3VjaGVyRm9ybS5jb2RlX3R5cGU7aWYodD09PSdudW1iZXJzJykgcmV0dXJuIHRoaXMudm91Y2hlckZvcm0udXNlX3ByZWZpeD8gKHRoaXMudm91Y2hlckZvcm0ucHJlZml4fHwnRkFNSScpKyctMjQ0MTc1JyA6ICcyNDQxNzUnO2lmKHQ9PT0nbGV0dGVycycpIHJldHVybiB0aGlzLnZvdWNoZXJGb3JtLnVzZV9wcmVmaXg/ICh0aGlzLnZvdWNoZXJGb3JtLnByZWZpeHx8J0ZBTUknKSsnLVJZQ1NWRCcgOiAnUllDU1ZEJztyZXR1cm4gdGhpcy52b3VjaGVyRm9ybS51c2VfcHJlZml4PyAodGhpcy52b3VjaGVyRm9ybS5wcmVmaXh8fCdGQU1JJykrJy1SNUMyVjEnIDogJ1I1QzJWMSc7fSwKICAgIGFzeW5jIGNyZWF0ZVZvdWNoZXIoKXt0aGlzLnNhdmluZz10cnVlO3RyeXtjb25zdCBwYXlsb2FkPXt0ZW5hbnRfaWQ6dGhpcy50ZW5hbnRJZCxxdWFudGl0eTp0aGlzLnZvdWNoZXJGb3JtLnF1YW50aXR5LHBhY2thZ2VfaWQ6dGhpcy52b3VjaGVyRm9ybS5wYWNrYWdlX2lkLGNvZGVfdHlwZTp0aGlzLnZvdWNoZXJGb3JtLmNvZGVfdHlwZSxwcmVmaXg6dGhpcy52b3VjaGVyRm9ybS5wcmVmaXgsdXNlX3ByZWZpeDp0aGlzLnZvdWNoZXJGb3JtLnVzZV9wcmVmaXgsdGVtcGxhdGU6dGhpcy52b3VjaGVyRm9ybS50ZW1wbGF0ZSxxcl9vcl9sYWhhOnRoaXMudm91Y2hlckZvcm0ucXJfb3JfbGFoYX07Y29uc3QgZGF0YT1hd2FpdCB0aGlzLnJlcXVlc3QoJy9hcGkvdm91Y2hlcnMnLHttZXRob2Q6J1BPU1QnLGJvZHk6SlNPTi5zdHJpbmdpZnkocGF5bG9hZCl9KTt0aGlzLmxhc3RCYXRjaD1kYXRhOyB0aGlzLm5vdGlmeShkYXRhLmNvdW50Kycgdm9jaGEgLSAnK2RhdGEuYmF0Y2hfaWQsJ3N1Y2Nlc3MnKTsgYXdhaXQgdGhpcy5sb2FkUGFnZURhdGEoKTt9Y2F0Y2goZSl7dGhpcy5ub3RpZnkoZS5tZXNzYWdlLCdlcnJvcicpfWZpbmFsbHl7dGhpcy5zYXZpbmc9ZmFsc2V9fSwKICAgIC8vIERFTEVURSBCQURBTEEgWUEgRElTQUJMRSAtIEZJWCBZQSBGQUlMRUQKICAgIGFzeW5jIGRlbGV0ZVZvdWNoZXIodil7CiAgICAgIGNvbnN0IGNvZGUgPSB2LmNvZGUgfHwgdi52b3VjaGVyX2NvZGUgfHwgdi5pZDsKICAgICAgY29uc3QgdmlkID0gdi5pZCB8fCB2Ll9pZCB8fCBjb2RlOwogICAgICBpZighY29uZmlybSgnRnV0YSB2b2NoYSAnK2NvZGUrJyA/IEhhaXdlemkga3VydWRpc2h3YSEnKSkgcmV0dXJuOwogICAgICB0cnl7CiAgICAgICAgY29uc3QgcmVzID0gYXdhaXQgZmV0Y2godGhpcy5hcGkrJy9hcGkvdm91Y2hlcnMvJytlbmNvZGVVUklDb21wb25lbnQodmlkKSwgewogICAgICAgICAgbWV0aG9kOidERUxFVEUnLAogICAgICAgICAgaGVhZGVyczp0aGlzLmhlYWRlcnMoZmFsc2UpCiAgICAgICAgfSk7CiAgICAgICAgY29uc3QgZGF0YSA9IGF3YWl0IHJlcy5qc29uKCkuY2F0Y2goKCk9Pih7fSkpOwogICAgICAgIGlmKCFyZXMub2spewogICAgICAgICAgLy8gamFyaWJ1IG5hIGNvZGUga2FtYSBpZCBpbWVzaGluZGlrYW5hCiAgICAgICAgICBjb25zdCByZXMyID0gYXdhaXQgZmV0Y2godGhpcy5hcGkrJy9hcGkvdm91Y2hlcnMvJytlbmNvZGVVUklDb21wb25lbnQoY29kZSksIHsKICAgICAgICAgICAgbWV0aG9kOidERUxFVEUnLAogICAgICAgICAgICBoZWFkZXJzOnRoaXMuaGVhZGVycyhmYWxzZSkKICAgICAgICAgIH0pOwogICAgICAgICAgY29uc3QgZGF0YTIgPSBhd2FpdCByZXMyLmpzb24oKS5jYXRjaCgoKT0+KHt9KSk7CiAgICAgICAgICBpZighcmVzMi5vaykgdGhyb3cgbmV3IEVycm9yKGRhdGEyLm1lc3NhZ2V8fGRhdGEubWVzc2FnZXx8J0ltZXNoaW5kd2Ega3VmdXRhIC0gdm9jaGEgaGFpa3VwYXRpa2FuYScpOwogICAgICAgIH0KICAgICAgICB0aGlzLm5vdGlmeSgnVm9jaGEgJytjb2RlKycgaW1lZnV0d2EnLCdzdWNjZXNzJyk7CiAgICAgICAgLy8gT25kb2EgbG9jYWwgaGFyYWthIGJpbGEga3VzdWJpcmkgc2VydmVyCiAgICAgICAgdGhpcy52b3VjaGVycyA9IHRoaXMudm91Y2hlcnMuZmlsdGVyKHggPT4gU3RyaW5nKHguaWQpIT09U3RyaW5nKHZpZCkgJiYgU3RyaW5nKHguY29kZSkhPT1TdHJpbmcoY29kZSkgJiYgU3RyaW5nKHgudm91Y2hlcl9jb2RlKSE9PVN0cmluZyhjb2RlKSk7CiAgICAgICAgYXdhaXQgdGhpcy5sb2FkUGFnZURhdGEoKTsKICAgICAgfWNhdGNoKGUpewogICAgICAgIGNvbnNvbGUuZXJyb3IoJ0RlbGV0ZSBmYWlsZWQ6JywgZSk7CiAgICAgICAgdGhpcy5ub3RpZnkoJ0ZhaWxlZDogJytlLm1lc3NhZ2UsJ2Vycm9yJyk7CiAgICAgIH0KICAgIH0sCiAgICBhc3luYyBsb2FkRXhwaXJlZCgpe3RyeXtjb25zdCB0aWQ9ZW5jb2RlVVJJQ29tcG9uZW50KHRoaXMudGVuYW50SWQpO2NvbnN0IGRhdGE9YXdhaXQgdGhpcy5yZXF1ZXN0KCcvYXBpL3ZvdWNoZXJzL2V4cGlyZWQvJyt0aWQpO3RoaXMuZXhwaXJlZFZvdWNoZXJzPWRhdGEuZXhwaXJlZHx8W107fWNhdGNoKGUpe3RoaXMuZXhwaXJlZFZvdWNoZXJzPVtdfX0sCiAgICBwcmludFZvdWNoZXJzKHRwbCl7Y29uc3QgdGVtcGxhdGU9dHBsfHx0aGlzLnZvdWNoZXJGb3JtLnRlbXBsYXRlfHwnQic7bGV0IGxpbWl0PXRlbXBsYXRlPT09J0InPzEwMDp0ZW1wbGF0ZT09PSdDJz8zMjo1MDtsZXQgdG9QcmludD10aGlzLmxhc3RCYXRjaD8udm91Y2hlcnN8fHRoaXMuZmlsdGVyZWRWb3VjaGVycygpLmZpbHRlcih2PT52LnN0YXR1cz09PSd1bnVzZWQnfHx2LnN0YXR1cz09PSdhY3RpdmUnKS5zbGljZSgwLGxpbWl0KTt0b1ByaW50PXRvUHJpbnQuc2xpY2UoMCxsaW1pdCk7dGhpcy5wcmludFRlbXBsYXRlPXRlbXBsYXRlOyB0aGlzLnByaW50QmF0Y2hJZD10aGlzLmxhc3RCYXRjaD8uYmF0Y2hfaWR8fCdCQVRDSCc7IHRoaXMuc2hvd1ByaW50UHJldmlldz10cnVlO3RoaXMuJG5leHRUaWNrKCgpPT57Y29uc3QgZ3JpZD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncHJpbnRHcmlkJyk7IGlmKCFncmlkKSByZXR1cm47IGdyaWQuaW5uZXJIVE1MPScnOyBncmlkLmNsYXNzTmFtZT0ncHJpbnQtZ3JpZC0nK3RlbXBsYXRlKycgbXgtYXV0byBiZy13aGl0ZSc7dG9QcmludC5mb3JFYWNoKHY9Pntjb25zdCBjYXJkPWRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ2RpdicpOyBjYXJkLmNsYXNzTmFtZT0ndm91Y2hlci1jYXJkJztjb25zdCBjb2RlPXYuY29kZXx8di52b3VjaGVyX2NvZGV8fCcnO2NhcmQuaW5uZXJIVE1MPWA8ZGl2IHN0eWxlPSJmb250LXNpemU6N3B4O2ZvbnQtd2VpZ2h0OmJvbGQiPk1SIEhBQVMgV0ktRkk8L2Rpdj48ZGl2IHN0eWxlPSJmb250LXdlaWdodDo5MDA7Zm9udC1zaXplOjExcHgiPiR7Y29kZX08L2Rpdj48ZGl2IHN0eWxlPSJmb250LXNpemU6NnB4Ij4ke3RoaXMucHJpbnRCYXRjaElkfTwvZGl2PmA7Z3JpZC5hcHBlbmRDaGlsZChjYXJkKTt9KTt9KTt9LAogICAgZG9QcmludCgpe3dpbmRvdy5wcmludCgpfSwKICAgIGN1cnJlbnRUaXRsZSgpe2NvbnN0IG09e2Rhc2hib2FyZDonT3ZlcnZpZXcnLGRldmljZXM6J0FkZCBEZXZpY2VzJyxzaXRlczonTXkgc2l0ZXMnLHBhY2thZ2VzOidQYWNrYWdlcycsY2xpZW50czonQ3VzdG9tZXJzJyx2b3VjaGVyczonVm91Y2hlcnMnLHBheW1lbnRzOidTYWxlcycscmVwb3J0czonUmVwb3J0cycscG9ydGFsOidQb3J0YWwgYnJhbmRpbmcnLHdhbGxldDonTUggV2FsbGV0JyxzdWJzY3JpcHRpb246J1N1YnNjcmlwdGlvbicsJ3BheW1lbnQtc2V0dGluZ3MnOidQYXltZW50IHNldHRpbmdzJyxzdXBwb3J0OidTdXBwb3J0Jyx0ZWFtOidUZWFtJyxzZXR0aW5nczonU2V0dGluZ3MnfTtyZXR1cm4gbVt0aGlzLnBhZ2VdfHwnTVIgSEFBUyBORVQnO30sCiAgICBnbyhwYWdlKXtpZihwYWdlPT09J2RldmljZXMnKXt0aGlzLmdvRGlyZWN0QWRkRGV2aWNlcygpO3JldHVybjt9IHRoaXMucGFnZT1wYWdlO3RoaXMuc2lkZWJhck9wZW49ZmFsc2U7aWYocGFnZSE9PSdkZXZpY2VzJyl0aGlzLnNob3dMaW5rV2l6YXJkPWZhbHNlO30sCiAgICBub3RpZnkodGV4dCx0eXBlPSdzdWNjZXNzJyl7dGhpcy5ub3RpY2U9e3RleHQsdHlwZX07c2V0VGltZW91dCgoKT0+e3RoaXMubm90aWNlLnRleHQ9Jyd9LCA4MDAwKTt9LAogICAgbG9nb3V0KCl7WydtcmhhYXNfdG9rZW4nLCdtcmhhYXNfdGVuYW50X2lkJywnbXJoYWFzX3RlbmFudCcsJ21yaGFhc19yb2xlJ10uZm9yRWFjaChrPT5sb2NhbFN0b3JhZ2UucmVtb3ZlSXRlbShrKSk7d2luZG93LmxvY2F0aW9uLnJlcGxhY2UoJy9sb2dpbi5odG1sJyl9LAogICAgbW9uZXkodil7cmV0dXJuIE51bWJlcih2fHwwKS50b0xvY2FsZVN0cmluZygnZW4tVFonKX0sCiAgICBmb3JtYXREYXRlKHYpe2lmKCF2KXJldHVybiAnLSc7Y29uc3QgZD1uZXcgRGF0ZSh2KTtyZXR1cm4gaXNOYU4oZC5nZXRUaW1lKCkpPyctJzpkLnRvTG9jYWxlRGF0ZVN0cmluZygnc3ctVFonKX0sCiAgICBwYWNrYWdlTmFtZShpZCl7Y29uc3QgcD10aGlzLnBhY2thZ2VzLmZpbmQoeD0+U3RyaW5nKHguaWQpPT09U3RyaW5nKGlkKSk7cmV0dXJuIHA/cC5uYW1lOictJ30sCiAgfTsKfQo="></script>
+<nav class="flex-1 overflow-y-auto py-2">
+<button class="nav-item" :class="page==='dashboard'?'nav-active':''" @click="page='dashboard';sidebarOpen=false"><span class="nav-icon">⊞</span>Overview</button>
+<button class="nav-item" :class="page==='devices'?'nav-active':''" @click="page='devices';sidebarOpen=false"><span class="nav-icon">＋</span>Add Devices</button>
+<button class="nav-item" @click="page='packages';sidebarOpen=false"><span class="nav-icon">📦</span>Packages</button>
+<button class="nav-item" @click="page='vouchers';sidebarOpen=false"><span class="nav-icon">🎟️</span>Vouchers</button>
+</nav>
+</aside>
+<div class="min-h-screen md:ml-[280px] flex-1 bg-[#080a0f]">
+<header class="sticky top-0 z-30 flex min-h-[64px] items-center justify-between border-b border-[#1e2230] bg-[#0c0e14]/90 backdrop-blur-md px-4">
+<div class="flex items-center gap-3"><button @click="sidebarOpen=!sidebarOpen" class="w-10 h-10 rounded-xl bg-[#1a1d2b] border border-[#2a2e3a] flex items-center justify-center text-[#e8bf58] md:hidden">☰</button><h1 class="text-[15px] font-bold text-white" x-text="page==='devices'?'Add a device':'MR HAAS NET'"></h1><span class="hidden md:flex bg-[#1a1d2b] border border-[#2a2e3a] rounded-full px-3 py-1 text-[11px] text-green-400">● Tembo • Active</span></div>
+</header>
+<main class="p-4 md:p-8">
+
+<div x-show="notice.text" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-[92%] max-w-2xl flex justify-between gap-4 rounded-xl border p-4" :class="notice.type==='error'?'border-red-900 bg-red-950 text-red-200':'border-green-900 bg-green-950 text-green-200'"><p class="text-sm font-bold" x-text="notice.text"></p><button @click="notice.text=''" class="font-bold">×</button></div>
+
+<section x-show="page==='dashboard'" class="space-y-4 max-w-[700px] mx-auto md:max-w-full">
+<div class="card"><h2 class="text-xl font-bold">Karibu, MR HAAS WI-FI!</h2><p class="text-sm text-gray-400 mt-1">MH NET - Overview</p></div>
+<div class="card"><button class="btn btn-gold" @click="page='devices'">Nenda Add Devices</button></div>
+</section>
+
+<section x-show="page==='devices'" class="space-y-4">
+<div x-show="wizardStep===0" class="wizard-container text-center">
+<h2 class="text-lg font-bold">Add a device</h2>
+<p class="text-[13px] text-gray-400 mt-2">Chagua aina ya kifaa chako kwenye menyu ya <b>Add Devices</b> upande wa kushoto.<br>Pick your device type under <b>Add Devices</b> in the menu on the left.</p>
+<div class="mt-6 space-y-3 text-left">
+<button class="w-full flex items-center gap-4 p-4 rounded-xl border border-[#2a2e3a] bg-[#0f111a] hover:border-[#3b82f6] text-left" @click="startWizard('mikrotik')"><div class="w-12 h-12 rounded-xl bg-[#1a1d2b] flex items-center justify-center text-xl">📡</div><div><div class="font-bold">MikroTik</div><div class="text-[11px] text-gray-400">RB3011, hAP ac², hAP ax², L009 - MH NET</div></div><div class="ml-auto text-gray-500">›</div></button>
+<button class="w-full flex items-center gap-4 p-4 rounded-xl border border-[#2a2e3a] bg-[#0f111a] hover:border-[#3b82f6] text-left" @click="startWizard('omada')"><div class="w-12 h-12 rounded-xl bg-[#1a1d2b] flex items-center justify-center text-xl">📶</div><div><div class="font-bold">Omada EAP</div><div class="text-[11px] text-gray-400">EAP245, EAP610, EAP650 - MH NET</div></div><div class="ml-auto text-gray-500">›</div></button>
+</div>
+<div x-show="devices.length>0" class="mt-6 text-left"><h3 class="font-bold text-sm mb-2">Vifaa vyako (<span x-text="devices.length"></span>) - MH NET</h3><template x-for="d in devices" :key="d.id"><div class="flex justify-between items-center py-2 px-3 bg-[#080a0f] border border-[#1e2230] rounded-xl mb-2 text-sm"><span x-text="d.name"></span><button class="text-red-400 text-xs" @click="deleteDevice(d)">Remove</button></div></template></div>
+</div>
+
+<div x-show="wizardStep>=1" class="wizard-container">
+<div class="flex items-start justify-between gap-2">
+<div>
+<div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-[#1a1d2b] flex items-center justify-center">📡</div><h2 class="font-bold text-[16px]">Link a MikroTik - MH NET</h2></div>
+<p class="text-[12px] text-gray-400 mt-1">Isajili router ya MH NET, bandika amri moja, chagua inafanya nini.<br>Register the MH NET router, paste the one-line command, choose what it does.</p>
+</div>
+<button class="text-[12px] text-gray-400 hover:text-white" @click="resetWizard()">✕ Ghairi · Cancel</button>
+</div>
+
+<div class="flex items-center mt-6 mb-8">
+<template x-for="i in 4" :key="i">
+<div class="flex items-center flex-1">
+<div class="step-dot" :class="wizardStep>i?'done':wizardStep===i?'active':''" x-text="wizardStep>i?'✓':i"></div>
+<div x-show="i<4" class="step-line" :class="wizardStep>i?'done':''"></div>
+</div>
+</template>
+</div>
+<div class="flex justify-between text-[11px] text-gray-500 mb-6 -mt-4">
+<span :class="wizardStep===1?'text-white font-bold':''">Identity</span>
+<span :class="wizardStep===2?'text-white font-bold':''">Provision</span>
+<span :class="wizardStep===3?'text-white font-bold':''">Services</span>
+<span :class="wizardStep===4?'text-white font-bold':''">Done</span>
+</div>
+
+<div x-show="wizardStep===1" class="space-y-5">
+<div>
+<label class="text-[12px] text-gray-300 font-medium">Jina la mahali · Location name - MH NET</label>
+<input class="field mt-2" x-model="form.location" placeholder="Kimara Shop - MH NET">
+</div>
+<div>
+<label class="text-[12px] text-gray-300 font-medium">Jina la WiFi · WiFi name (SSID) - MH NET</label>
+<input class="field mt-2" x-model="form.ssid" placeholder="MH NET">
+<div class="text-[11px] text-gray-500 mt-1.5 flex items-start gap-1.5"><span>ℹ️</span><span>Hili ndio jina wateja wa MH NET wanaoliona kwenye simu zao.</span></div>
+</div>
+<div class="pt-2">
+<div class="text-[11px] text-gray-500">Hatua 1 kati ya 4 - MH NET</div>
+<button class="btn btn-blue mt-2" @click="nextStep()" :disabled="!form.location.trim() || !form.ssid.trim()" :class="(!form.location.trim() || !form.ssid.trim())?'opacity-50':''">Endelea · Continue →</button>
+</div>
+</div>
+
+<div x-show="wizardStep===2" class="space-y-5">
+<div>
+<label class="text-[12px] text-gray-300 font-medium">Waya ya intaneti umeingia mlango upi? · Which port is the internet cable in?</label>
+<div class="flex gap-2 mt-3 flex-wrap">
+<template x-for="p in ['Port 1','Port 2','Port 3','Port 4','Port 5']" :key="p">
+<button class="port-btn" :class="form.port===p?'active':''" @click="form.port=p" x-text="p"></button>
+</template>
+</div>
+</div>
+<div>
+<label class="text-[12px] text-gray-300 font-medium">Aina ya router yako · Your router model - MH NET</label>
+<p class="text-[11px] text-gray-500 mt-1">Imepigwa kwenye kitasa chako. Tunachagua mazingira sahihi ya MH NET kutokana na kifaa chako.</p>
+<button class="field mt-3 text-left flex justify-between items-center" @click="showModelList=!showModelList">
+<span x-text="form.model||'chagua · choose'"></span><span>▼</span>
+</button>
+<div x-show="showModelList" class="mt-2 max-h-[320px] overflow-y-auto border border-[#2a2e3a] rounded-xl bg-[#080a0f]">
+<div class="p-3 text-[11px] font-bold text-gray-400 uppercase">Routers with built-in WiFi - MH NET</div>
+<template x-for="m in modelsWifi" :key="m"><div class="model-option" :class="form.model===m?'selected':''" @click="form.model=m; showModelList=false"><span x-text="m"></span><span x-text="form.model===m?'●':''"></span></div></template>
+<div class="p-3 text-[11px] font-bold text-gray-400 uppercase mt-2">Routers without WiFi - MH NET AP</div>
+<template x-for="m in modelsNoWifi" :key="m"><div class="model-option" :class="form.model===m?'selected':''" @click="form.model=m; showModelList=false"><span x-text="m"></span><span x-text="form.model===m?'●':''"></span></div></template>
+</div>
+</div>
+<div class="flex gap-2 pt-2">
+<button class="btn btn-ghost flex-1" @click="wizardStep=1">← Nyuma · Back</button>
+<button class="btn btn-blue flex-1" @click="generateScript()" :disabled="!form.model">Tengeneza amri · Generate script →</button>
+</div>
+<div class="text-[11px] text-gray-500">Hatua 2 kati ya 4 - MH NET</div>
+</div>
+
+<div x-show="wizardStep===3" class="space-y-4">
+<div class="flex justify-between items-center"><h3 class="font-bold text-sm">Amri yako - MH NET</h3><button class="text-[11px] text-gray-400" @click="wizardStep=2">Badilisha kifaa</button></div>
+<p class="text-[11px] text-gray-400" x-text="form.model+' · internet port '+form.port+' · MH NET'"></p>
+<div class="code-box" x-text="generatedCommand"></div>
+<div class="flex gap-2"><button class="copy-btn" @click="copyCommand()">Nakili · Copy</button><span class="text-[11px] text-gray-500 self-center" x-show="copied">✅ Copied!</span></div>
+<div class="bg-[#080a0f] border border-[#1e2230] rounded-xl p-4 mt-4">
+<h4 class="font-bold text-[13px]">MALLEKEZO - MH NET</h4>
+<div class="text-[11px] text-gray-300 mt-3 space-y-2 leading-relaxed">
+<p>1. Plug internet cable into <b x-text="form.port.toUpperCase()"></b> for MH NET.</p>
+<p>2. Open router terminal (WinBox → New Terminal, 192.168.88.1)</p>
+<p>3. Copy everything paste Enter - MH NET itaunganishwa!</p>
+<p>4. Wait 1 minute refresh - MH NET status turns connected.</p>
+<p class="font-bold mt-2">Done. MH NET WiFi now shows customers login page.</p>
+</div>
+</div>
+<div class="flex gap-2 pt-4">
+<button class="btn btn-ghost flex-1" @click="wizardStep=2">← Nyuma</button>
+<button class="btn btn-blue flex-1" @click="finalSave()">Nimebandika - MH NET →</button>
+</div>
+<div class="text-[11px] text-gray-500">Hatua 3 kati ya 4</div>
+</div>
+
+<div x-show="wizardStep===4" class="space-y-4 text-center">
+<div class="w-16 h-16 mx-auto bg-green-900/30 border border-green-700 rounded-full flex items-center justify-center text-2xl">✓</div>
+<h3 class="font-bold text-lg">MH NET - Tunasubiri router yako iwasliane nasi...</h3>
+<p class="text-[12px] text-gray-400">Waiting for MH NET router first check-in...</p>
+<div class="code-box text-left mt-4 text-[10px]" x-text="'/system/device-mode/update fetch=yes scheduler=yes hotspot=yes - MH NET'"></div>
+<div class="pt-4"><button class="btn btn-ghost w-full" @click="resetWizard()">Maliza - MH NET Done</button></div>
+<div class="text-[11px] text-gray-500">Hatua 4 kati ya 4 - MH NET</div>
+</div>
+</div>
+
+<div x-show="omadaStep>0" class="wizard-container mt-6">
+<h2 class="font-bold">Link an Omada EAP - MH NET</h2>
+<div class="space-y-3 mt-4">
+<input class="field" x-model="omadaForm.location" placeholder="Location - SIZA UKEREWE MH NET">
+<input class="field" x-model="omadaForm.ssid" placeholder="SSID - MH NET">
+<input class="field" x-model="omadaForm.mac" placeholder="MAC (hiari)">
+<div class="flex gap-2"><button class="btn btn-ghost flex-1" @click="omadaStep=0">Cancel</button><button class="btn btn-blue flex-1" @click="saveOmada()">Hifadhi MH NET</button></div>
+</div>
+</div>
+</section>
+
+<section x-show="page==='vouchers'"><div class="card">Vouchers - MH NET</div></section>
+</main>
+</div>
+</div>
 <script>
-function app(){
-  const base = (()=>{ try{ const m = window.__app_base || null; return m; }catch(e){return null} })();
-  // Load the real app from file via fetch of JS file not possible, so we define again with delete fix included
-  return {
-    api:'', token:localStorage.getItem('mrhaas_token')||'', tenantId:localStorage.getItem('mrhaas_tenant_id')||'', tenant:{},user:{},page:'vouchers',sidebarOpen:false,loading:false,saving:false, notice:{text:'',type:'success'},voucherTab:'all', displayLimit:50, showPackageFilter:false, selectedPackageFilter:'', stats:{cleared:0}, clients:[],devices:[],sites:[],packages:[],vouchers:[],expiredVouchers:[],payments:[], lastBatch:null, showPrintPreview:false, printTemplate:'B', printBatchId:'', timeAgo:'14s ago', refreshCountdown:15, activityStart:0,
-    voucherForm:{quantity:10,package_id:'',code_type:'numbers',prefix:'FAMI',use_prefix:false,template:'B',qr_or_laha:'QR'},
-    showLinkWizard:false, deviceType:null, linkLocation:'', linkSsid:'', linkPort:'Port 1', linkModel:'', omLocation:'SIZA UKEREWE', omSsid:'FAMI NET', omMac:'',
-    get devicesOnlineReal(){return this.devices.filter(d=>d.status==='online'||d.is_online).length},
-    get usersOnlineReal(){return this.clients.filter(c=>c.is_online||c.status==='online').length},
-    get revToday(){const p=this.payments.filter(x=>this.isToday(x.created_at||x.date)); const sum=p.reduce((a,b)=>a+Number(b.amount||0),0); return this.money(sum)+' TZS'},
-    get revYesterday(){const y=new Date(); y.setDate(y.getDate()-1); const p=this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d.toDateString()===y.toDateString()}); const sum=p.reduce((a,b)=>a+Number(b.amount||0),0); return this.money(sum)+' TZS'},
-    get revWeek(){const now=new Date(); const weekAgo=new Date(); weekAgo.setDate(now.getDate()-7); const p=this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d>=weekAgo}); const sum=p.reduce((a,b)=>a+Number(b.amount||0),0); return this.money(sum)+' TZS'},
-    get revYear(){const now=new Date(); const p=this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d.getFullYear()===now.getFullYear()}); const sum=p.reduce((a,b)=>a+Number(b.amount||0),0); return this.money(sum)+' TZS'},
-    get revTodayCount(){return this.payments.filter(x=>this.isToday(x.created_at||x.date)).length},
-    get revYesterdayCount(){const y=new Date(); y.setDate(y.getDate()-1); return this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d.toDateString()===y.toDateString()}).length},
-    get revWeekCount(){const now=new Date(); const weekAgo=new Date(); weekAgo.setDate(now.getDate()-7); return this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d>=weekAgo}).length},
-    get revYearCount(){const now=new Date(); return this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d.getFullYear()===now.getFullYear()}).length},
-    get recentReal(){
-      const now=new Date(); const thirty=new Date(); thirty.setDate(now.getDate()-30);
-      const acts=[];
-      this.payments.filter(p=>{const d=new Date(p.created_at||p.date); return d>=thirty}).forEach(p=>{
-        acts.push({code:p.voucher_code||p.code||'-', package:p.package_name||'Package', amount:this.money(p.amount||0)+' TZS', type:p.type||'online', method:p.method||p.payment_method||'M-Pesa', time:this.timeAgoFormat(new Date(p.created_at||p.date)), date:new Date(p.created_at||p.date)});
-      });
-      return acts.sort((a,b)=>b.date-a.date);
-    },
-    isToday(dateStr){if(!dateStr) return false; const d=new Date(dateStr); const now=new Date(); return d.toDateString()===now.toDateString();},
-    timeAgoFormat(d){const diff=Math.floor((new Date()-d)/60000); if(diff<1) return 'Just now'; if(diff<60) return diff+'m ago'; if(diff<1440) return Math.floor(diff/60)+'h ago'; return Math.floor(diff/1440)+'d ago';},
-    paginatedReal(){return this.recentReal.slice(this.activityStart, this.activityStart+15)},
-    packagePrice(id){const p=this.packages.find(x=>String(x.id)===String(id)); return p?Number(p.price):0},
-    greetingText(){const h=new Date().getHours(); if(h>=5&&h<12) return 'Habari ya asubuhi'; if(h>=12&&h<15) return 'Habari ya mchana'; if(h>=15&&h<19) return 'Habari ya jioni'; return 'Habari ya usiku';},
-    greetingEmoji(){const h=new Date().getHours(); if(h>=5&&h<12) return '🌅'; if(h>=12&&h<15) return '☀️'; if(h>=15&&h<19) return '🌇'; return '🌙';},
-    greetingSubText(){const h=new Date().getHours(); if(h>=5&&h<12) return 'Asubuhi njema! Tayari kwa siku mpya ya kazi? 🚀'; if(h>=12&&h<15) return 'Mchana mwema! Endelea kusimamia mtandao wako ☀️'; if(h>=15&&h<19) return 'Jioni njema! Umefanya kazi nzuri leo 🌇'; return 'Usiku mwema! Pumzika, kesho ni siku nyingine 🌙';},
-    async init(){if(!this.token||!this.tenantId){window.location.replace('/login.html');return}await this.loadMe();await this.loadPageData();setInterval(()=>{this.timeAgo=Math.floor(Math.random()*30)+'s ago';}, 5000);setInterval(()=>{this.refreshCountdown--; if(this.refreshCountdown<=0){this.refreshCountdown=15; if(this.page==='dashboard'){this.loadPageData();}}}, 1000);setInterval(()=>{if(this.page==='dashboard'){this.loadPageData(); this.refreshCountdown=15;}}, 15000);},
-    headers(j=true){const h={'Authorization':'Bearer '+this.token};if(j)h['Content-Type']='application/json';if(this.tenantId)h['X-Tenant-ID']=this.tenantId;return h;},
-    async request(p,o={}){const r=await fetch(this.api+p,{...o,headers:{...this.headers(),...(o.headers||{})}});const d=await r.json().catch(()=>({}));if(r.status===401){this.logout();throw new Error('Session expired')}if(!r.ok)throw new Error(d.message||'Failed');return d;},
-    async loadMe(){try{const data=await this.request('/api/auth/me');this.tenant=data.tenant||data;this.user=data.user||{email:this.tenant.email||''};}catch(e){}},
-    async loadPageData(){this.loading=true;const tid=encodeURIComponent(this.tenantId);const jobs=[['clients','/api/clients/'+tid],['devices','/api/devices/'+tid],['sites','/api/sites/'+tid],['packages','/api/packages/'+tid],['vouchers','/api/vouchers/'+tid],['payments','/api/payments/'+tid]];await Promise.all(jobs.map(async([k,path])=>{try{const data=await this.request(path);const v=data[k]||data.items||data.data||data;if(Array.isArray(v))this[k]=v}catch(e){}}));this.loading=false; this.refreshCountdown=15;},
-    selectDeviceType(t){this.deviceType=t},
-    goDirectAddDevices(){this.page='devices'; this.deviceType=null; this.showLinkWizard=true; this.sidebarOpen=false;},
-    async saveMikroTik(){try{await this.request('/api/devices',{method:'POST',body:JSON.stringify({tenant_id:this.tenantId,name:this.linkLocation+' - '+this.linkSsid,vendor:'MikroTik',model:this.linkModel||'RB',ssid:this.linkSsid,location:this.linkLocation,port:this.linkPort})});this.notify('MikroTik imehifadhiwa','success');}catch(e){this.notify(e.message,'error')}this.showLinkWizard=false;this.deviceType=null;await this.loadPageData();},
-    async finishOmadaWizard(){try{await this.request('/api/devices',{method:'POST',body:JSON.stringify({tenant_id:this.tenantId,name:this.omLocation+' - '+this.omSsid,vendor:'TP-Link Omada',model:'EAP',mac_address:this.omMac,ssid:this.omSsid,location:this.omLocation})});this.notify('Omada EAP imehifadhiwa','success');}catch(e){this.notify(e.message,'error')}this.showLinkWizard=false;this.deviceType=null;await this.loadPageData();},
-    async deleteDevice(d){if(!confirm('Futa kifaa '+d.name+' ?'))return;try{await this.request('/api/devices/'+encodeURIComponent(d.id),{method:'DELETE'});await this.loadPageData();}catch(e){this.notify(e.message,'error')}},
-    filteredByPackage(){if(!this.selectedPackageFilter)return this.vouchers;return this.vouchers.filter(v=> (v.package_name||this.packageName(v.package_id))===this.selectedPackageFilter)},
-    filteredVouchers(){let list=this.filteredByPackage();if(this.voucherTab==='active') list=list.filter(v=>v.status==='unused'||v.status==='active');if(this.voucherTab==='used') list=list.filter(v=>v.status==='used');return list;},
-    selectedPackageName(){const p=this.packages.find(x=>String(x.id)===String(this.voucherForm.package_id)); return p?p.name:'';},
-    selectedPackagePrice(){const p=this.packages.find(x=>String(x.id)===String(this.voucherForm.package_id)); return p?this.money(p.price):'1,000';},
-    previewCode(){const t=this.voucherForm.code_type;if(t==='numbers') return this.voucherForm.use_prefix? (this.voucherForm.prefix||'FAMI')+'-244175' : '244175';if(t==='letters') return this.voucherForm.use_prefix? (this.voucherForm.prefix||'FAMI')+'-RYCSVD' : 'RYCSVD';return this.voucherForm.use_prefix? (this.voucherForm.prefix||'FAMI')+'-R5C2V1' : 'R5C2V1';},
-    async createVoucher(){this.saving=true;try{const payload={tenant_id:this.tenantId,quantity:this.voucherForm.quantity,package_id:this.voucherForm.package_id,code_type:this.voucherForm.code_type,prefix:this.voucherForm.prefix,use_prefix:this.voucherForm.use_prefix,template:this.voucherForm.template,qr_or_laha:this.voucherForm.qr_or_laha};const data=await this.request('/api/vouchers',{method:'POST',body:JSON.stringify(payload)});this.lastBatch=data; this.notify(data.count+' vocha - '+data.batch_id,'success'); await this.loadPageData();}catch(e){this.notify(e.message,'error')}finally{this.saving=false}},
-    async deleteVoucher(v){
-      const code = v.code || v.voucher_code || v.id;
-      const vid = v.id || v._id || code;
-      if(!confirm('Futa vocha '+code+' ?')) return;
-      try{
-        let res = await fetch(this.api+'/api/vouchers/'+encodeURIComponent(vid),{method:'DELETE',headers:this.headers(false)});
-        if(!res.ok){
-          res = await fetch(this.api+'/api/vouchers/'+encodeURIComponent(code),{method:'DELETE',headers:this.headers(false)});
-        }
-        const data = await res.json().catch(()=>({}));
-        if(!res.ok) throw new Error(data.message||'Failed');
-        this.notify('Vocha '+code+' imefutwa','success');
-        this.vouchers = this.vouchers.filter(x => String(x.id)!==String(vid) && String(x.code)!==String(code));
-        await this.loadPageData();
-      }catch(e){this.notify('Failed: '+e.message,'error')}
-    },
-    async loadExpired(){try{const tid=encodeURIComponent(this.tenantId);const data=await this.request('/api/vouchers/expired/'+tid);this.expiredVouchers=data.expired||[];}catch(e){this.expiredVouchers=[]}},
-    printVouchers(tpl){const template=tpl||this.voucherForm.template||'B';let limit=template==='B'?100:template==='C'?32:50;let toPrint=this.lastBatch?.vouchers||this.filteredVouchers().filter(v=>v.status==='unused'||v.status==='active').slice(0,limit);toPrint=toPrint.slice(0,limit);this.printTemplate=template; this.printBatchId=this.lastBatch?.batch_id||'BATCH'; this.showPrintPreview=true;this.$nextTick(()=>{const grid=document.getElementById('printGrid'); if(!grid) return; grid.innerHTML=''; grid.className='print-grid-'+template+' mx-auto bg-white';toPrint.forEach(v=>{const card=document.createElement('div'); card.className='voucher-card';const code=v.code||v.voucher_code||'';card.innerHTML=`<div style="font-size:7px;font-weight:bold">MR HAAS WI-FI</div><div style="font-weight:900;font-size:11px">${code}</div><div style="font-size:6px">${this.printBatchId}</div>`;grid.appendChild(card);});});},
-    doPrint(){window.print()},
-    currentTitle(){const m={dashboard:'Overview',devices:'Add Devices',sites:'My sites',packages:'Packages',clients:'Customers',vouchers:'Vouchers',payments:'Sales',reports:'Reports',portal:'Portal branding',wallet:'MH Wallet',subscription:'Subscription','payment-settings':'Payment settings',support:'Support',team:'Team',settings:'Settings'};return m[this.page]||'MR HAAS NET';},
-    go(page){if(page==='devices'){this.goDirectAddDevices();return;} this.page=page;this.sidebarOpen=false;if(page!=='devices')this.showLinkWizard=false;},
-    notify(text,type='success'){this.notice={text,type};setTimeout(()=>{this.notice.text=''}, 8000);},
-    logout(){['mrhaas_token','mrhaas_tenant_id','mrhaas_tenant','mrhaas_role'].forEach(k=>localStorage.removeItem(k));window.location.replace('/login.html')},
-    money(v){return Number(v||0).toLocaleString('en-TZ')},
-    formatDate(v){if(!v)return '-';const d=new Date(v);return isNaN(d.getTime())?'-':d.toLocaleDateString('sw-TZ')},
-    packageName(id){const p=this.packages.find(x=>String(x.id)===String(id));return p?p.name:'-'},
-  };
+function wizardApp(){
+return {
+api:'', token:localStorage.getItem('mrhaas_token')||'', tenantId:localStorage.getItem('mrhaas_tenant_id')||'', tenant:{}, user:{}, page:'devices', sidebarOpen:false, notice:{text:'',type:'success'},
+devices:[], wizardStep:0, omadaStep:0, showModelList:false, copied:false,
+form:{location:'', ssid:'MH NET', port:'Port 1', model:''},
+omadaForm:{location:'', ssid:'MH NET', mac:''},
+generatedCommand:'',
+modelsWifi:["hAP ac²","hAP ac³","hAP ax lite","hAP ax²","hAP ax³","RB951G-2HnD","cAP ac","cAP ax","wAP ac","wAP ax","L009","Chateau LTE","Audience"],
+modelsNoWifi:["RB750","RB760iGS","RB3011","RB1100AHx2","RB5009","L009","CCR1009","CCR1036","CCR2004","CRS switch","RB4011","Outdoor - SXT, LHG, Metal, QRT","Other"],
+async init(){if(!this.token||!this.tenantId){window.location.replace('/login.html');return}await this.loadMe();await this.loadPageData();},
+headers(j=true){const h={'Authorization':'Bearer '+this.token}; if(j)h['Content-Type']='application/json'; if(this.tenantId)h['X-Tenant-ID']=this.tenantId; return h;},
+async request(p,o={}){const r=await fetch(this.api+p,{...o,headers:{...this.headers(),...(o.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Failed');return d;},
+async loadMe(){try{const data=await this.request('/api/auth/me');this.tenant=data.tenant||data; this.user=data.user||{email:this.tenant.email||''};}catch(e){}},
+async loadPageData(){const tid=encodeURIComponent(this.tenantId);try{const data=await this.request('/api/devices/'+tid);this.devices=data.devices||[];}catch(e){}},
+startWizard(type){if(type==='mikrotik'){this.wizardStep=1; this.form={location:'', ssid:'MH NET', port:'Port 1', model:''};}else{this.omadaStep=1; this.omadaForm={location:'', ssid:'MH NET', mac:''};}},
+nextStep(){if(this.wizardStep===1){if(!this.form.location.trim()||!this.form.ssid.trim()){this.notify('Jaza mahali na MH NET','error');return;} this.wizardStep=2;}},
+generateScript(){
+if(!this.form.model){this.notify('Chagua model','error');return;}
+const tenant=this.tenantId; const site=encodeURIComponent(this.form.location); const ssid=encodeURIComponent(this.form.ssid); const model=encodeURIComponent(this.form.model); const port=encodeURIComponent(this.form.port);
+this.generatedCommand=`# MH NET - ${this.form.location} - ${this.form.ssid}
+/ip dhcp-client remove [find interface=ether1]
+/ip dhcp-client add interface=${this.form.port.toLowerCase().replace(' ','')} use-peer-dns=no add-default-route=yes disabled=no
+/tool fetch url=https://mrhaas-backend.onrender.com/api/mikrotik/register?tenant=${tenant}&site=${site}&ssid=${ssid}&model=${model}&port=${port} mode=https check-certificate=no
+:put "MH NET: ${this.form.location} - ${this.form.ssid} imeunganishwa!"`;
+this.wizardStep=3;
+},
+copyCommand(){navigator.clipboard.writeText(this.generatedCommand); this.copied=true; setTimeout(()=>this.copied=false,2000);},
+async finalSave(){
+try{
+const payload={tenant_id:this.tenantId, name:this.form.location+' - '+this.form.ssid, location_name:this.form.location, ssid:this.form.ssid, port:this.form.port, model:this.form.model, vendor:'MikroTik'};
+const data=await this.request('/api/devices',{method:'POST',body:JSON.stringify(payload)});
+this.notify('✅ MH NET Kifaa: '+payload.name+' imehifadhiwa','success');
+this.wizardStep=4;
+setTimeout(async()=>{await this.loadPageData();}, 1000);
+}catch(e){this.notify('Imeshindwa: '+e.message,'error');}
+},
+async saveOmada(){
+try{
+const payload={tenant_id:this.tenantId, name:this.omadaForm.location+' - '+this.omadaForm.ssid, location_name:this.omadaForm.location, ssid:this.omadaForm.ssid, mac_address:this.omadaForm.mac, vendor:'TP-Link Omada', model:'EAP245'};
+await this.request('/api/devices',{method:'POST',body:JSON.stringify(payload)});
+this.notify('MH NET Omada EAP imehifadhiwa','success'); this.omadaStep=0; await this.loadPageData();
+}catch(e){this.notify(e.message,'error');}
+},
+resetWizard(){this.wizardStep=0; this.form={location:'', ssid:'MH NET', port:'Port 1', model:''}; this.generatedCommand=''; this.showModelList=false;},
+async deleteDevice(d){if(!confirm('Remove '+d.name+' ?'))return;try{await this.request('/api/devices/'+encodeURIComponent(d.id),{method:'DELETE'});await this.loadPageData();}catch(e){this.notify(e.message,'error')}},
+notify(text,type='success'){this.notice={text,type};setTimeout(()=>this.notice.text='',6000);},
+};
 }
 </script>
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
