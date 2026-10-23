@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="sw" x-data="wizardApp()" x-init="init()">
+<html lang="sw" x-data="app()" x-init="init()">
 <head><style>
 @font-face {
   font-family: "Optimistic";
@@ -22,24 +22,38 @@
   font-family: "Optimistic Mono", ui-monospace, monospace;
 }
 </style>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MR HAAS - MH NET ONLY</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#080808">
+<title>MR HAAS NET - MH NET KAMILI</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>
-[x-cloak]{display:none!important} body{margin:0;background:#080808;color:#e5e7eb;font-family:Inter,Arial,sans-serif}
+[x-cloak]{display:none!important} body{margin:0;background:#090909;color:#f5f5f5;font-family:Arial,sans-serif}
 .sidebar{background:#080808;color:#eee;border-right:1px solid #292218}
 .nav-item{display:flex;align-items:center;gap:12px;width:calc(100% - 16px);margin:2px 8px;padding:11px 12px;border-radius:10px;color:#a39e94;font-size:14px;border:1px solid transparent;text-align:left}
 .nav-item:hover{background:#1a150a;color:#f5d78a;border-color:#3a2e1a}
 .nav-active{background:linear-gradient(90deg,#332712,#18130a)!important;color:#ffdc80!important;border:1px solid #5d471f!important;font-weight:700}
 .nav-icon{width:28px;height:28px;border-radius:8px;background:#141009;border:1px solid #2a2214;display:flex;align-items:center;justify-content:center;font-size:14px}
-.field{width:100%;border:1px solid #2a2e3a;border-radius:12px;padding:14px;background:#11131a;color:#f7f1e3}
-.field:focus{border-color:#e8bf58;outline:none}
-.btn{padding:12px 18px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer}
-.btn-blue{background:#3b82f6;color:white;width:100%}
-.btn-gold{background:linear-gradient(135deg,#ffe69a,#d7a633);color:#111;width:100%}
-.btn-ghost{background:#1a1c25;border:1px solid #2a2e3a;color:#9ca3af}
-.wizard-container{background:#11131a;border:1px solid #1e2230;border-radius:20px;padding:24px;max-width:560px;margin:0 auto}
+.nav-active .nav-icon{background:linear-gradient(135deg,#ffe69a,#d7a633)!important;color:#111!important}
+.account-label{color:#6b6560;font-size:10px;letter-spacing:1.2px;padding:18px 16px 6px 16px;font-weight:700;text-transform:uppercase}
+.card{background:linear-gradient(145deg,#171717,#101010);border:1px solid #30291c;border-radius:16px;padding:16px}
+.stat-card{background:#121212;border:1px solid #2a2214;border-radius:14px;padding:16px}
+.upesi-card{background:#121212;border:1px solid #30291c;border-radius:16px;padding:14px}
+.upesi-stat{border:1px solid #30291c;background:#111;border-radius:14px;padding:14px;display:flex;justify-content:space-between;align-items:center}
+.upesi-tab{padding:8px 12px;border-radius:10px;font-size:13px;border:1px solid #30291c;background:#111;color:#8a93a8;cursor:pointer}
+.upesi-tab.active{background:#332712;color:#ffdc80;border-color:#5d471f}
+.upesi-input{background:#0d0d0d;border:1px solid #403827;border-radius:12px;padding:12px;color:white;width:100%}
+.haraka-btn{padding:6px 14px;border-radius:20px;font-size:12px;border:1px solid #30291c;background:#0d0d0d;color:#8a93a8;cursor:pointer}
+.haraka-btn.active{background:#e8bf58;color:#111;font-weight:bold;border-color:#e8bf58}
+.voucher-row{background:#0d0d0d;border:1px solid #30291c;border-radius:12px;padding:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.delete-btn{background:#2a0a0a;color:#ff6b6b;border:1px solid #4a1a1a;border-radius:20px;padding:6px 14px;font-size:12px;cursor:pointer}
+.delete-btn:hover{background:#ff4444;color:white}
+.field{width:100%;border:1px solid #403827;border-radius:10px;padding:11px 12px;background:#0d0d0d;color:#f7f1e3}
+.btn{padding:10px 15px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer}
+.btn-gold{background:linear-gradient(135deg,#ffe69a,#d7a633,#aa781b);color:#17120a}
+.btn-blue{background:#3b82f6;color:white}
+.wizard-card{background:linear-gradient(145deg,#171717,#101010);border:1px solid #30291c;border-radius:16px;padding:20px}
+.type-card{border:1px solid #30291c;background:#111;border-radius:14px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:16px;text-align:left;width:100%}
+.type-card:hover{border-color:#5d471f;background:#1a150a}
 .step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid #2a2e3a;color:#6b7280}
 .step-dot.active{background:#3b82f6;color:white;border-color:#3b82f6}
 .step-dot.done{background:#22c55e;color:white;border-color:#22c55e}
@@ -51,182 +65,209 @@
 .port-btn{padding:10px 16px;border-radius:20px;border:1px solid #2a2e3a;background:#0f111a;color:#9ca3af;cursor:pointer}
 .port-btn.active{background:#3b82f6;color:white;border-color:#3b82f6}
 .code-box{background:#080a0f;border:1px solid #1e2230;border-radius:12px;padding:14px;font-family:monospace;font-size:11px;color:#22c55e;white-space:pre-wrap;word-break:break-all;max-height:260px;overflow-y:auto}
-.copy-btn{background:#1a1d2b;border:1px solid #2a2e3a;color:#e5e7eb;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer}
-.card{background:#11131a;border:1px solid #1e2230;border-radius:16px;padding:16px}
+.greeting-card{background:linear-gradient(135deg,#1a150a,#121212);border:1px solid #3a2e1a;border-radius:16px;padding:20px;position:relative;overflow:hidden}
+.pulse-dot{width:8px;height:8px;background:#22c55e;border-radius:50%;animation:pulse 2s infinite;display:inline-block}
+@keyframes pulse{0%{box-shadow:0 0 0 0 #22c55e88}70%{box-shadow:0 0 0 6px #22c55e00}100%{box-shadow:0 0 0 0 #22c55e00}}
+.voucher-card{border:1px dashed #999;background:white;color:black;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.print-grid-A{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(10,1fr);width:210mm;height:277mm;gap:0}
+.print-grid-A .voucher-card{height:27.7mm;padding:2mm}
+.print-grid-B{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(20,1fr);width:210mm;height:277mm;gap:0}
+.print-grid-B .voucher-card{height:13.85mm;padding:1mm;flex-direction:row;justify-content:space-between}
+.print-grid-C{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(8,1fr);width:210mm;height:277mm;gap:0}
+.print-grid-C .voucher-card{height:34.6mm;padding:2mm}
+@media print{body *{visibility:hidden}#printGrid,#printGrid *{visibility:visible}#printGrid{position:absolute;left:0;top:0;width:210mm}}
 </style>
 </head>
 <body x-cloak>
-<div class="min-h-screen flex">
-<aside class="sidebar fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col" :class="sidebarOpen?'translate-x-0':'-translate-x-full md:translate-x-0'">
+<div class="min-h-screen">
+<div x-show="sidebarOpen" @click="sidebarOpen=false" class="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"></div>
+<aside class="sidebar fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col transition-transform" :class="sidebarOpen?'translate-x-0':'-translate-x-full md:translate-x-0'">
 <div class="border-b border-[#292218] p-4">
-<div class="flex items-center gap-3"><div class="flex h-11 w-11 items-center justify-center rounded-xl border border-yellow-700/60 bg-black text-lg font-black" style="color:#e8bf58">MH</div><div><div class="font-extrabold tracking-wide">MR HAAS <span style="color:#e8bf58">NET</span></div><div class="mt-1 text-[10px] tracking-wider text-gray-500">WISP MANAGEMENT 🚀</div></div></div>
+<div class="flex items-center gap-3"><div class="flex h-11 w-11 items-center justify-center rounded-xl border border-yellow-700/60 bg-black text-lg font-black" style="color:#e8bf58">MH</div><div class="min-w-0"><div class="font-extrabold tracking-wide text-white">MR HAAS <span style="color:#e8bf58">NET</span></div><div class="mt-1 text-[10px] tracking-wider text-gray-500">WISP MANAGEMENT 🚀</div></div><button @click="sidebarOpen=false" class="ml-auto md:hidden w-8 h-8 rounded-full bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-[#e8bf58]">✕</button></div>
+<div class="mt-4"><div class="text-[10px] uppercase tracking-widest text-gray-500">Biashara yako</div><div class="mt-2 truncate text-sm font-bold text-white" x-text="tenant.name||tenant.business_name||'MR HAAS WI-FI'"></div><div class="text-[11px] text-gray-500" x-text="tenant.subdomain||''"></div></div>
 </div>
 <nav class="flex-1 overflow-y-auto py-2">
-<button class="nav-item" :class="page==='dashboard'?'nav-active':''" @click="page='dashboard';sidebarOpen=false"><span class="nav-icon">⊞</span>Overview</button>
-<button class="nav-item" :class="page==='devices'?'nav-active':''" @click="page='devices';sidebarOpen=false"><span class="nav-icon">＋</span>Add Devices</button>
-<button class="nav-item" @click="page='packages';sidebarOpen=false"><span class="nav-icon">📦</span>Packages</button>
-<button class="nav-item" @click="page='vouchers';sidebarOpen=false"><span class="nav-icon">🎟️</span>Vouchers</button>
+<button class="nav-item" :class="page==='dashboard'?'nav-active':''" @click="go('dashboard')"><span class="nav-icon">⊞</span><span>Overview</span></button>
+<button class="nav-item" :class="page==='devices'?'nav-active':''" @click="goDirectAddDevices()"><span class="nav-icon">＋</span><span>Add Devices</span></button>
+<button class="nav-item" :class="page==='sites'?'nav-active':''" @click="go('sites')"><span class="nav-icon">📡</span><span>My sites</span></button>
+<button class="nav-item" :class="page==='packages'?'nav-active':''" @click="go('packages')"><span class="nav-icon">📦</span><span>Packages</span></button>
+<button class="nav-item" :class="page==='clients'?'nav-active':''" @click="go('clients')"><span class="nav-icon">👤</span><span>Customers</span></button>
+<button class="nav-item" :class="page==='vouchers'?'nav-active':''" @click="go('vouchers')"><span class="nav-icon">🎟️</span><span>Vouchers</span><span x-show="vouchers.length>0" class="ml-auto text-[10px] bg-[#e8bf58] text-black px-2 py-0.5 rounded-full font-bold" x-text="vouchers.length">0</span></button>
+<button class="nav-item" :class="page==='payments'?'nav-active':''" @click="go('payments')"><span class="nav-icon">↗</span><span>Sales</span></button>
+<button class="nav-item" :class="page==='reports'?'nav-active':''" @click="go('reports')"><span class="nav-icon">📊</span><span>Reports</span></button>
+<button class="nav-item" :class="page==='portal'?'nav-active':''" @click="go('portal')"><span class="nav-icon">🎨</span><span>Portal branding</span></button>
+<button class="nav-item" :class="page==='wallet'?'nav-active':''" @click="go('wallet')"><span class="nav-icon">💳</span><span>MH Wallet</span></button>
+<div class="account-label">ACCOUNT</div>
+<button class="nav-item" :class="page==='subscription'?'nav-active':''" @click="go('subscription')"><span class="nav-icon">🕒</span><span>Subscription</span></button>
+<button class="nav-item" :class="page==='payment-settings'?'nav-active':''" @click="go('payment-settings')"><span class="nav-icon">💳</span><span>Payment settings</span></button>
+<button class="nav-item" :class="page==='support'?'nav-active':''" @click="go('support')"><span class="nav-icon">🎧</span><span>Support</span></button>
+<button class="nav-item" :class="page==='team'?'nav-active':''" @click="go('team')"><span class="nav-icon">👥</span><span>Team</span></button>
+<button class="nav-item" :class="page==='settings'?'nav-active':''" @click="go('settings')"><span class="nav-icon">⚙️</span><span>Settings</span></button>
+<div class="mt-6 border-t border-[#292218] pt-4 px-2"><button class="nav-item w-full" @click="logout()"><span class="nav-icon">🚪</span><span>Log out</span></button></div>
 </nav>
+<div class="border-t border-[#292218] p-4 bg-[#060606]"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#ffe69a] to-[#aa781b] flex items-center justify-center text-[#111] font-black" x-text="(user.email||'H').charAt(0).toUpperCase()">H</div><div class="min-w-0 flex-1"><div class="truncate text-[13px] font-bold text-white" x-text="user.email||''"></div><div class="text-[11px] text-gray-500">Akaunti ya WISP - MH NET</div></div></div></div>
 </aside>
-<div class="min-h-screen md:ml-[280px] flex-1 bg-[#080a0f]">
-<header class="sticky top-0 z-30 flex min-h-[64px] items-center justify-between border-b border-[#1e2230] bg-[#0c0e14]/90 backdrop-blur-md px-4">
-<div class="flex items-center gap-3"><button @click="sidebarOpen=!sidebarOpen" class="w-10 h-10 rounded-xl bg-[#1a1d2b] border border-[#2a2e3a] flex items-center justify-center text-[#e8bf58] md:hidden">☰</button><h1 class="text-[15px] font-bold text-white" x-text="page==='devices'?'Add a device':'MR HAAS NET'"></h1><span class="hidden md:flex bg-[#1a1d2b] border border-[#2a2e3a] rounded-full px-3 py-1 text-[11px] text-green-400">● Tembo • Active</span></div>
+<div class="min-h-screen md:ml-[280px]">
+<header class="sticky top-0 z-30 flex min-h-[64px] items-center justify-between gap-3 border-b border-[#292218] bg-[#0c0c0c]/90 backdrop-blur-md px-4 md:px-7">
+<div class="flex items-center gap-3"><button @click="sidebarOpen=!sidebarOpen" class="w-10 h-10 rounded-xl bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-[#e8bf58] md:hidden">☰</button><h1 class="text-[15px] font-bold text-white" x-text="currentTitle()"></h1><span class="hidden md:flex items-center gap-2 bg-[#1a150a] border border-[#3a2e1a] rounded-full px-3 py-1 text-[11px] text-[#a39e94]"><span class="pulse-dot"></span> Live • <span x-text="timeAgo">14s ago</span></span></div>
+<div class="flex items-center gap-2"><span class="text-[10px] bg-[#1a150a] border border-[#3a2e1a] px-2 py-1 rounded-full text-[#e8bf58]" x-text="'Refresh: '+refreshCountdown+'s'">15s</span><button class="w-9 h-9 rounded-xl bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-[#e8bf58]" @click="loadPageData()">🔄</button></div>
 </header>
-<main class="p-4 md:p-8">
-
+<main class="space-y-5 p-4 md:p-6 bg-[#090909] min-h-[calc(100vh-64px)]">
 <div x-show="notice.text" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-[92%] max-w-2xl flex justify-between gap-4 rounded-xl border p-4" :class="notice.type==='error'?'border-red-900 bg-red-950 text-red-200':'border-green-900 bg-green-950 text-green-200'"><p class="text-sm font-bold" x-text="notice.text"></p><button @click="notice.text=''" class="font-bold">×</button></div>
 
 <section x-show="page==='dashboard'" class="space-y-4 max-w-[700px] mx-auto md:max-w-full">
-<div class="card"><h2 class="text-xl font-bold">Karibu, MR HAAS WI-FI!</h2><p class="text-sm text-gray-400 mt-1">MH NET - Overview</p></div>
-<div class="card"><button class="btn btn-gold" @click="page='devices'">Nenda Add Devices</button></div>
+<div class="greeting-card"><div class="relative z-10"><div class="text-[13px] text-[#e8bf58] font-bold" x-text="greetingEmoji()+' '+greetingText()">🌅 Habari ya asubuhi</div><h2 class="text-[22px] font-extrabold text-white mt-1" x-text="'Karibu, '+(tenant.business_name||tenant.name||'MR HAAS WI-FI')+'!'">Karibu!</h2><p class="text-[12px] text-gray-400 mt-1" x-text="greetingSubText()">Asubuhi njema!</p><div class="mt-3 flex items-center gap-2 text-[11px] text-gray-500"><span class="pulse-dot"></span> Live • <span x-text="timeAgo">14s ago</span> • Auto-refresh 15s - MH NET</div></div></div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+<div class="stat-card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">📡 Devices Online</span><span class="text-[10px] text-gray-500">Live</span></div><div class="flex items-end gap-2 mt-3"><div class="text-[26px] font-extrabold" style="color:#e8bf58" x-text="devicesOnlineReal">0</div><div class="text-[12px] text-gray-500 mb-1">/ <span x-text="devices.length">0</span> total</div></div><div class="text-[11px] text-gray-500 mt-1"><span x-text="devices.length - devicesOnlineReal">0</span> offline - MH NET</div></div>
+<div class="stat-card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">👥 User Online</span><span class="text-[10px] text-gray-500">Active now</span></div><div class="flex items-end gap-2 mt-3"><div class="text-[26px] font-extrabold text-gray-300" x-text="usersOnlineReal">0</div><div class="text-[12px] text-gray-500 mb-1">watumiaji MH NET</div></div><div class="text-[11px] text-gray-500 mt-1">Hakuna mtumiaji online sasa</div></div>
+<div class="stat-card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">📊 Data In Use Now</span><span class="text-[10px] text-gray-500">Real-time MH NET</span></div><div class="flex items-end gap-2 mt-3"><div class="text-[26px] font-extrabold text-gray-300">0 GB</div></div><div class="text-[11px] text-gray-500 mt-1">Hakuna data inayotumika sasa</div></div>
+</div>
+<div class="space-y-3"><h3 class="font-bold text-[14px]">💰 Revenue - MH NET</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3"><div class="card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">Today</span><span class="text-[10px] bg-[#1a150a] text-gray-400 px-2 py-0.5 rounded-full">TZS</span></div><div class="text-[18px] font-extrabold text-gray-300 mt-2" x-text="revToday">0 TZS</div><div class="text-[10px] text-gray-500 mt-1" x-text="revTodayCount+' miamala leo'">0</div></div><div class="card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">Yesterday</span><span class="text-[10px] bg-[#1a150a] text-gray-400 px-2 py-0.5 rounded-full">TZS</span></div><div class="text-[18px] font-extrabold text-gray-300 mt-2" x-text="revYesterday">0 TZS</div><div class="text-[10px] text-gray-500 mt-1" x-text="revYesterdayCount+' miamala jana'">0</div></div><div class="card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">This Week</span><span class="text-[10px] bg-[#1a150a] text-gray-400 px-2 py-0.5 rounded-full">TZS</span></div><div class="text-[18px] font-extrabold text-gray-300 mt-2" x-text="revWeek">0 TZS</div><div class="text-[10px] text-gray-500 mt-1" x-text="revWeekCount+' miamala wiki hii'">0</div></div><div class="card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">This Year</span><span class="text-[10px] bg-[#1a150a] text-gray-400 px-2 py-0.5 rounded-full">TZS</span></div><div class="text-[18px] font-extrabold text-gray-300 mt-2" x-text="revYear">0 TZS</div><div class="text-[10px] text-gray-500 mt-1" x-text="revYearCount+' miamala mwaka huu'">0</div></div></div></div>
+<div class="card"><div class="flex justify-between items-center mb-4"><h3 class="font-bold text-[14px]">📋 Recent Activity's (30 days) - MH NET</h3><span class="text-[11px] text-gray-400" x-text="recentReal.length>0 ? 'Showing '+(activityStart+1)+'-'+Math.min(activityStart+15, recentReal.length)+' of '+recentReal.length : ''"></span></div><div class="space-y-2"><template x-for="(act, idx) in paginatedReal()" :key="idx"><div class="flex items-center gap-3 py-2.5 px-3 bg-[#0d0d0d] border border-[#2a2214] rounded-xl"><div class="w-8 h-8 rounded-full flex items-center justify-center text-[14px] bg-[#1a150a] border border-[#3a2e1a]" x-text="act.type==='online'?'💳':'🎟️'"></div><div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="font-bold text-[13px]" x-text="act.code">CODE</span><span class="text-[10px] px-2 py-0.5 rounded-full bg-[#1a150a] text-[#e8bf58] border border-[#3a2e1a]" x-text="act.type==='online'?'Online Purchase':'Voucher'">Voucher</span></div><div class="text-[11px] text-gray-400 truncate" x-text="act.package+' • '+act.method">Package • Method</div></div><div class="text-right"><div class="text-[12px] font-bold" style="color:#e8bf58" x-text="act.amount">1,000 TZS</div><div class="text-[10px] text-gray-500" x-text="act.time">2m ago</div></div></div></template><div x-show="recentReal.length===0" class="text-center py-12"><div class="text-[40px] mb-2">📭</div><div class="text-[13px] text-gray-400">Hakuna miamala ya siku 30 zilizopita - MH NET</div><div class="text-[11px] text-gray-500 mt-1">Vocha zilizoingizwa au kununuliwa online zitaonekana hapa</div></div></div><div x-show="recentReal.length>15" class="flex justify-between items-center mt-4 pt-3 border-t border-[#2a2214]"><button class="text-[12px] bg-[#1a150a] border border-[#3a2e1a] px-4 py-2 rounded-full text-[#e8bf58] disabled:opacity-30" :disabled="activityStart===0" @click="activityStart=Math.max(0, activityStart-15)">‹ Previous</button><div class="flex gap-1"><template x-for="p in Math.ceil(recentReal.length/15)" :key="p"><button class="w-7 h-7 rounded-full text-[11px] border" :class="(activityStart/15)+1===p?'bg-[#e8bf58] text-black border-[#e8bf58]':'bg-[#1a150a] border-[#3a2e1a] text-gray-400'" @click="activityStart=(p-1)*15" x-text="p">1</button></template></div><button class="text-[12px] bg-[#1a150a] border border-[#3a2e1a] px-4 py-2 rounded-full text-[#e8bf58] disabled:opacity-30" :disabled="activityStart+15>=recentReal.length" @click="activityStart=Math.min(recentReal.length-15, activityStart+15)">Next ›</button></div></div>
 </section>
 
-<section x-show="page==='devices'" class="space-y-4">
-<div x-show="wizardStep===0" class="wizard-container text-center">
-<h2 class="text-lg font-bold">Add a device</h2>
-<p class="text-[13px] text-gray-400 mt-2">Chagua aina ya kifaa chako kwenye menyu ya <b>Add Devices</b> upande wa kushoto.<br>Pick your device type under <b>Add Devices</b> in the menu on the left.</p>
-<div class="mt-6 space-y-3 text-left">
-<button class="w-full flex items-center gap-4 p-4 rounded-xl border border-[#2a2e3a] bg-[#0f111a] hover:border-[#3b82f6] text-left" @click="startWizard('mikrotik')"><div class="w-12 h-12 rounded-xl bg-[#1a1d2b] flex items-center justify-center text-xl">📡</div><div><div class="font-bold">MikroTik</div><div class="text-[11px] text-gray-400">RB3011, hAP ac², hAP ax², L009 - MH NET</div></div><div class="ml-auto text-gray-500">›</div></button>
-<button class="w-full flex items-center gap-4 p-4 rounded-xl border border-[#2a2e3a] bg-[#0f111a] hover:border-[#3b82f6] text-left" @click="startWizard('omada')"><div class="w-12 h-12 rounded-xl bg-[#1a1d2b] flex items-center justify-center text-xl">📶</div><div><div class="font-bold">Omada EAP</div><div class="text-[11px] text-gray-400">EAP245, EAP610, EAP650 - MH NET</div></div><div class="ml-auto text-gray-500">›</div></button>
+<!-- ADD DEVICES WIZARD 4 STEPS - MH NET -->
+<section x-show="page==='devices'" class="space-y-4 max-w-[600px] mx-auto md:max-w-full">
+<!-- HATUA 0 -->
+<div x-show="wizardStep===0" class="wizard-card">
+<h2 class="text-[18px] font-extrabold">Add a device - MH NET</h2><p class="text-[13px] text-gray-400 mt-1">Chagua aina ya kifaa unachotaka kuunganisha MH NET</p>
+<div class="mt-6 space-y-3">
+<button class="type-card" @click="startWizard('mikrotik')"><div class="w-10 h-10 rounded-xl bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-lg">📡</div><div class="flex-1"><div class="font-bold text-[14px]">MikroTik - MH NET</div><div class="text-[11px] text-gray-400">RB3011, hAP ac², hAP ax² · RouterOS</div></div><div class="text-gray-500">›</div></button>
+<button class="type-card" @click="startWizard('omada')"><div class="w-10 h-10 rounded-xl bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-lg">📶</div><div class="flex-1"><div class="font-bold text-[14px]">Omada EAP - MH NET</div><div class="text-[11px] text-gray-400">EAP245, EAP610, EAP650 · TP-Link Omada</div></div><div class="text-gray-500">›</div></button>
 </div>
-<div x-show="devices.length>0" class="mt-6 text-left"><h3 class="font-bold text-sm mb-2">Vifaa vyako (<span x-text="devices.length"></span>) - MH NET</h3><template x-for="d in devices" :key="d.id"><div class="flex justify-between items-center py-2 px-3 bg-[#080a0f] border border-[#1e2230] rounded-xl mb-2 text-sm"><span x-text="d.name"></span><button class="text-red-400 text-xs" @click="deleteDevice(d)">Remove</button></div></template></div>
+<div x-show="devices.length>0" class="mt-8 border-t border-[#2a2214] pt-4"><h3 class="font-bold text-[13px] mb-3">Vifaa vyako MH NET (<span x-text="devices.length"></span>)</h3><template x-for="d in devices" :key="d.id"><div class="flex justify-between items-center py-3 px-3 bg-[#0d0d0d] border border-[#2a2214] rounded-xl mb-2"><div><div class="font-bold text-[13px]" x-text="d.name"></div><div class="text-[11px] text-gray-500" x-text="d.vendor+' • '+d.model"></div></div><button class="text-red-400 text-xs border border-red-900 bg-red-950 px-3 py-1 rounded-full" @click="deleteDevice(d)">Futa</button></div></template></div>
 </div>
 
-<div x-show="wizardStep>=1" class="wizard-container">
+<!-- WIZARD 1-4 MH NET -->
+<div x-show="wizardStep>=1" class="wizard-card">
 <div class="flex items-start justify-between gap-2">
-<div>
-<div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-[#1a1d2b] flex items-center justify-center">📡</div><h2 class="font-bold text-[16px]">Link a MikroTik - MH NET</h2></div>
-<p class="text-[12px] text-gray-400 mt-1">Isajili router ya MH NET, bandika amri moja, chagua inafanya nini.<br>Register the MH NET router, paste the one-line command, choose what it does.</p>
-</div>
+<div><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-[#1a150a] flex items-center justify-center">📡</div><h2 class="font-bold text-[16px]">Link a MikroTik - MH NET</h2></div><p class="text-[12px] text-gray-400 mt-1">Isajili router ya MH NET, bandika amri moja.</p></div>
 <button class="text-[12px] text-gray-400 hover:text-white" @click="resetWizard()">✕ Ghairi · Cancel</button>
 </div>
-
-<div class="flex items-center mt-6 mb-8">
-<template x-for="i in 4" :key="i">
-<div class="flex items-center flex-1">
-<div class="step-dot" :class="wizardStep>i?'done':wizardStep===i?'active':''" x-text="wizardStep>i?'✓':i"></div>
-<div x-show="i<4" class="step-line" :class="wizardStep>i?'done':''"></div>
-</div>
-</template>
-</div>
-<div class="flex justify-between text-[11px] text-gray-500 mb-6 -mt-4">
-<span :class="wizardStep===1?'text-white font-bold':''">Identity</span>
-<span :class="wizardStep===2?'text-white font-bold':''">Provision</span>
-<span :class="wizardStep===3?'text-white font-bold':''">Services</span>
-<span :class="wizardStep===4?'text-white font-bold':''">Done</span>
-</div>
+<div class="flex items-center mt-6 mb-8"><template x-for="i in 4" :key="i"><div class="flex items-center flex-1"><div class="step-dot" :class="wizardStep>i?'done':wizardStep===i?'active':''" x-text="wizardStep>i?'✓':i"></div><div x-show="i<4" class="step-line" :class="wizardStep>i?'done':''"></div></div></template></div>
+<div class="flex justify-between text-[11px] text-gray-500 mb-6 -mt-4"><span :class="wizardStep===1?'text-white font-bold':''">Identity</span><span :class="wizardStep===2?'text-white font-bold':''">Provision</span><span :class="wizardStep===3?'text-white font-bold':''">Services</span><span :class="wizardStep===4?'text-white font-bold':''">Done</span></div>
 
 <div x-show="wizardStep===1" class="space-y-5">
-<div>
-<label class="text-[12px] text-gray-300 font-medium">Jina la mahali · Location name - MH NET</label>
-<input class="field mt-2" x-model="form.location" placeholder="Kimara Shop - MH NET">
-</div>
-<div>
-<label class="text-[12px] text-gray-300 font-medium">Jina la WiFi · WiFi name (SSID) - MH NET</label>
-<input class="field mt-2" x-model="form.ssid" placeholder="MH NET">
-<div class="text-[11px] text-gray-500 mt-1.5 flex items-start gap-1.5"><span>ℹ️</span><span>Hili ndio jina wateja wa MH NET wanaoliona kwenye simu zao.</span></div>
-</div>
-<div class="pt-2">
-<div class="text-[11px] text-gray-500">Hatua 1 kati ya 4 - MH NET</div>
-<button class="btn btn-blue mt-2" @click="nextStep()" :disabled="!form.location.trim() || !form.ssid.trim()" :class="(!form.location.trim() || !form.ssid.trim())?'opacity-50':''">Endelea · Continue →</button>
-</div>
+<div><label class="text-[12px] text-gray-300 font-medium">Jina la mahali · Location name - MH NET</label><input class="field mt-2" x-model="form.location" placeholder="SIZA UKEREWE - MH NET"></div>
+<div><label class="text-[12px] text-gray-300 font-medium">Jina la WiFi · WiFi name (SSID) - MH NET</label><input class="field mt-2" x-model="form.ssid" placeholder="MH NET"><div class="text-[11px] text-gray-500 mt-1.5">ℹ️ Hili ndio jina wateja wa MH NET wanaoliona kwenye simu zao.</div></div>
+<div class="pt-2"><div class="text-[11px] text-gray-500">Hatua 1 kati ya 4 - MH NET</div><button class="btn btn-blue mt-2 w-full" @click="nextStep()" :disabled="!form.location.trim() || !form.ssid.trim()" :class="(!form.location.trim() || !form.ssid.trim())?'opacity-50':''">Endelea · Continue →</button></div>
 </div>
 
 <div x-show="wizardStep===2" class="space-y-5">
-<div>
-<label class="text-[12px] text-gray-300 font-medium">Waya ya intaneti umeingia mlango upi? · Which port is the internet cable in?</label>
-<div class="flex gap-2 mt-3 flex-wrap">
-<template x-for="p in ['Port 1','Port 2','Port 3','Port 4','Port 5']" :key="p">
-<button class="port-btn" :class="form.port===p?'active':''" @click="form.port=p" x-text="p"></button>
-</template>
-</div>
-</div>
-<div>
-<label class="text-[12px] text-gray-300 font-medium">Aina ya router yako · Your router model - MH NET</label>
-<p class="text-[11px] text-gray-500 mt-1">Imepigwa kwenye kitasa chako. Tunachagua mazingira sahihi ya MH NET kutokana na kifaa chako.</p>
-<button class="field mt-3 text-left flex justify-between items-center" @click="showModelList=!showModelList">
-<span x-text="form.model||'chagua · choose'"></span><span>▼</span>
-</button>
-<div x-show="showModelList" class="mt-2 max-h-[320px] overflow-y-auto border border-[#2a2e3a] rounded-xl bg-[#080a0f]">
-<div class="p-3 text-[11px] font-bold text-gray-400 uppercase">Routers with built-in WiFi - MH NET</div>
-<template x-for="m in modelsWifi" :key="m"><div class="model-option" :class="form.model===m?'selected':''" @click="form.model=m; showModelList=false"><span x-text="m"></span><span x-text="form.model===m?'●':''"></span></div></template>
-<div class="p-3 text-[11px] font-bold text-gray-400 uppercase mt-2">Routers without WiFi - MH NET AP</div>
-<template x-for="m in modelsNoWifi" :key="m"><div class="model-option" :class="form.model===m?'selected':''" @click="form.model=m; showModelList=false"><span x-text="m"></span><span x-text="form.model===m?'●':''"></span></div></template>
-</div>
-</div>
-<div class="flex gap-2 pt-2">
-<button class="btn btn-ghost flex-1" @click="wizardStep=1">← Nyuma · Back</button>
-<button class="btn btn-blue flex-1" @click="generateScript()" :disabled="!form.model">Tengeneza amri · Generate script →</button>
-</div>
-<div class="text-[11px] text-gray-500">Hatua 2 kati ya 4 - MH NET</div>
+<div><label class="text-[12px] text-gray-300 font-medium">Waya ya intaneti umeingia mlango upi?</label><div class="flex gap-2 mt-3 flex-wrap"><template x-for="p in ['Port 1','Port 2','Port 3','Port 4','Port 5']" :key="p"><button class="port-btn" :class="form.port===p?'active':''" @click="form.port=p" x-text="p"></button></template></div></div>
+<div><label class="text-[12px] text-gray-300 font-medium">Aina ya router yako · Your router model - MH NET</label><button class="field mt-3 text-left flex justify-between items-center" @click="showModelList=!showModelList"><span x-text="form.model||'chagua · choose'"></span><span>▼</span></button><div x-show="showModelList" class="mt-2 max-h-[320px] overflow-y-auto border border-[#2a2e3a] rounded-xl bg-[#080a0f]"><div class="p-3 text-[11px] font-bold text-gray-400 uppercase">Routers with built-in WiFi - MH NET</div><template x-for="m in modelsWifi" :key="m"><div class="model-option" :class="form.model===m?'selected':''" @click="form.model=m; showModelList=false"><span x-text="m"></span><span x-text="form.model===m?'●':''"></span></div></template><div class="p-3 text-[11px] font-bold text-gray-400 uppercase mt-2">Routers without WiFi</div><template x-for="m in modelsNoWifi" :key="m"><div class="model-option" :class="form.model===m?'selected':''" @click="form.model=m; showModelList=false"><span x-text="m"></span><span x-text="form.model===m?'●':''"></span></div></template></div></div>
+<div class="flex gap-2 pt-2"><button class="btn flex-1" style="background:#1a1c25;border:1px solid #2a2e3a;color:#9ca3af" @click="wizardStep=1">← Nyuma</button><button class="btn btn-blue flex-1" @click="generateScript()" :disabled="!form.model">Tengeneza amri · Generate script →</button></div><div class="text-[11px] text-gray-500">Hatua 2 kati ya 4 - MH NET</div>
 </div>
 
 <div x-show="wizardStep===3" class="space-y-4">
 <div class="flex justify-between items-center"><h3 class="font-bold text-sm">Amri yako - MH NET</h3><button class="text-[11px] text-gray-400" @click="wizardStep=2">Badilisha kifaa</button></div>
-<p class="text-[11px] text-gray-400" x-text="form.model+' · internet port '+form.port+' · MH NET'"></p>
+<p class="text-[11px] text-gray-400" x-text="form.model+' · '+form.port+' · MH NET'"></p>
 <div class="code-box" x-text="generatedCommand"></div>
-<div class="flex gap-2"><button class="copy-btn" @click="copyCommand()">Nakili · Copy</button><span class="text-[11px] text-gray-500 self-center" x-show="copied">✅ Copied!</span></div>
-<div class="bg-[#080a0f] border border-[#1e2230] rounded-xl p-4 mt-4">
-<h4 class="font-bold text-[13px]">MALLEKEZO - MH NET</h4>
-<div class="text-[11px] text-gray-300 mt-3 space-y-2 leading-relaxed">
-<p>1. Plug internet cable into <b x-text="form.port.toUpperCase()"></b> for MH NET.</p>
-<p>2. Open router terminal (WinBox → New Terminal, 192.168.88.1)</p>
-<p>3. Copy everything paste Enter - MH NET itaunganishwa!</p>
-<p>4. Wait 1 minute refresh - MH NET status turns connected.</p>
-<p class="font-bold mt-2">Done. MH NET WiFi now shows customers login page.</p>
+<div class="flex gap-2"><button class="px-3 py-1.5 bg-[#1a1d2b] border border-[#2a2e3a] rounded-lg text-xs" @click="copyCommand()">Nakili · Copy</button><span class="text-[11px] text-green-400 self-center" x-show="copied">✅ Copied!</span></div>
+<div class="bg-[#080a0f] border border-[#1e2230] rounded-xl p-4 mt-4 text-[11px] text-gray-300 leading-relaxed">
+<p>1. Plug internet into <b x-text="form.port.toUpperCase()"></b> for MH NET</p><p class="mt-2">2. Open terminal (WinBox → New Terminal, 192.168.88.1)</p><p class="mt-2">3. Copy paste Enter - MH NET itaunganishwa!</p><p class="mt-2 font-bold">Done. MH NET WiFi now shows login page.</p>
 </div>
-</div>
-<div class="flex gap-2 pt-4">
-<button class="btn btn-ghost flex-1" @click="wizardStep=2">← Nyuma</button>
-<button class="btn btn-blue flex-1" @click="finalSave()">Nimebandika - MH NET →</button>
-</div>
-<div class="text-[11px] text-gray-500">Hatua 3 kati ya 4</div>
+<div class="flex gap-2 pt-4"><button class="btn flex-1" style="background:#1a1c25;border:1px solid #2a2e3a;color:#9ca3af" @click="wizardStep=2">← Nyuma</button><button class="btn btn-blue flex-1" @click="finalSave()">Nimebandika - MH NET →</button></div><div class="text-[11px] text-gray-500">Hatua 3 kati ya 4</div>
 </div>
 
 <div x-show="wizardStep===4" class="space-y-4 text-center">
 <div class="w-16 h-16 mx-auto bg-green-900/30 border border-green-700 rounded-full flex items-center justify-center text-2xl">✓</div>
-<h3 class="font-bold text-lg">MH NET - Tunasubiri router yako iwasliane nasi...</h3>
-<p class="text-[12px] text-gray-400">Waiting for MH NET router first check-in...</p>
-<div class="code-box text-left mt-4 text-[10px]" x-text="'/system/device-mode/update fetch=yes scheduler=yes hotspot=yes - MH NET'"></div>
-<div class="pt-4"><button class="btn btn-ghost w-full" @click="resetWizard()">Maliza - MH NET Done</button></div>
-<div class="text-[11px] text-gray-500">Hatua 4 kati ya 4 - MH NET</div>
+<h3 class="font-bold text-lg">MH NET - Tunasubiri router yako iwasliane nasi...</h3><p class="text-[12px] text-gray-400">Waiting for MH NET router first check-in...</p><div class="code-box text-left mt-4 text-[10px]" x-text="'/system/device-mode/update fetch=yes scheduler=yes hotspot=yes - MH NET'"></div><div class="pt-4"><button class="btn w-full" style="background:#1a1c25;border:1px solid #2a2e3a;color:#9ca3af" @click="resetWizard()">Maliza - MH NET Done</button></div><div class="text-[11px] text-gray-500">Hatua 4 kati ya 4 - MH NET</div>
 </div>
 </div>
 
-<div x-show="omadaStep>0" class="wizard-container mt-6">
+<div x-show="omadaStep>0" class="wizard-card mt-6">
 <h2 class="font-bold">Link an Omada EAP - MH NET</h2>
-<div class="space-y-3 mt-4">
-<input class="field" x-model="omadaForm.location" placeholder="Location - SIZA UKEREWE MH NET">
-<input class="field" x-model="omadaForm.ssid" placeholder="SSID - MH NET">
-<input class="field" x-model="omadaForm.mac" placeholder="MAC (hiari)">
-<div class="flex gap-2"><button class="btn btn-ghost flex-1" @click="omadaStep=0">Cancel</button><button class="btn btn-blue flex-1" @click="saveOmada()">Hifadhi MH NET</button></div>
-</div>
+<div class="space-y-3 mt-4"><input class="field" x-model="omadaForm.location" placeholder="Location - SIZA UKEREWE MH NET"><input class="field" x-model="omadaForm.ssid" placeholder="SSID - MH NET"><input class="field" x-model="omadaForm.mac" placeholder="MAC (hiari)"><div class="flex gap-2"><button class="btn flex-1" style="background:#1a1c25;border:1px solid #2a2e3a" @click="omadaStep=0">Cancel</button><button class="btn btn-blue flex-1" @click="saveOmada()">Hifadhi MH NET</button></div></div>
 </div>
 </section>
 
-<section x-show="page==='vouchers'"><div class="card">Vouchers - MH NET</div></section>
+<section x-show="page==='vouchers'" class="space-y-4 max-w-[480px] mx-auto md:max-w-full">
+<div class="flex justify-between items-center"><h2 class="font-bold">Vouchers - MH NET</h2><span class="text-[11px] bg-[#1a150a] border border-[#3a2e1a] px-3 py-1 rounded-full text-[#e8bf58]">Active • <span x-text="vouchers.length">0</span></span></div>
+<div class="grid grid-cols-2 gap-3"><div class="upesi-stat"><div><div class="text-[11px] text-gray-400">◧ Generated MH NET</div><div class="text-xl font-bold mt-1" style="color:#f3d27b" x-text="vouchers.length">0</div></div></div><div class="upesi-stat"><div><div class="text-[11px] text-gray-400">☑ Used</div><div class="text-xl font-bold mt-1" x-text="vouchers.filter(v=>v.status==='used').length">0</div></div></div><div class="upesi-stat"><div><div class="text-[11px] text-gray-400">◍ Active</div><div class="text-xl font-bold mt-1 text-green-400" x-text="vouchers.filter(v=>v.status==='unused'||v.status==='active').length">0</div></div></div><div class="upesi-stat"><div><div class="text-[11px] text-gray-400">🗑 Cleared</div><div class="text-xl font-bold mt-1" x-text="stats.cleared||0">0</div></div></div></div>
+<div class="upesi-card">
+<h3 class="font-bold mb-3 text-[14px]">Vouchers - MH NET</h3>
+<div class="flex gap-2 mb-3"><button class="upesi-tab" :class="voucherTab==='all'?'active':''" @click="voucherTab='all'">All <span class="bg-[#e8bf58] text-black px-1.5 rounded-full text-[10px]" x-text="filteredByPackage().length">0</span></button><button class="upesi-tab" :class="voucherTab==='active'?'active':''" @click="voucherTab='active'">Active</button><button class="upesi-tab" :class="voucherTab==='used'?'active':''" @click="voucherTab='used'">Used</button><button class="upesi-tab" :class="voucherTab==='expired'?'active':''" @click="voucherTab='expired'; loadExpired()">Zimeisha Muda</button></div>
+<div class="relative mb-3"><button class="upesi-input text-left flex justify-between items-center text-[13px]" @click="showPackageFilter=!showPackageFilter"><span x-text="selectedPackageFilter? selectedPackageFilter : 'Vifurushi vyote ('+vouchers.length+') MH NET'">Vifurushi</span><span>▼</span></button><div x-show="showPackageFilter" class="absolute z-20 w-full mt-2 bg-[#080808] border border-[#3a2e1a] rounded-xl p-2 max-h-64 overflow-y-auto"><button class="w-full text-left px-3 py-2 hover:bg-[#1a150a] rounded text-sm" @click="selectedPackageFilter=''; showPackageFilter=false">Vyote MH NET (<span x-text="vouchers.length"></span>)</button><template x-for="p in packages" :key="p.id"><button class="w-full text-left px-3 py-2 hover:bg-[#1a150a] rounded text-sm" @click="selectedPackageFilter=p.name; showPackageFilter=false" x-text="p.name"></button></template></div></div>
+<button x-show="voucherTab!=='expired'" class="w-full rounded-xl py-3 font-bold text-[13px] mb-3" style="background:linear-gradient(135deg,#ffe69a,#d7a633);color:#111" @click="printVouchers('B')">⬇ Download <span x-text="vouchers.filter(v=>v.status==='unused'||v.status==='active').length">0</span> unused as PDF - MH NET</button>
+<div x-show="voucherTab!=='expired'">
+<template x-for="v in filteredVouchers().slice(0, displayLimit)" :key="v.id||v.code">
+<div class="voucher-row">
+<div><div class="font-bold tracking-widest" style="color:#e8bf58" x-text="v.code||v.voucher_code">CODE</div><div class="text-[11px] text-gray-400" x-text="v.package_name||packageName(v.package_id)">Package MH NET</div></div>
+<div class="text-right"><div class="text-[10px]" :class="v.status==='unused'||v.status==='active'?'text-green-400':'text-orange-400'" x-text="v.status==='unused'||v.status==='active'?'+ Unused':'• Used'"></div><button class="delete-btn mt-1" @click="deleteVoucher(v)">🗑️ Delete</button></div>
+</div>
+</template>
+<div x-show="filteredVouchers().length===0" class="text-center text-gray-500 py-10">Hakuna vocha MH NET - Tengeneza hapo chini 👇</div>
+<div x-show="filteredVouchers().length>displayLimit" class="text-center mt-3"><button class="text-[12px] bg-[#1a150a] border border-[#3a2e1a] px-4 py-2 rounded-full text-[#e8bf58]" @click="displayLimit+=20">Ona zaidi...</button></div>
+</div>
+<div x-show="voucherTab==='expired'"><template x-for="v in expiredVouchers" :key="v.code"><div class="voucher-row"><div><div class="font-bold tracking-widest text-red-300" x-text="v.code">CODE</div><div class="text-[11px] text-gray-400" x-text="(v.package_name||'-')+' • '+(v.device_model||'Hakuna device')+' • '+(v.mb_used||0)+' MB MH NET'">Package • Model • MB</div></div><div class="text-right"><div class="text-[11px] text-gray-400" x-text="formatDate(v.used_at)"></div><button class="delete-btn mt-1" @click="deleteVoucher({code:v.code})">🗑️ Delete</button></div></div></template><div x-show="expiredVouchers.length===0" class="text-center text-gray-500 py-10">Hakuna zilizokwisha muda MH NET</div></div>
+</div>
+
+<div class="upesi-card" style="border-color:#3a2e1a"><h3 class="font-bold text-[14px]">🎟️ Tengeneza vocha - MH NET</h3><p class="text-[11px] text-gray-500 mb-4">Chagua kifurushi, idadi na muundo - MH NET</p><div class="space-y-4"><div><label class="text-[11px] text-gray-400">Kifurushi * - MH NET</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.package_id"><option value="">Chagua kifurushi MH NET</option><template x-for="p in packages" :key="p.id"><option :value="p.id" x-text="p.name+' - '+money(p.price)+' TSh'"></option></template></select></div><div><label class="text-[11px] text-gray-400">Idadi</label><div class="flex items-center gap-3 mt-1.5"><button type="button" class="w-10 h-10 rounded-full bg-[#080808] border border-[#3a2e1a] text-[#e8bf58]" @click="voucherForm.quantity=Math.max(1,voucherForm.quantity-1)">−</button><div class="flex-1 text-center bg-[#080808] border border-[#3a2e1a] rounded-xl py-2.5 font-bold" x-text="voucherForm.quantity">10</div><button type="button" class="w-10 h-10 rounded-full bg-[#080808] border border-[#3a2e1a] text-[#e8bf58]" @click="voucherForm.quantity=Math.min(500,voucherForm.quantity+1)">+</button></div><div class="flex gap-2 mt-3 items-center"><span class="text-[11px] text-gray-400">Haraka:</span><template x-for="n in [10,25,50,100]" :key="n"><button type="button" class="haraka-btn" :class="voucherForm.quantity===n?'active':''" @click="voucherForm.quantity=n" x-text="n">10</button></template></div></div><div><label class="text-[11px] text-gray-400">Muundo wa kodi - MH NET</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.code_type"><option value="numbers">Namba tu - 244175 (MH NET)</option><option value="letters">Herufi tu - RYCSVD</option><option value="mixed">Herufi na namba - R5C2V1</option></select></div><div><label class="text-[11px] text-gray-400">Ukubwa wa kuchapisha - Page1 A4 - MH NET</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.template"><option value="B">B: 100 bila QR - 38×13.8mm - Page1 MH NET</option><option value="A">A: 50 na QR/LAHA - 38×27.7mm - Page1</option><option value="C">C: 32 na QR Kubwa - Page1 Premium</option></select></div><div><label class="text-[11px] text-gray-400">Mitindo - MH NET</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.qr_or_laha"><option value="QR">Kawaida - QR Code MH NET</option><option value="LAHA">Kawaida - LAHA - Kata hapa ✂️ MH NET</option></select></div><div><label class="text-[11px] text-gray-400">Prefix - MH NET</label><div class="flex gap-2 mt-1.5"><input class="upesi-input flex-1" x-model="voucherForm.prefix" placeholder="MH"><label class="flex items-center gap-2 text-[11px] bg-[#080808] border border-[#3a2e1a] px-3 rounded-xl"><input type="checkbox" x-model="voucherForm.use_prefix"> Tumia MH NET</label></div></div><button class="w-full rounded-xl py-3.5 font-bold text-[14px]" style="background:linear-gradient(135deg,#ffe69a,#d7a633);color:#111" @click="createVoucher()" :disabled="saving">+ Tengeneza vocha MH NET <span x-text="voucherForm.quantity">10</span></button></div></div>
+<div class="upesi-card"><div class="flex justify-between mb-3"><h3 class="text-[13px] font-bold">Hakiki ya vocha - MH NET</h3><span class="text-[11px] text-[#e8bf58]" x-text="voucherForm.template+' • '+(lastBatch?.batch_id||'BATCH-HAKUNA')">B • BATCH</span></div><div class="bg-white text-black rounded-lg p-3 text-center w-[200px] mx-auto"><div class="text-[10px] font-bold bg-[#d7a633] text-black -m-3 mb-2 p-1 rounded-t">MH NET - MR HAAS</div><div class="text-[11px]" x-text="(selectedPackageName()||'MH NET GEN Z')+' - TZS '+(selectedPackagePrice()||'1,000')">Package MH NET</div><div class="text-2xl font-bold tracking-widest mt-2" style="color:#aa781b" x-text="previewCode()">244175</div><div class="text-[8px] mt-1 text-gray-500" x-text="voucherForm.qr_or_laha==='QR'?'[QR CODE MH NET]':'✂️ Kata hapa LAHA MH NET'">[QR]</div></div></div>
+<div x-show="showPrintPreview" class="fixed inset-0 z-[200] bg-white overflow-auto p-2"><div class="flex justify-between mb-2 bg-black text-white p-3 rounded sticky top-0"><div><h2 class="font-bold">Preview Page1 A4 - MH NET Template <span x-text="printTemplate"></span> • <span x-text="printBatchId"></span></h2><p class="text-xs">A=50 na QR MH NET | B=100 bila QR MH NET | C=32 QR Kubwa MH NET</p></div><div class="flex gap-2"><button class="text-white text-xs border px-3 py-1 rounded" @click="showPrintPreview=false">Funga</button><button class="bg-[#d7a633] text-black text-xs px-3 py-1 rounded font-bold" @click="doPrint()">🖨️ Chapisha MH NET</button></div></div><div id="printGrid" class="mx-auto bg-white"></div></div>
+</section>
+
+<section x-show="page==='sites'"><h2 class="font-bold mb-4">My sites - MH NET</h2><div class="card"><template x-for="s in sites" :key="s.id"><div class="voucher-row"><span x-text="s.name"></span><span class="text-xs text-gray-400" x-text="s.location"></span></div></template><div x-show="sites.length===0" class="text-gray-500 py-4">Hakuna sites MH NET</div><div class="card mt-4"><h3 class="font-bold mb-2">Ongeza site - MH NET</h3><input class="field mb-2" x-model="newSite.name" placeholder="Jina la site - MH NET"><input class="field mb-2" x-model="newSite.location" placeholder="Location - SIZA UKEREWE"><button class="btn btn-gold" @click="createSite()">Ongeza MH NET</button></div></div></section>
+<section x-show="page==='packages'"><h2 class="font-bold mb-4">Packages - MH NET</h2><div class="grid gap-3 md:grid-cols-3"><template x-for="p in packages" :key="p.id"><div class="card"><div class="font-bold" x-text="p.name"></div><div style="color:#e8bf58" x-text="money(p.price)+' TSh MH NET'"></div><button class="delete-btn mt-2" @click="deletePackage(p)">🗑️ Delete</button></div></template><div x-show="packages.length===0" class="text-gray-500">Hakuna vifurushi MH NET</div></div><div class="card mt-4"><h3 class="font-bold mb-2">Ongeza kifurushi - MH NET</h3><input class="field mb-2" x-model="newPackage.name" placeholder="Jina - MH NET"><input class="field mb-2" x-model="newPackage.price" type="number" placeholder="Bei TSh"><button class="btn btn-gold" @click="createPackage()">Ongeza MH NET</button></div></section>
+<section x-show="page==='clients'"><h2 class="font-bold mb-4">Customers - MH NET</h2><div class="card"><template x-for="c in clients" :key="c.id"><div class="voucher-row"><span x-text="c.name||c.full_name"></span><span x-text="c.phone"></span></div></template><div x-show="clients.length===0" class="text-gray-500 py-4">Hakuna wateja MH NET</div></div></section>
+<section x-show="page==='payments'"><h2 class="font-bold mb-4">Sales - MH NET</h2><div class="card"><template x-for="pay in payments" :key="pay.id"><div class="voucher-row"><span x-text="pay.reference||pay.code"></span><span style="color:#e8bf58" x-text="money(pay.amount)+' TZS'"></span></div></template><div x-show="payments.length===0" class="text-gray-500">Hakuna sales MH NET - Real 0</div></div></section>
+<section x-show="page==='reports'"><h2 class="font-bold mb-4">Reports - MH NET</h2><div class="card">Reports - MH NET - Data halisi 0 kama hakuna matumizi</div></section>
+<section x-show="page==='portal'"><h2 class="font-bold mb-4">Portal branding - MH NET</h2><div class="card">Portal branding - MH NET</div></section>
+<section x-show="page==='wallet'"><h2 class="font-bold mb-4">MH Wallet</h2><div class="card">MH Wallet - MH NET - Salio: 0 TZS (real data)</div></section>
+<section x-show="page==='subscription'"><h2 class="font-bold mb-4">Subscription - MH NET</h2><div class="card">Subscription - MH NET</div></section>
+<section x-show="page==='payment-settings'"><h2 class="font-bold mb-4">Payment settings - MH NET</h2><div class="card">Payment settings - MH NET</div></section>
+<section x-show="page==='support'"><h2 class="font-bold mb-4">Support - MH NET</h2><div class="card">Support - MH NET</div></section>
+<section x-show="page==='team'"><h2 class="font-bold mb-4">Team - MH NET</h2><div class="card">Team - MH NET</div></section>
+<section x-show="page==='settings'"><h2 class="font-bold mb-4">Settings - MH NET</h2><div class="card">Settings - MH NET</div></section>
 </main>
 </div>
 </div>
 <script>
-function wizardApp(){
+function app(){
 return {
-api:'', token:localStorage.getItem('mrhaas_token')||'', tenantId:localStorage.getItem('mrhaas_tenant_id')||'', tenant:{}, user:{}, page:'devices', sidebarOpen:false, notice:{text:'',type:'success'},
-devices:[], wizardStep:0, omadaStep:0, showModelList:false, copied:false,
+api:'', token:localStorage.getItem('mrhaas_token')||'', tenantId:localStorage.getItem('mrhaas_tenant_id')||'', tenant:{},user:{},page:'dashboard',sidebarOpen:false,loading:false,saving:false, notice:{text:'',type:'success'},voucherTab:'all', displayLimit:20, showPackageFilter:false, selectedPackageFilter:'', stats:{cleared:0}, clients:[],devices:[],sites:[],packages:[],vouchers:[],expiredVouchers:[],payments:[], lastBatch:null, showPrintPreview:false, printTemplate:'B', printBatchId:'', timeAgo:'14s ago', refreshCountdown:15, activityStart:0,
+voucherForm:{quantity:10,package_id:'',code_type:'numbers',prefix:'MH',use_prefix:true,template:'B',qr_or_laha:'QR'},
+wizardStep:0, omadaStep:0, showModelList:false, copied:false,
 form:{location:'', ssid:'MH NET', port:'Port 1', model:''},
 omadaForm:{location:'', ssid:'MH NET', mac:''},
-generatedCommand:'',
-modelsWifi:["hAP ac²","hAP ac³","hAP ax lite","hAP ax²","hAP ax³","RB951G-2HnD","cAP ac","cAP ax","wAP ac","wAP ax","L009","Chateau LTE","Audience"],
-modelsNoWifi:["RB750","RB760iGS","RB3011","RB1100AHx2","RB5009","L009","CCR1009","CCR1036","CCR2004","CRS switch","RB4011","Outdoor - SXT, LHG, Metal, QRT","Other"],
-async init(){if(!this.token||!this.tenantId){window.location.replace('/login.html');return}await this.loadMe();await this.loadPageData();},
-headers(j=true){const h={'Authorization':'Bearer '+this.token}; if(j)h['Content-Type']='application/json'; if(this.tenantId)h['X-Tenant-ID']=this.tenantId; return h;},
-async request(p,o={}){const r=await fetch(this.api+p,{...o,headers:{...this.headers(),...(o.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Failed');return d;},
-async loadMe(){try{const data=await this.request('/api/auth/me');this.tenant=data.tenant||data; this.user=data.user||{email:this.tenant.email||''};}catch(e){}},
-async loadPageData(){const tid=encodeURIComponent(this.tenantId);try{const data=await this.request('/api/devices/'+tid);this.devices=data.devices||[];}catch(e){}},
+generatedCommand:'', newPackage:{name:'',price:''}, newSite:{name:'',location:''},
+modelsWifi:["hAP ac²","hAP ac³","hAP ax lite","hAP ax²","hAP ax³","RB951G-2HnD / RB951Ui-2HnD (128MB)","cAP ac","cAP ax","cAP XL ac","wAP ac","wAP ax","LHAP / LHAP LTE","Chateau LTE","Audience"],
+modelsNoWifi:["RB750 / RB750Gr3","RB760iGS","RB3011","RB1100AHx2 / AHx4","RB5009","L009","CCR1009 / CCR1016","CCR1036 / CCR1072","CCR2004 / CCR2116 / CCR2216","CRS switch (CRS1xx-CRS5xx)","RB4011","Outdoor link - SXT, LHG, Metal, NetMetal, QRT, Cube","Other / I don't know"],
+get devicesOnlineReal(){return this.devices.filter(d=>d.status==='online'||d.is_online).length},
+get usersOnlineReal(){return this.clients.filter(c=>c.is_online||c.status==='online').length},
+get revToday(){const p=this.payments.filter(x=>this.isToday(x.created_at||x.date)); const sum=p.reduce((a,b)=>a+Number(b.amount||0),0); return this.money(sum)+' TZS'},
+get revYesterday(){const y=new Date(); y.setDate(y.getDate()-1); const p=this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d.toDateString()===y.toDateString()}); const sum=p.reduce((a,b)=>a+Number(b.amount||0),0); return this.money(sum)+' TZS'},
+get revWeek(){const now=new Date(); const weekAgo=new Date(); weekAgo.setDate(now.getDate()-7); const p=this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d>=weekAgo}); const sum=p.reduce((a,b)=>a+Number(b.amount||0),0); return this.money(sum)+' TZS'},
+get revYear(){const now=new Date(); const p=this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d.getFullYear()===now.getFullYear()}); const sum=p.reduce((a,b)=>a+Number(b.amount||0),0); return this.money(sum)+' TZS'},
+get revTodayCount(){return this.payments.filter(x=>this.isToday(x.created_at||x.date)).length},
+get revYesterdayCount(){const y=new Date(); y.setDate(y.getDate()-1); return this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d.toDateString()===y.toDateString()}).length},
+get revWeekCount(){const now=new Date(); const weekAgo=new Date(); weekAgo.setDate(now.getDate()-7); return this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d>=weekAgo}).length},
+get revYearCount(){const now=new Date(); return this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d.getFullYear()===now.getFullYear()}).length},
+get recentReal(){
+const now=new Date(); const thirty=new Date(); thirty.setDate(now.getDate()-30);
+const acts=[];
+this.payments.filter(p=>{const d=new Date(p.created_at||p.date); return d>=thirty}).forEach(p=>{
+acts.push({code:p.voucher_code||p.code||'-', package:p.package_name||'MH NET Package', amount:this.money(p.amount||0)+' TZS', type:p.type||'online', method:p.method||p.payment_method||'M-Pesa', time:this.timeAgoFormat(new Date(p.created_at||p.date)), date:new Date(p.created_at||p.date)});
+});
+return acts.sort((a,b)=>b.date-a.date);
+},
+isToday(dateStr){if(!dateStr) return false; const d=new Date(dateStr); const now=new Date(); return d.toDateString()===now.toDateString();},
+timeAgoFormat(d){const diff=Math.floor((new Date()-d)/60000); if(diff<1) return 'Just now'; if(diff<60) return diff+'m ago'; if(diff<1440) return Math.floor(diff/60)+'h ago'; return Math.floor(diff/1440)+'d ago';},
+paginatedReal(){return this.recentReal.slice(this.activityStart, this.activityStart+15)},
+packagePrice(id){const p=this.packages.find(x=>String(x.id)===String(id)); return p?Number(p.price):0},
+greetingText(){const h=new Date().getHours(); if(h>=5&&h<12) return 'Habari ya asubuhi'; if(h>=12&&h<15) return 'Habari ya mchana'; if(h>=15&&h<19) return 'Habari ya jioni'; return 'Habari ya usiku';},
+greetingEmoji(){const h=new Date().getHours(); if(h>=5&&h<12) return '🌅'; if(h>=12&&h<15) return '☀️'; if(h>=15&&h<19) return '🌇'; return '🌙';},
+greetingSubText(){const h=new Date().getHours(); if(h>=5&&h<12) return 'Asubuhi njema! Tayari kwa siku mpya ya kazi MH NET? 🚀'; if(h>=12&&h<15) return 'Mchana mwema! Endelea kusimamia mtandao wako MH NET ☀️'; if(h>=15&&h<19) return 'Jioni njema! Umefanya kazi nzuri leo MH NET 🌇'; return 'Usiku mwema! Pumzika MH NET 🌙';},
+async init(){if(!this.token||!this.tenantId){window.location.replace('/login.html');return}await this.loadMe();await this.loadPageData();setInterval(()=>{this.timeAgo=Math.floor(Math.random()*30)+'s ago';}, 5000);setInterval(()=>{this.refreshCountdown--; if(this.refreshCountdown<=0){this.refreshCountdown=15; if(this.page==='dashboard'){this.loadPageData();}}}, 1000);setInterval(()=>{if(this.page==='dashboard'){this.loadPageData(); this.refreshCountdown=15;}}, 15000);},
+headers(j=true){const h={'Authorization':'Bearer '+this.token};if(j)h['Content-Type']='application/json';if(this.tenantId)h['X-Tenant-ID']=this.tenantId;return h;},
+async request(p,o={}){const r=await fetch(this.api+p,{...o,headers:{...this.headers(),...(o.headers||{})}});const d=await r.json().catch(()=>({}));if(r.status===401){this.logout();throw new Error('Session expired')}if(!r.ok)throw new Error(d.message||'Failed');return d;},
+async loadMe(){try{const data=await this.request('/api/auth/me');this.tenant=data.tenant||data;this.user=data.user||{email:this.tenant.email||''};}catch(e){}},
+async loadPageData(){this.loading=true;const tid=encodeURIComponent(this.tenantId);const jobs=[['clients','/api/clients/'+tid],['devices','/api/devices/'+tid],['sites','/api/sites/'+tid],['packages','/api/packages/'+tid],['vouchers','/api/vouchers/'+tid],['payments','/api/payments/'+tid]];await Promise.all(jobs.map(async([k,path])=>{try{const data=await this.request(path);const v=data[k]||data.items||data.data||data;if(Array.isArray(v))this[k]=v}catch(e){}}));this.loading=false; this.refreshCountdown=15;},
 startWizard(type){if(type==='mikrotik'){this.wizardStep=1; this.form={location:'', ssid:'MH NET', port:'Port 1', model:''};}else{this.omadaStep=1; this.omadaForm={location:'', ssid:'MH NET', mac:''};}},
-nextStep(){if(this.wizardStep===1){if(!this.form.location.trim()||!this.form.ssid.trim()){this.notify('Jaza mahali na MH NET','error');return;} this.wizardStep=2;}},
+nextStep(){if(this.wizardStep===1){if(!this.form.location.trim()||!this.form.ssid.trim()){this.notify('Jaza jina la mahali na MH NET','error');return;} this.wizardStep=2;}},
 generateScript(){
-if(!this.form.model){this.notify('Chagua model','error');return;}
+if(!this.form.model){this.notify('Chagua model MH NET','error');return;}
 const tenant=this.tenantId; const site=encodeURIComponent(this.form.location); const ssid=encodeURIComponent(this.form.ssid); const model=encodeURIComponent(this.form.model); const port=encodeURIComponent(this.form.port);
 this.generatedCommand=`# MH NET - ${this.form.location} - ${this.form.ssid}
 /ip dhcp-client remove [find interface=ether1]
@@ -243,7 +284,7 @@ const data=await this.request('/api/devices',{method:'POST',body:JSON.stringify(
 this.notify('✅ MH NET Kifaa: '+payload.name+' imehifadhiwa','success');
 this.wizardStep=4;
 setTimeout(async()=>{await this.loadPageData();}, 1000);
-}catch(e){this.notify('Imeshindwa: '+e.message,'error');}
+}catch(e){this.notify('Imeshindwa MH NET: '+e.message,'error');}
 },
 async saveOmada(){
 try{
@@ -253,8 +294,61 @@ this.notify('MH NET Omada EAP imehifadhiwa','success'); this.omadaStep=0; await 
 }catch(e){this.notify(e.message,'error');}
 },
 resetWizard(){this.wizardStep=0; this.form={location:'', ssid:'MH NET', port:'Port 1', model:''}; this.generatedCommand=''; this.showModelList=false;},
-async deleteDevice(d){if(!confirm('Remove '+d.name+' ?'))return;try{await this.request('/api/devices/'+encodeURIComponent(d.id),{method:'DELETE'});await this.loadPageData();}catch(e){this.notify(e.message,'error')}},
-notify(text,type='success'){this.notice={text,type};setTimeout(()=>this.notice.text='',6000);},
+goDevices(){this.page='devices'; this.wizardStep=0; this.omadaStep=0; this.sidebarOpen=false;},
+filteredByPackage(){if(!this.selectedPackageFilter)return this.vouchers;return this.vouchers.filter(v=> (v.package_name||this.packageName(v.package_id))===this.selectedPackageFilter)},
+filteredVouchers(){let list=this.filteredByPackage();if(this.voucherTab==='active') list=list.filter(v=>v.status==='unused'||v.status==='active');if(this.voucherTab==='used') list=list.filter(v=>v.status==='used');return list;},
+selectedPackageName(){const p=this.packages.find(x=>String(x.id)===String(this.voucherForm.package_id)); return p?p.name:'';},
+selectedPackagePrice(){const p=this.packages.find(x=>String(x.id)===String(this.voucherForm.package_id)); return p?this.money(p.price):'1,000';},
+previewCode(){const t=this.voucherForm.code_type;if(t==='numbers') return this.voucherForm.use_prefix? (this.voucherForm.prefix||'MH')+'-244175' : '244175';if(t==='letters') return this.voucherForm.use_prefix? (this.voucherForm.prefix||'MH')+'-RYCSVD' : 'RYCSVD';return this.voucherForm.use_prefix? (this.voucherForm.prefix||'MH')+'-R5C2V1' : 'R5C2V1';},
+async createVoucher(){this.saving=true;try{const payload={tenant_id:this.tenantId,quantity:this.voucherForm.quantity,package_id:this.voucherForm.package_id,code_type:this.voucherForm.code_type,prefix:this.voucherForm.prefix,use_prefix:this.voucherForm.use_prefix,template:this.voucherForm.template,qr_or_laha:this.voucherForm.qr_or_laha};const data=await this.request('/api/vouchers',{method:'POST',body:JSON.stringify(payload)});this.lastBatch=data; this.notify(data.count+' vocha MH NET - '+data.batch_id+' - Template '+data.template,'success'); await this.loadPageData();}catch(e){this.notify(e.message,'error')}finally{this.saving=false}},
+async deleteVoucher(v){
+const code = v.code || v.voucher_code || v.id;
+const vid = v.id || v._id || code;
+if(!confirm('Futa vocha MH NET '+code+' ? Haiwezi kurudishwa!')) return;
+try{
+let res = await fetch(this.api+'/api/vouchers/'+encodeURIComponent(vid),{method:'DELETE',headers:this.headers(false)});
+let data = await res.json().catch(()=>({}));
+if(!res.ok){
+res = await fetch(this.api+'/api/vouchers/'+encodeURIComponent(code),{method:'DELETE',headers:this.headers(false)});
+data = await res.json().catch(()=>({}));
+if(!res.ok) throw new Error(data.message||'Imeshindwa kufuta');
+}
+this.notify('MH NET Vocha '+code+' imefutwa','success');
+this.vouchers = this.vouchers.filter(x => String(x.id)!==String(vid) && String(x.code)!==String(code));
+await this.loadPageData();
+}catch(e){this.notify('Failed MH NET: '+e.message,'error')}
+},
+async createPackage(){if(!this.newPackage.name||!this.newPackage.price){this.notify('Jaza jina na bei MH NET','error');return}try{await this.request('/api/packages',{method:'POST',body:JSON.stringify({tenant_id:this.tenantId,name:this.newPackage.name,price:Number(this.newPackage.price)})});this.newPackage={name:'',price:''};await this.loadPageData();this.notify('Kifurushi MH NET kimeongezwa','success')}catch(e){this.notify(e.message,'error')}},
+async deletePackage(p){if(!confirm('Futa MH NET '+p.name+' ?'))return;try{await this.request('/api/packages/'+encodeURIComponent(p.id),{method:'DELETE'});await this.loadPageData();}catch(e){this.notify(e.message,'error')}},
+async createSite(){if(!this.newSite.name){this.notify('Jaza jina MH NET','error');return}try{await this.request('/api/sites',{method:'POST',body:JSON.stringify({tenant_id:this.tenantId,name:this.newSite.name,location:this.newSite.location})});this.newSite={name:'',location:''};await this.loadPageData();this.notify('Site MH NET imeongezwa','success')}catch(e){this.notify(e.message,'error')}},
+async loadExpired(){try{const tid=encodeURIComponent(this.tenantId);const data=await this.request('/api/vouchers/expired/'+tid);this.expiredVouchers=data.expired||[];}catch(e){this.expiredVouchers=[]}},
+printVouchers(tpl){
+const template=tpl||this.voucherForm.template||'B';
+let limit=template==='B'?100:template==='C'?32:50;
+let toPrint=this.lastBatch?.vouchers||this.filteredVouchers().filter(v=>v.status==='unused'||v.status==='active').slice(0,limit);
+toPrint=toPrint.slice(0,limit);
+this.printTemplate=template; this.printBatchId=this.lastBatch?.batch_id||'BATCH-MH-NET'; this.showPrintPreview=true;
+this.$nextTick(()=>{
+const grid=document.getElementById('printGrid'); if(!grid) return; grid.innerHTML=''; grid.className='print-grid-'+template+' mx-auto bg-white';
+toPrint.forEach(v=>{
+const card=document.createElement('div'); card.className='voucher-card';
+const code=v.code||v.voucher_code||'';
+const batch=this.printBatchId;
+const isLaha = (v.qr_or_laha||this.voucherForm.qr_or_laha)==='LAHA';
+card.innerHTML=`<div style="font-size:6px;font-weight:bold;background:#d7a633;color:black;width:100%;text-align:center;padding:1px">MH NET - MR HAAS - ${v.package_name||''}</div><div style="font-weight:900;font-size:${template==='B'?'10px':'14px'};letter-spacing:1px">${code}</div><div style="font-size:5px">${batch} ${isLaha?'✂️ LAHA MH NET':'QR MH NET'}</div>`;
+grid.appendChild(card);
+});
+});
+},
+doPrint(){window.print()},
+currentTitle(){const m={dashboard:'Overview MH NET',devices:'Add Devices MH NET',sites:'My sites',packages:'Packages MH NET',clients:'Customers MH NET',vouchers:'Vouchers MH NET',payments:'Sales MH NET',reports:'Reports',portal:'Portal branding',wallet:'MH Wallet',subscription:'Subscription', 'payment-settings':'Payment settings',support:'Support',team:'Team',settings:'Settings'};return m[this.page]||'MR HAAS NET MH NET';},
+go(page){if(page==='devices'){this.goDirectAddDevices();return;} this.page=page;this.sidebarOpen=false;},
+goDirectAddDevices(){this.page='devices'; this.wizardStep=0; this.omadaStep=0; this.sidebarOpen=false;},
+notify(text,type='success'){this.notice={text,type};setTimeout(()=>this.notice.text='',8000);},
+logout(){['mrhaas_token','mrhaas_tenant_id','mrhaas_tenant','mrhaas_role'].forEach(k=>localStorage.removeItem(k));window.location.replace('/login.html')},
+money(v){return Number(v||0).toLocaleString('en-TZ')},
+formatDate(v){if(!v)return '-';const d=new Date(v);return isNaN(d.getTime())?'-':d.toLocaleDateString('sw-TZ')+' '+d.toLocaleTimeString('sw-TZ',{hour:'2-digit',minute:'2-digit'})},
+packageName(id){const p=this.packages.find(x=>String(x.id)===String(id));return p?p.name:'-'},
 };
 }
 </script>
