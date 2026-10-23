@@ -215,7 +215,94 @@
 <section x-show="page==='reports'"><h2 class="font-bold mb-4">Reports - MH NET</h2><div class="card">Reports - MH NET - Data halisi 0 kama hakuna matumizi</div></section>
 <section x-show="page==='portal'"><h2 class="font-bold mb-4">Portal branding - MH NET</h2><div class="card">Portal branding - MH NET</div></section>
 <section x-show="page==='wallet'"><h2 class="font-bold mb-4">MH Wallet</h2><div class="card">MH Wallet - MH NET - Salio: 0 TZS (real data)</div></section>
-<section x-show="page==='subscription'"><h2 class="font-bold mb-4">Subscription - MH NET</h2><div class="card">Subscription - MH NET</div></section>
+
+<section x-show="page==='subscription'" class="space-y-6 max-w-[700px] mx-auto">
+<!-- 1. KIFURUSHI CHAKO - KAMA VIDEO -->
+<div class="card">
+<div class="flex justify-between items-start">
+<div>
+<div class="text-[11px] text-gray-400 tracking-wide">Kifurushi chako - MH NET</div>
+<div class="flex items-center gap-3 mt-2">
+<h2 class="text-[28px] font-extrabold" x-text="sub.currentPlanName">DIAMOND</h2>
+<span class="text-[11px] px-3 py-1 rounded-full font-bold bg-green-900/30 border border-green-700 text-green-400" x-text="sub.status==='active'?'● Kimelewa':'● Haijalipiwa'">● Kimelewa</span>
+</div>
+</div>
+</div>
+<div class="mt-6">
+<div class="text-[11px] text-gray-400">Bei kwa mwezi - MH NET</div>
+<div class="text-[34px] font-extrabold mt-1">TZS <span x-text="money(sub.currentPrice)">15,000</span></div>
+<div class="text-[11px] text-gray-500 mt-1">Kwa mwezi</div>
+</div>
+<div class="mt-6 grid grid-cols-2 gap-4">
+<div><div class="text-[11px] text-gray-400">Kinaisha</div><div class="font-bold text-[13px] mt-1.5" x-text="sub.expiryDateText">Ijumaa, 20 Nov 2026</div></div>
+<div class="text-right"><span class="text-[11px] px-3 py-1.5 rounded-full font-bold bg-green-900/30 border border-green-700 text-green-400" x-text="sub.daysRemaining>0 ? 'Siku '+sub.daysRemaining+' zimebaki' : 'Imeisha muda'">Siku 28 zimebaki</span></div>
+</div>
+<div class="mt-4 text-[11px] text-gray-500 bg-[#0d0d0d] border border-[#2a2214] rounded-xl p-3">
+<span x-text="sub.currentPlanVifaa">Vifaa: 7 · Wateja: 500</span> - MH NET<br><span class="text-[10px]">Lipa kabla tarehe hiyo huduma isisimame.</span>
+</div>
+</div>
+
+<!-- 2. LIPA - KAMA VIDEO -->
+<div class="card">
+<h3 class="font-bold text-[18px]">Lipa usajili wako wa MH NET</h3>
+<p class="text-[12px] text-gray-400 mt-2 leading-relaxed">Utapokea ombi la malipo kwenye simu yako, weka PIN kuthibitisha. Kifurushi kitaunganishwa moja kwa moja baada ya malipo. MH NET</p>
+<div class="mt-6 space-y-5">
+<div><label class="text-[11px] text-gray-400">Namba ya simu - MH NET</label><input class="field mt-2" x-model="sub.phone" type="tel" placeholder="+255 ..."></div>
+<div><label class="text-[11px] text-gray-400">Kuponi <span class="text-[10px] text-gray-500">si lazima - MH NET</span></label><div class="flex gap-2 mt-2"><input class="field flex-1" x-model="sub.coupon" placeholder="MFANO LAUNCH50" style="text-transform:uppercase"><button class="px-5 py-2.5 rounded-xl text-[12px] font-bold bg-[#1a1c25] border border-[#2a2e3a] text-gray-300" @click="applyCoupon()">Tumia</button></div><div x-show="sub.couponMessage" class="mt-2 text-[11px]" :class="sub.couponValid?'text-green-400':'text-red-400'" x-text="sub.couponMessage"></div></div>
+<div class="pt-4 border-t border-[#2a2214] space-y-3 text-[13px]">
+<div class="flex justify-between"><span class="text-gray-400" x-text="sub.currentPlanName+' - mwezi 1 MH NET'">DIAMOND - mwezi 1</span><span class="font-bold">TZS <span x-text="money(sub.currentPrice)">15,000</span></span></div>
+<div x-show="sub.discount>0" class="flex justify-between text-green-400"><span>Punguzo MH NET</span><span>- TZS <span x-text="money(sub.discount)">0</span></span></div>
+<div class="flex justify-between font-extrabold text-[15px] pt-3 border-t border-[#2a2214]"><span>Utalipa MH NET</span><span>TZS <span x-text="money(sub.finalPrice)">15,000</span></span></div>
+</div>
+<button class="w-full py-4 rounded-xl font-bold text-[15px] bg-[#3b82f6] text-white mt-2" @click="paySubscription()" :disabled="sub.paying" x-text="sub.paying ? 'Inalipisha MH NET...' : 'Lipa TZS '+money(sub.finalPrice)+' sasa - MH NET'">Lipa TZS 15,000 sasa</button>
+</div>
+</div>
+
+<!-- 3. HISTORIA YA MALIPO - KAMA VIDEO -->
+<div class="card">
+<h3 class="font-bold text-[16px]">Historia ya malipo - MH NET</h3>
+<div class="mt-4 overflow-x-auto">
+<table class="w-full text-[11px]">
+<thead><tr class="text-gray-500 border-b border-[#2a2214]"><th class="text-left py-3">TAREHE</th><th class="text-left py-3">KIASI</th><th class="text-left py-3">HALI</th><th class="text-left py-3">KUMBUKUMBU</th></tr></thead>
+<tbody>
+<template x-for="h in sub.historyPaginated" :key="h.id">
+<tr class="border-b border-[#0f0f0f]"><td class="py-3.5 text-[12px]" x-text="h.date">20/10/2026 10:57</td><td class="py-3.5 text-[12px] font-medium">TZS <span x-text="money(h.amount)">15,000</span></td><td class="py-3.5"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold" :class="h.status==='paid'?'bg-green-900/30 text-green-400 border border-green-800':'bg-red-900/30 text-red-400 border border-red-800'" x-text="h.status">paid</span><div x-show="h.status!=='paid'" class="text-[9px] text-gray-500 mt-1" x-text="h.failReason">Malipo hayakukamilika. Jaribu tena.</div></td><td class="py-3.5 font-mono text-[11px] text-gray-400" x-text="h.reference">SUB7924305</td></tr>
+</template>
+<tr x-show="sub.history.length===0"><td colspan="4" class="py-10 text-center text-gray-500">Hakuna historia MH NET</td></tr>
+</tbody>
+</table>
+</div>
+<div class="flex justify-between items-center mt-4 pt-4 border-t border-[#2a2214] text-[11px]"><span class="text-gray-500" x-text="(sub.historyPage*sub.historyPageSize+1)+' - '+Math.min((sub.historyPage+1)*sub.historyPageSize, sub.history.length)+' kati ya '+sub.history.length">1-5 kati ya 6</span><div class="flex gap-2"><button class="px-4 py-2 rounded-full bg-[#0d0d0d] border border-[#2a2214] text-gray-400 disabled:opacity-30" :disabled="sub.historyPage===0" @click="sub.historyPage--">‹ Nyuma</button><button class="px-4 py-2 rounded-full bg-[#0d0d0d] border border-[#2a2214] text-gray-400 disabled:opacity-30" :disabled="(sub.historyPage+1)*sub.historyPageSize>=sub.history.length" @click="sub.historyPage++">Mbele ›</button></div></div>
+</div>
+
+<!-- 4. MIPANGO YA BEI - VIFURUSHI VYAKO HALISI - KAMA VIDEO + PICHA -->
+<div class="space-y-4 pt-2">
+<div><h3 class="font-bold text-[20px]">Mipango ya Bei - MH NET</h3><p class="text-[12px] text-gray-400 mt-1.5 leading-relaxed">Mipango ya biashara za WISP. Badilisha wakati wowote, kifurushi kinaanza na majaribio ya siku 7 kabla ya kulipa. - MH NET</p></div>
+<div class="flex items-center gap-2.5 text-[12px] text-gray-300"><span class="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-white text-[10px] font-bold">✓</span><span>Majaribio ya siku 7 - MH NET</span></div>
+
+<template x-for="plan in sub.plans" :key="plan.code">
+<div class="card" :class="plan.code===sub.currentPlanCode ? '!border-green-700 !bg-gradient-to-br !from-[#0f1f14] !to-[#121212]' : ''">
+<div class="flex justify-between items-start">
+<div>
+<div class="text-[11px] font-bold tracking-widest" style="color:#d7a633" x-text="plan.codeLabel">DIAMOND</div>
+<div class="mt-3 text-[28px] font-extrabold" x-text="money(plan.price)+' TSh'">15,000 TSh</div>
+<div class="text-[11px] text-gray-400 mt-1" x-text="plan.subtext">Kwa mwezi</div>
+</div>
+<div class="flex flex-col items-end gap-1.5"><span x-show="plan.code===sub.currentPlanCode" class="text-[10px] px-3 py-1 rounded-full font-bold bg-green-900/30 border border-green-700 text-green-400">● Kifurushi chako sasa</span></div>
+</div>
+<div class="mt-5 pt-4 border-t border-[#2a2214]">
+<div class="text-[13px] text-gray-300" x-text="plan.details">Vifaa: 7 · Wateja: 500</div>
+<div x-show="plan.tag" class="mt-2 inline-flex px-2.5 py-1 rounded-full bg-[#1a150a] border border-[#3a2e1a] text-[#e8bf58] text-[11px] font-bold" x-text="plan.tag"></div>
+</div>
+<div class="mt-5">
+<button x-show="plan.code===sub.currentPlanCode" class="w-full py-3.5 rounded-xl bg-[#1a1c25] border border-[#2a2e3a] text-gray-500 font-bold text-[13px]" disabled>Kifurushi chako sasa - MH NET</button>
+<button x-show="plan.code!==sub.currentPlanCode" class="w-full py-3.5 rounded-xl bg-[#3b82f6] text-white font-bold text-[13px]" @click="changePlan(plan)" x-text="'Badilisha kwenda '+plan.name+' - MH NET'">Badilisha kwenda DIAMOND</button>
+</div>
+</div>
+</template>
+</div>
+</section>
+
 <section x-show="page==='payment-settings'"><h2 class="font-bold mb-4">Payment settings - MH NET</h2><div class="card">Payment settings - MH NET</div></section>
 <section x-show="page==='support'"><h2 class="font-bold mb-4">Support - MH NET</h2><div class="card">Support - MH NET</div></section>
 <section x-show="page==='team'"><h2 class="font-bold mb-4">Team - MH NET</h2><div class="card">Team - MH NET</div></section>
@@ -226,7 +313,8 @@
 <script>
 function app(){
 return {
-api:'', token:localStorage.getItem('mrhaas_token')||'', tenantId:localStorage.getItem('mrhaas_tenant_id')||'', tenant:{},user:{},page:'dashboard',sidebarOpen:false,loading:false,saving:false, notice:{text:'',type:'success'},voucherTab:'all', displayLimit:20, showPackageFilter:false, selectedPackageFilter:'', stats:{cleared:0}, clients:[],devices:[],sites:[],packages:[],vouchers:[],expiredVouchers:[],payments:[], lastBatch:null, showPrintPreview:false, printTemplate:'B', printBatchId:'', timeAgo:'14s ago', refreshCountdown:15, activityStart:0,
+api:'', token:localStorage.getItem('mrhaas_token')||'', tenantId:localStorage.getItem('mrhaas_tenant_id')||'', tenant:{},user:{},page:'dashboard',sidebarOpen:false,loading:false,saving:false, notice:{text:'',type:'success'},voucherTab:'all', displayLimit:20, showPackageFilter:false, selectedPackageFilter:'', stats:{cleared:0}, clients:[],devices:[],sites:[],packages:[],vouchers:[],expiredVouchers:[],payments:[], lastBatch:null,
+sub:{currentPlanCode:'diamond', currentPlanName:'DIAMOND', currentPrice:15000, currentPlanVifaa:'Vifaa: 7 · Wateja: 500', status:'active', expiryDateText:'Ijumaa, 20 Nov 2026', daysRemaining:28, phone:'+255', coupon:'', couponMessage:'', couponValid:false, discount:0, finalPrice:15000, paying:false, history:[], historyPage:0, historyPageSize:5, plans:[{code:'start', codeLabel:'START', name:'START', price:10000, subtext:'Kwa mwezi', details:'Vifaa: 2 · Wateja: 50', tag:''},{code:'diamond', codeLabel:'DIAMOND', name:'DIAMOND', price:15000, subtext:'Kwa mwezi', details:'Vifaa: 7 · Wateja: 500', tag:'Maarufu MH NET'},{code:'premium', codeLabel:'PREMIUM', name:'PREMIUM', price:20000, subtext:'Kwa mwezi', details:'Vifaa: Bila kikomo · Wateja: 5000', tag:''},{code:'revenue_share', codeLabel:'REVENUE SHARE', name:'REVENUE SHARE', price:20000, subtext:'Ada ya kuanza + 3% ya mapato', details:'Vifaa: Bila kikomo · Wateja: Bila kikomo', tag:'Revenue Share'}], get historyPaginated(){const s=this.historyPage*this.historyPageSize; return this.history.slice(s,s+this.historyPageSize)}},, showPrintPreview:false, printTemplate:'B', printBatchId:'', timeAgo:'14s ago', refreshCountdown:15, activityStart:0,
 voucherForm:{quantity:10,package_id:'',code_type:'numbers',prefix:'MH',use_prefix:true,template:'B',qr_or_laha:'QR'},
 wizardStep:0, omadaStep:0, showModelList:false, copied:false,
 form:{location:'', ssid:'MH NET', port:'Port 1', model:''},
@@ -259,7 +347,7 @@ packagePrice(id){const p=this.packages.find(x=>String(x.id)===String(id)); retur
 greetingText(){const h=new Date().getHours(); if(h>=5&&h<12) return 'Habari ya asubuhi'; if(h>=12&&h<15) return 'Habari ya mchana'; if(h>=15&&h<19) return 'Habari ya jioni'; return 'Habari ya usiku';},
 greetingEmoji(){const h=new Date().getHours(); if(h>=5&&h<12) return '🌅'; if(h>=12&&h<15) return '☀️'; if(h>=15&&h<19) return '🌇'; return '🌙';},
 greetingSubText(){const h=new Date().getHours(); if(h>=5&&h<12) return 'Asubuhi njema! Tayari kwa siku mpya ya kazi MH NET? 🚀'; if(h>=12&&h<15) return 'Mchana mwema! Endelea kusimamia mtandao wako MH NET ☀️'; if(h>=15&&h<19) return 'Jioni njema! Umefanya kazi nzuri leo MH NET 🌇'; return 'Usiku mwema! Pumzika MH NET 🌙';},
-async init(){if(!this.token||!this.tenantId){window.location.replace('/login.html');return}await this.loadMe();await this.loadPageData();setInterval(()=>{this.timeAgo=Math.floor(Math.random()*30)+'s ago';}, 5000);setInterval(()=>{this.refreshCountdown--; if(this.refreshCountdown<=0){this.refreshCountdown=15; if(this.page==='dashboard'){this.loadPageData();}}}, 1000);setInterval(()=>{if(this.page==='dashboard'){this.loadPageData(); this.refreshCountdown=15;}}, 15000);},
+async init(){if(!this.token||!this.tenantId){window.location.replace('/login.html');return}await this.loadMe();await this.loadPageData(); await this.loadSubscription();setInterval(()=>{this.timeAgo=Math.floor(Math.random()*30)+'s ago';}, 5000);setInterval(()=>{this.refreshCountdown--; if(this.refreshCountdown<=0){this.refreshCountdown=15; if(this.page==='dashboard'){this.loadPageData();}}}, 1000);setInterval(()=>{if(this.page==='dashboard'){this.loadPageData(); this.refreshCountdown=15;}}, 15000);},
 headers(j=true){const h={'Authorization':'Bearer '+this.token};if(j)h['Content-Type']='application/json';if(this.tenantId)h['X-Tenant-ID']=this.tenantId;return h;},
 async request(p,o={}){const r=await fetch(this.api+p,{...o,headers:{...this.headers(),...(o.headers||{})}});const d=await r.json().catch(()=>({}));if(r.status===401){this.logout();throw new Error('Session expired')}if(!r.ok)throw new Error(d.message||'Failed');return d;},
 async loadMe(){try{const data=await this.request('/api/auth/me');this.tenant=data.tenant||data;this.user=data.user||{email:this.tenant.email||''};}catch(e){}},
@@ -283,14 +371,14 @@ const payload={tenant_id:this.tenantId, name:this.form.location+' - '+this.form.
 const data=await this.request('/api/devices',{method:'POST',body:JSON.stringify(payload)});
 this.notify('✅ MH NET Kifaa: '+payload.name+' imehifadhiwa','success');
 this.wizardStep=4;
-setTimeout(async()=>{await this.loadPageData();}, 1000);
+setTimeout(async()=>{await this.loadPageData(); await this.loadSubscription();}, 1000);
 }catch(e){this.notify('Imeshindwa MH NET: '+e.message,'error');}
 },
 async saveOmada(){
 try{
 const payload={tenant_id:this.tenantId, name:this.omadaForm.location+' - '+this.omadaForm.ssid, location_name:this.omadaForm.location, ssid:this.omadaForm.ssid, mac_address:this.omadaForm.mac, vendor:'TP-Link Omada', model:'EAP245'};
 await this.request('/api/devices',{method:'POST',body:JSON.stringify(payload)});
-this.notify('MH NET Omada EAP imehifadhiwa','success'); this.omadaStep=0; await this.loadPageData();
+this.notify('MH NET Omada EAP imehifadhiwa','success'); this.omadaStep=0; await this.loadPageData(); await this.loadSubscription();
 }catch(e){this.notify(e.message,'error');}
 },
 resetWizard(){this.wizardStep=0; this.form={location:'', ssid:'MH NET', port:'Port 1', model:''}; this.generatedCommand=''; this.showModelList=false;},
@@ -300,7 +388,7 @@ filteredVouchers(){let list=this.filteredByPackage();if(this.voucherTab==='activ
 selectedPackageName(){const p=this.packages.find(x=>String(x.id)===String(this.voucherForm.package_id)); return p?p.name:'';},
 selectedPackagePrice(){const p=this.packages.find(x=>String(x.id)===String(this.voucherForm.package_id)); return p?this.money(p.price):'1,000';},
 previewCode(){const t=this.voucherForm.code_type;if(t==='numbers') return this.voucherForm.use_prefix? (this.voucherForm.prefix||'MH')+'-244175' : '244175';if(t==='letters') return this.voucherForm.use_prefix? (this.voucherForm.prefix||'MH')+'-RYCSVD' : 'RYCSVD';return this.voucherForm.use_prefix? (this.voucherForm.prefix||'MH')+'-R5C2V1' : 'R5C2V1';},
-async createVoucher(){this.saving=true;try{const payload={tenant_id:this.tenantId,quantity:this.voucherForm.quantity,package_id:this.voucherForm.package_id,code_type:this.voucherForm.code_type,prefix:this.voucherForm.prefix,use_prefix:this.voucherForm.use_prefix,template:this.voucherForm.template,qr_or_laha:this.voucherForm.qr_or_laha};const data=await this.request('/api/vouchers',{method:'POST',body:JSON.stringify(payload)});this.lastBatch=data; this.notify(data.count+' vocha MH NET - '+data.batch_id+' - Template '+data.template,'success'); await this.loadPageData();}catch(e){this.notify(e.message,'error')}finally{this.saving=false}},
+async createVoucher(){this.saving=true;try{const payload={tenant_id:this.tenantId,quantity:this.voucherForm.quantity,package_id:this.voucherForm.package_id,code_type:this.voucherForm.code_type,prefix:this.voucherForm.prefix,use_prefix:this.voucherForm.use_prefix,template:this.voucherForm.template,qr_or_laha:this.voucherForm.qr_or_laha};const data=await this.request('/api/vouchers',{method:'POST',body:JSON.stringify(payload)});this.lastBatch=data; this.notify(data.count+' vocha MH NET - '+data.batch_id+' - Template '+data.template,'success'); await this.loadPageData(); await this.loadSubscription();}catch(e){this.notify(e.message,'error')}finally{this.saving=false}},
 async deleteVoucher(v){
 const code = v.code || v.voucher_code || v.id;
 const vid = v.id || v._id || code;
@@ -315,12 +403,12 @@ if(!res.ok) throw new Error(data.message||'Imeshindwa kufuta');
 }
 this.notify('MH NET Vocha '+code+' imefutwa','success');
 this.vouchers = this.vouchers.filter(x => String(x.id)!==String(vid) && String(x.code)!==String(code));
-await this.loadPageData();
+await this.loadPageData(); await this.loadSubscription();
 }catch(e){this.notify('Failed MH NET: '+e.message,'error')}
 },
-async createPackage(){if(!this.newPackage.name||!this.newPackage.price){this.notify('Jaza jina na bei MH NET','error');return}try{await this.request('/api/packages',{method:'POST',body:JSON.stringify({tenant_id:this.tenantId,name:this.newPackage.name,price:Number(this.newPackage.price)})});this.newPackage={name:'',price:''};await this.loadPageData();this.notify('Kifurushi MH NET kimeongezwa','success')}catch(e){this.notify(e.message,'error')}},
-async deletePackage(p){if(!confirm('Futa MH NET '+p.name+' ?'))return;try{await this.request('/api/packages/'+encodeURIComponent(p.id),{method:'DELETE'});await this.loadPageData();}catch(e){this.notify(e.message,'error')}},
-async createSite(){if(!this.newSite.name){this.notify('Jaza jina MH NET','error');return}try{await this.request('/api/sites',{method:'POST',body:JSON.stringify({tenant_id:this.tenantId,name:this.newSite.name,location:this.newSite.location})});this.newSite={name:'',location:''};await this.loadPageData();this.notify('Site MH NET imeongezwa','success')}catch(e){this.notify(e.message,'error')}},
+async createPackage(){if(!this.newPackage.name||!this.newPackage.price){this.notify('Jaza jina na bei MH NET','error');return}try{await this.request('/api/packages',{method:'POST',body:JSON.stringify({tenant_id:this.tenantId,name:this.newPackage.name,price:Number(this.newPackage.price)})});this.newPackage={name:'',price:''};await this.loadPageData(); await this.loadSubscription();this.notify('Kifurushi MH NET kimeongezwa','success')}catch(e){this.notify(e.message,'error')}},
+async deletePackage(p){if(!confirm('Futa MH NET '+p.name+' ?'))return;try{await this.request('/api/packages/'+encodeURIComponent(p.id),{method:'DELETE'});await this.loadPageData(); await this.loadSubscription();}catch(e){this.notify(e.message,'error')}},
+async createSite(){if(!this.newSite.name){this.notify('Jaza jina MH NET','error');return}try{await this.request('/api/sites',{method:'POST',body:JSON.stringify({tenant_id:this.tenantId,name:this.newSite.name,location:this.newSite.location})});this.newSite={name:'',location:''};await this.loadPageData(); await this.loadSubscription();this.notify('Site MH NET imeongezwa','success')}catch(e){this.notify(e.message,'error')}},
 async loadExpired(){try{const tid=encodeURIComponent(this.tenantId);const data=await this.request('/api/vouchers/expired/'+tid);this.expiredVouchers=data.expired||[];}catch(e){this.expiredVouchers=[]}},
 printVouchers(tpl){
 const template=tpl||this.voucherForm.template||'B';
