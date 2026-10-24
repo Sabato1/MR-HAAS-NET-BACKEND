@@ -149,71 +149,92 @@ async function checkPalmPesaStatus(orderId){
 
 /* ================= FIMIPAY FUNCTIONS - MR HAAS NET ================= */
 async function createFimiPayCheckout({ tenantId, amount, phone, planCode, email, clientIp, userAgent }){
-  if(!FIMIPAY_SECRET_KEY) throw new Error('FIMIPAY_SECRET_KEY haijawekwa ENV - weka kwenye Render');
+  if(!FIMIPAY_SECRET_KEY) throw new Error('FIMIPAY_SECRET_KEY haijawekwa ENV');
   if(!FIMIPAY_PUBLIC_KEY) throw new Error('FIMIPAY_PUBLIC_KEY haijawekwa');
   const reference = `MRHAAS-${tenantId.slice(0,8)}-${Date.now()}`;
+  const idempotencyKey = crypto.randomUUID();
+  
+  // FimiPay correct payload per docs: /api/v1/checkout/sessions
   const payload = {
     amount: Number(amount),
     currency: 'TZS',
-    client_id: FIMIPAY_PUBLIC_KEY,
     reference: reference,
     description: `MR HAAS NET ${planCode.toUpperCase()} - ${amount} TZS`,
-    customer_phone: phone,
-    customer_email: email || undefined,
-    callback_url: FIMIPAY_CALLBACK_URL,
+    customer: {
+      phone: phone,
+      email: email || `customer-${tenantId.slice(0,6)}@mrhaasnet.co.tz`
+    },
+    payment_methods: ['MPESA', 'TIGOPESA', 'AIRTEL'],
+    mode: 'redirect',
     success_url: `${process.env.FRONTEND_URL || 'https://mrhaasnet.co.tz'}/billing/success?ref=${reference}`,
     cancel_url: `${process.env.FRONTEND_URL || 'https://mrhaasnet.co.tz'}/billing/cancel?ref=${reference}`,
-    metadata: { tenantId: tenantId, planCode: planCode, source: 'mrhaas_wisp' }
+    expires_in: 1800,
+    metadata: { tenantId, planCode, source: 'mrhaas_wisp', phone }
   };
-  Object.keys(payload).forEach(k=> payload[k]===undefined && delete payload[k]);
-  console.log('[FIMIPAY CREATE]', payload, {clientIp, userAgent});
 
-  const browserHeaders = {
+  console.log('[FIMIPAY CREATE]', payload);
+
+  const headers = {
     'Authorization': `Bearer ${FIMIPAY_SECRET_KEY}`,
     'Content-Type': 'application/json',
+    'Idempotency-Key': idempotencyKey,
     'Accept': 'application/json',
-    'User-Agent': userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Origin': process.env.FRONTEND_URL || 'https://mrhaasnet.co.tz',
-    'Referer': (process.env.FRONTEND_URL || 'https://mrhaasnet.co.tz') + '/',
-    'X-Forwarded-For': clientIp || '',
-    'X-Real-IP': clientIp || '',
-    'CF-Connecting-IP': clientIp || ''
+    'User-Agent': userAgent || 'MR-HAAS-NET/1.0',
+    'X-Client-IP': clientIp || '',
+    'X-Forwarded-For': clientIp || ''
   };
-  Object.keys(browserHeaders).forEach(k=> !browserHeaders[k] && delete browserHeaders[k]);
 
-  const endpoints = ['/api/v1/checkout'];
+  // Correct endpoints - FimiPay uses /api/v1/checkout/sessions
+  const endpoints = [
+    '/api/v1/checkout/sessions',
+    '/api/v1/checkout',
+    '/api/checkout/sessions',
+    '/checkout/sessions'
+  ];
+
   let lastErr = null;
   for(const ep of endpoints){
     try{
       const resp = await fetch(FIMIPAY_BASE_URL + ep, {
         method: 'POST',
-        headers: browserHeaders,
+        headers,
         body: JSON.stringify(payload)
       });
       const text = await resp.text();
       let data; try{ data = JSON.parse(text); }catch{ data = { raw: text }; }
-      console.log(`[FIMIPAY RESP ${ep}] ${resp.status}`, data);
-      // Handle VPN blocked specifically
-      if(resp.status===403 && (text.includes('vpn_blocked') || text.includes('proxy') || text.includes('VPN'))){
-        lastErr = `FIMIPAY_VPN_BLOCKED: ${text.slice(0,500)} | IP ya Render imezuiwa na FimiPay. Tafadhali wasiliana na FimiPay support wakuruhusu IP au tumia domain yako mwenyewe.`;
-        // Try next endpoint, but likely all will fail, so we keep error
+      console.log(`[FIMIPAY RESP ${ep}] ${resp.status}`, JSON.stringify(data).slice(0,1000));
+      
+      if(text.includes('vpn_blocked') || text.includes('VPN') || text.includes('proxy')){
+        lastErr = `FIMIPAY_VPN_BLOCKED: ${text.slice(0,500)}`;
         continue;
       }
-      if(resp.ok && (data.checkout_url || data.data?.checkout_url || data.url || data.payment_url)){
-        const checkoutUrl = data.checkout_url || data.data?.checkout_url || data.url || data.payment_url || data.data?.url;
+      
+      // Success cases
+      const checkoutUrl = data.checkout_url || data.data?.checkout_url || data.url || data.payment_url || data.data?.url || data.checkoutUrl;
+      if(resp.ok && checkoutUrl){
         return { success:true, checkout_url: checkoutUrl, reference, response: data, endpoint: ep };
       }
-      if(resp.ok && data.success){
-        const checkoutUrl = data.checkout_url || data.data?.checkout_url || data.url || data.payment_url;
-        if(checkoutUrl) return { success:true, checkout_url: checkoutUrl, reference, response: data, endpoint: ep };
+      if(resp.status===201 && checkoutUrl){
+        return { success:true, checkout_url: checkoutUrl, reference, response: data, endpoint: ep };
       }
-      lastErr = `${ep} ${resp.status}: ${text.slice(0,500)}`;
-    }catch(e){ lastErr = e.message; }
+      // Some APIs return id and you build URL yourself
+      if(resp.ok && data.id && data.id.startsWith('cs_')){
+        const builtUrl = `https://pay.fimipay.com/c/${data.id}`;
+        return { success:true, checkout_url: data.checkout_url || builtUrl, reference, response: data, endpoint: ep };
+      }
+      
+      lastErr = `${ep} ${resp.status}: ${text.slice(0,800)}`;
+      if(resp.status===404) continue; // try next endpoint
+      if(resp.status>=400 && resp.status<500 && resp.status!==403 && resp.status!==429) {
+        // For 400 errors, don't try other endpoints, show error
+        if(!text.includes('Not implemented')) break;
+      }
+    }catch(e){ 
+      lastErr = e.message; 
+      console.error(`[FIMIPAY ERR ${ep}]`, e.message);
+    }
   }
-  if(lastErr && lastErr.includes('FIMIPAY_VPN_BLOCKED')){
-    throw new Error('FimiPay wamezuia server ya Render (vpn_blocked). Tafadhali wasiliana na FimiPay support wakuruhusu IP ya Render au badili kutumia VPS ya Tanzania. Kosa halisi: ' + lastErr);
-  }
-  throw new Error(lastErr || 'FimiPay checkout failed - angalia API keys');
+  throw new Error(lastErr || 'FimiPay checkout failed');
 }
 
 function verifyFimiPaySignature(rawBody, signature){
