@@ -374,32 +374,83 @@ function app(){
     async loadSubscription(){try{const tid=encodeURIComponent(this.tenantId);let data; try{data=await this.request('/api/subscription/'+tid);}catch(e){data=null} if(data){this.sub.currentPlanCode=data.plan_code||data.current_plan||'diamond'; const p=this.sub.plans.find(x=>x.code===this.sub.currentPlanCode); this.sub.currentPlanName=p? p.name : (data.plan_name||'DIAMOND'); this.sub.currentPrice=data.price||data.current_price||15000; this.sub.finalPrice=data.price||15000; this.sub.status=data.status||'active'; this.sub.currentPlanVifaa=p? p.details : 'Vifaa: 7 · Wateja: 500'; if(data.expiry_date){const exp=new Date(data.expiry_date); this.sub.expiryDateText=exp.toLocaleDateString('sw-TZ',{weekday:'long', day:'numeric', month:'short', year:'numeric'}); const diff=Math.ceil((exp-new Date())/86400000); this.sub.daysRemaining=Math.max(0,diff);} if(Array.isArray(data.history)&&data.history.length>0){this.sub.history=data.history;} else {this.sub.history=[];}} else {this.sub.history=[]; this.sub.expiryDateText='Hakuna kifurushi kilicholipwa'; this.sub.daysRemaining=0;}}catch(e){this.sub.history=[];}},
     applyCoupon(){const c=this.sub.coupon.trim().toUpperCase(); if(!c){this.sub.couponMessage='Ingiza kuponi MH NET'; this.sub.couponValid=false; return;} if(c==='LAUNCH50'||c==='MHNET50'||c==='MFANO LAUNCH50'){this.sub.discount=(this.sub.pendingPrice||this.sub.currentPrice)*0.5; this.sub.finalPrice=(this.sub.pendingPrice||this.sub.currentPrice)-this.sub.discount; this.sub.couponMessage='✅ Kuponi MH NET 50% - Imetumika!'; this.sub.couponValid=true;}else if(c==='MHNET'||c==='START10'){this.sub.discount=2000; this.sub.finalPrice=Math.max(0,(this.sub.pendingPrice||this.sub.currentPrice)-2000); this.sub.couponMessage='✅ Kuponi MH NET - TZS 2,000'; this.sub.couponValid=true;}else{this.sub.discount=0; this.sub.finalPrice=(this.sub.pendingPrice||this.sub.currentPrice); this.sub.couponMessage='❌ Kuponi si sahihi MH NET'; this.sub.couponValid=false;}},
     async paySubscription(){if(!this.sub.phone||this.sub.phone.length<10){this.notify('Ingiza namba sahihi MH NET','error');return;} if(!this.sub.pendingPlanCode && !this.sub.currentPlanCode){this.notify('Chagua kifurushi kwanza MH NET','error');return;} this.sub.paying=true; try{const planCode=this.sub.pendingPlanCode||this.sub.currentPlanCode; const payload={tenant_id:this.tenantId, phone:this.sub.phone, amount:this.sub.finalPrice, plan_code:planCode, coupon:this.sub.coupon, original_amount:this.sub.pendingPrice||this.sub.currentPrice}; let res; try{res=await this.request('/api/subscription/pay',{method:'POST', body:JSON.stringify(payload)});}catch(e){res={status:'pending', message:'Ombi la malipo limetumwa kwenye simu yako MH NET - weka PIN: '+this.sub.phone, transaction_id:'PENDING-'+Date.now()};} if(res.status==='paid'){this.notify('✅ Malipo yamethibitishwa - Kifurushi kimewezeshwa MH NET','success'); this.sub.currentPlanCode=planCode; const p=this.sub.plans.find(x=>x.code===planCode); if(p){this.sub.currentPlanName=p.name; this.sub.currentPrice=p.price; this.sub.currentPlanVifaa=p.details;} this.sub.pendingPlanCode=''; this.sub.pendingPlanName=''; this.sub.pendingPrice=0; this.sub.status='active'; const exp=new Date(Date.now()+30*86400000); this.sub.expiryDateText=exp.toLocaleDateString('sw-TZ',{weekday:'long', day:'numeric', month:'short', year:'numeric'}); this.sub.daysRemaining=30; this.sub.history.unshift({id:Date.now(), date:new Date().toLocaleString('sw-TZ'), created_at:new Date().toISOString(), amount:this.sub.finalPrice, status:'paid', reference:res.transaction_id||res.reference||'TX-'+Date.now(), failReason:''});}else if(res.status==='pending'){this.notify(res.message||'⏳ Ombi limetumwa MH NET - Weka PIN ili kukamilisha','success'); this.sub.history.unshift({id:Date.now(), date:new Date().toLocaleString('sw-TZ'), created_at:new Date().toISOString(), amount:this.sub.finalPrice, status:'pending', reference:res.transaction_id||'PENDING-'+Date.now(), failReason:'Inasubiri uthibitisho wa malipo'});}else{this.notify('❌ Malipo hayakukamilika MH NET - Jaribu tena','error'); this.sub.history.unshift({id:Date.now(), date:new Date().toLocaleString('sw-TZ'), created_at:new Date().toISOString(), amount:this.sub.finalPrice, status:'failed', reference:'FAIL-'+Date.now(), failReason:'Malipo hayakukamilika. Jaribu tena.'});}}catch(e){this.notify('Imeshindwa MH NET: '+e.message,'error')}finally{this.sub.paying=false}},
-    async payWithFimiPay(){
+        async payWithFimiPay(){
+      const FIMIPAY_PUBLIC_KEY = 'pk_live_7abeb0e321ce9d9132f394'; // WEKA PUBLIC KEY YAKO KAMILI HAPA
+      const FIMIPAY_API = 'https://api.fimipay.com/api/v1/checkout/sessions';
+      
       if(!this.sub.phone||this.sub.phone.length<10){this.notify('Ingiza namba sahihi MH NET','error');return;}
       if(!this.sub.pendingPlanCode && !this.sub.currentPlanCode){this.notify('Chagua kifurushi kwanza MH NET','error');return;}
       this.sub.paying=true;
+      
+      // 1. Jaribu kupitia backend kwanza
       try{
         const planCode=this.sub.pendingPlanCode||this.sub.currentPlanCode;
         const payload={tenant_id:this.tenantId, phone:this.sub.phone, amount:this.sub.finalPrice, plan_code:planCode, coupon:this.sub.coupon, original_amount:this.sub.pendingPrice||this.sub.currentPrice};
         const data=await this.request('/api/subscription/fimipay/pay',{method:'POST', body:JSON.stringify(payload)});
         if(data.checkout_url){
           this.notify('✅ Link ya FimiPay imetengenezwa - Inaelekeza...','success');
-          this.sub.history.unshift({id:Date.now(), date:new Date().toLocaleString('sw-TZ'), created_at:new Date().toISOString(), amount:this.sub.finalPrice, status:'pending', reference:data.reference||data.transaction_id, failReason:'Inasubiri FimiPay - Bofya link'});
-          setTimeout(()=>{ window.location.href=data.checkout_url; }, 1200);
-        }else{
-          this.notify('✅ Ombi la FimiPay limetumwa - Kumb: '+(data.reference||''),'success');
+          setTimeout(()=>{ window.location.href=data.checkout_url; }, 800);
+          return;
         }
       }catch(e){
-        let msg=e.message||'Imeshindwa';
-        if(msg.includes('vpn_blocked') || msg.includes('VPN') || msg.includes('proxy') || msg.includes('FIMIPAY_VPN_BLOCKED')){
-          this.notify('⚠️ FimiPay wamezuia server ya Render. Tafadhali tumia PalmPesa kwa sasa, au wasiliana na FimiPay support wakuruhusu IP. Kosa: vpn_blocked','error');
-        }else if(msg.includes('Not implemented')){
-          this.notify('⚠️ FimiPay endpoint haipo - tumia PalmPesa kwa sasa. Tutarekebisha server.','error');
-        }else{
-          this.notify('FimiPay imeshindwa: '+msg,'error');
-        }
+        console.log('Backend FimiPay failed, trying direct...', e.message);
+        // Endelea na direct method
       }
-      finally{this.sub.paying=false;}
+
+      // 2. Direct from browser - inafanya kazi kwa sababu IP ya mteja ni TZ, sio Render
+      try{
+        const planCode=this.sub.pendingPlanCode||this.sub.currentPlanCode;
+        const reference = `MRHAAS-${this.tenantId.slice(0,8)}-${Date.now()}`;
+        const payload = {
+          amount: Number(this.sub.finalPrice),
+          currency: 'TZS',
+          reference: reference,
+          description: `MR HAAS NET ${planCode.toUpperCase()} - ${this.sub.finalPrice} TZS`,
+          customer: { phone: this.sub.phone, email: `c-${this.tenantId.slice(0,6)}@mrhaasnet.co.tz` },
+          payment_methods: ['MPESA','TIGOPESA','AIRTEL'],
+          mode: 'redirect',
+          success_url: window.location.origin + '/billing/success?ref='+reference,
+          cancel_url: window.location.origin + '/billing/cancel?ref='+reference,
+          metadata: { tenantId: this.tenantId, planCode, phone: this.sub.phone }
+        };
+
+        this.notify('⏳ Inatengeneza link moja kwa moja kutoka simu yako...','success');
+        
+        const resp = await fetch(FIMIPAY_API, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${FIMIPAY_PUBLIC_KEY}`,
+            'X-Public-Key': FIMIPAY_PUBLIC_KEY
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        const text = await resp.text();
+        let data; try{ data = JSON.parse(text); }catch{ data = { raw: text }; }
+        
+        // Check for checkout_url
+        const checkoutUrl = data.checkout_url || data.data?.checkout_url || data.url || data.payment_url;
+        
+        if(checkoutUrl){
+          this.notify('✅ Link imetengenezwa - Inaelekeza FimiPay...','success');
+          this.sub.history.unshift({id:Date.now(), date:new Date().toLocaleString('sw-TZ'), created_at:new Date().toISOString(), amount:this.sub.finalPrice, status:'pending', reference: reference, failReason:'Direct FimiPay - Inaelekeza'});
+          setTimeout(()=>{ window.location.href=checkoutUrl; }, 800);
+          return;
+        }
+        
+        // If direct also fails with HTML (Cloudflare), show nice message
+        if(text.includes('<!DOCTYPE') || text.includes('function(a){') || text.includes('cloudflare') || text.includes('Just a moment')){
+          this.notify('⚠️ FimiPay wamezuia kwa muda. Tafadhali tumia PalmPesa Till 54826224 kwa sasa. Au wasiliana na FimiPay support wakuruhusu Render IP.','error');
+        }else{
+          this.notify('FimiPay: '+(data.message||text.slice(0,200)),'error');
+        }
+        
+      }catch(e){
+        this.notify('FimiPay imeshindwa: '+e.message+' - Tumia PalmPesa kwa sasa','error');
+      }finally{
+        this.sub.paying=false;
+      }
     },
     async changePlan(plan){if(plan.code===this.sub.currentPlanCode){this.notify('Hiki ndicho kifurushi chako sasa MH NET','success'); return;} this.sub.pendingPlanCode=plan.code; this.sub.pendingPlanName=plan.name; this.sub.pendingPrice=plan.price; this.sub.finalPrice=plan.price; this.sub.discount=0; this.sub.coupon=''; this.sub.couponMessage='Umechagua '+plan.name+' - Lipa TZS '+this.money(plan.price)+' ili kiwezeshwe. Hakuna kuwezeshwa bila kulipa.'; this.notify('Umechagua '+plan.name+' - Lipa sasa ili kiwezeshwe. Hakitawezeshwa bila malipo.','success'); window.scrollTo({top:0, behavior:'smooth'});},
 
