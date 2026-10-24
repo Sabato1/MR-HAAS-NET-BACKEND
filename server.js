@@ -181,7 +181,7 @@ async function createFimiPayCheckout({ tenantId, amount, phone, planCode, email,
   };
   Object.keys(browserHeaders).forEach(k=> !browserHeaders[k] && delete browserHeaders[k]);
 
-  const endpoints = ['/api/v1/checkout', '/api/v1/payments', '/v4/checkout', '/api/checkout', '/api/v1/checkout/session'];
+  const endpoints = ['/api/v1/checkout'];
   let lastErr = null;
   for(const ep of endpoints){
     try{
@@ -209,6 +209,9 @@ async function createFimiPayCheckout({ tenantId, amount, phone, planCode, email,
       }
       lastErr = `${ep} ${resp.status}: ${text.slice(0,500)}`;
     }catch(e){ lastErr = e.message; }
+  }
+  if(lastErr && lastErr.includes('FIMIPAY_VPN_BLOCKED')){
+    throw new Error('FimiPay wamezuia server ya Render (vpn_blocked). Tafadhali wasiliana na FimiPay support wakuruhusu IP ya Render au badili kutumia VPS ya Tanzania. Kosa halisi: ' + lastErr);
   }
   throw new Error(lastErr || 'FimiPay checkout failed - angalia API keys');
 }
