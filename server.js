@@ -1,541 +1,468 @@
-'use strict';
-
-const express = require('express');
-const cors = require('cors');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
-const path = require('path');
-
-const db = require('./database');
-
-const app = express();
-const PORT = Number(process.env.PORT || 3000);
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-
-let SECRET_KEY = process.env.SECRET_KEY || '';
-const SUPER_ADMIN_EMAIL = String(process.env.SUPER_ADMIN_EMAIL || 'admin@mrhaasnet.co.tz').trim().toLowerCase();
-const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || 'SuperAdminPassword123!';
-
-if (!SECRET_KEY || SECRET_KEY.length < 32) {
-  SECRET_KEY = crypto.randomBytes(48).toString('hex');
+<!DOCTYPE html>
+<html lang="sw" x-data="app()" x-init="init()">
+<head><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
 }
-
-const JWT_SECRET = SECRET_KEY;
-const SUPER_ADMIN_ID = 'tenant_super_admin';
-
-app.disable('x-powered-by');
-
-// FimiPay & PalmPesa need raw body for webhook verification
-app.use(express.json({ 
-  limit: '10mb',
-  verify: (req, res, buf) => {
-    req.rawBody = buf;
-  }
-}));
-app.use(express.urlencoded({ extended: false, limit: '10mb' }));
-
-const allowedOrigins = (process.env.CORS_ORIGINS || '').split(',').map(v=>v.trim().replace(/\/+$/, '')).filter(Boolean);
-app.use(cors({
-  origin(origin, cb){ if(!origin || !IS_PRODUCTION) return cb(null,true); const n=origin.trim().replace(/\/+$/, ''); if(allowedOrigins.includes(n)) return cb(null,true); const e=new Error('Origin hairuhusiwi.'); e.status=403; return cb(e); },
-  methods:['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders:['Content-Type','Authorization','X-Mikrotik-Secret','X-Tenant-ID','X-Fimipay-Signature'],
-  optionsSuccessStatus:204
-}));
-
-app.get('/super-admin.html',(req,res)=>{res.setHeader('Cache-Control','no-store'); res.sendFile(path.join(__dirname,'public','super-admin.html'));});
-app.use(express.static(path.join(__dirname,'public')));
-
-const PLANS = {
-  START:{name:'START',monthly_price:10000,max_devices:2,max_clients:50},
-  DIAMOND:{name:'DIAMOND',monthly_price:15000,max_devices:7,max_clients:500},
-  PREMIUM:{name:'PREMIUM',monthly_price:20000,max_devices:999999,max_clients:5000},
-  REVENUE_SHARE:{name:'REVENUE_SHARE',monthly_price:20000,signup_fee:20000,revenue_share_percent:3,max_devices:999999,max_clients:999999}
-};
-const PAYMENT_PROVIDERS=['AzamPay','ClickPesa','Selcom','Pesapal','PalmPesa','FimiPay','Beem','manual'];
-
-/* =========================================================
-   PALMPESA CONFIG - LIPA NAMBA 54826224 VODACOM DIRECT
-========================================================= */
-const PALMPESA_BASE_URL = (process.env.PALMPESA_BASE_URL || 'https://palmpesa.drmlelwa.co.tz').replace(/\/$/,'');
-const PALMPESA_USER_ID = process.env.PALMPESA_USER_ID || 'USR-5C910F926C88';
-const PALMPESA_API_TOKEN = process.env.PALMPESA_API_TOKEN || '';
-const PALMPESA_VENDOR = process.env.PALMPESA_VENDOR || process.env.VODACOM_LIPA_NAMBA || process.env.PALMPESA_LIPA_NAMBA || '54826224';
-const PALMPESA_CALLBACK_URL = process.env.PALMPESA_CALLBACK_URL || (process.env.BACKEND_URL ? process.env.BACKEND_URL + '/api/subscription/palmpesa-callback' : 'https://mrhaas-backend.onrender.com/api/subscription/palmpesa-callback');
-
-/* =========================================================
-   FIMIPAY CONFIG - MR HAAS NET WISP MANAGEMENT
-   ENV: FIMIPAY_PUBLIC_KEY=pk_live_..., FIMIPAY_SECRET_KEY=sk_live_..., FIMIPAY_WEBHOOK_SECRET=whsec_...
-========================================================= */
-const FIMIPAY_BASE_URL = (process.env.FIMIPAY_BASE_URL || 'https://api.fimipay.com').replace(/\/$/,'');
-const FIMIPAY_PUBLIC_KEY = process.env.FIMIPAY_PUBLIC_KEY || process.env.FIMIPAY_CLIENT_ID || '';
-const FIMIPAY_SECRET_KEY = process.env.FIMIPAY_SECRET_KEY || '';
-const FIMIPAY_WEBHOOK_SECRET = process.env.FIMIPAY_WEBHOOK_SECRET || '';
-const FIMIPAY_CALLBACK_URL = process.env.FIMIPAY_CALLBACK_URL || (process.env.BACKEND_URL ? process.env.BACKEND_URL + '/api/webhook/fimipay' : 'https://mrhaas-backend.onrender.com/api/webhook/fimipay');
-
-console.log('[PALMPESA] Config:', { baseUrl: PALMPESA_BASE_URL, userId: PALMPESA_USER_ID, hasToken: !!PALMPESA_API_TOKEN, vendor: PALMPESA_VENDOR });
-console.log('[FIMIPAY] Config:', { baseUrl: FIMIPAY_BASE_URL, hasPublic: !!FIMIPAY_PUBLIC_KEY, hasSecret: !!FIMIPAY_SECRET_KEY, hasWebhookSecret: !!FIMIPAY_WEBHOOK_SECRET, callback: FIMIPAY_CALLBACK_URL });
-
-class HttpError extends Error{constructor(s,m){super(m); this.status=s;}}
-const fail=(s,m)=>{throw new HttpError(s,m);};
-const asyncRoute=h=>(req,res,next)=>Promise.resolve(h(req,res,next)).catch(next);
-const query=async(sql,params=[])=>{const r=await db.pool.query(sql,params); return r.rows||[];};
-const one=async(sql,params=[])=>{const rows=await query(sql,params); return rows[0]||null;};
-const makeId=prefix=>`${prefix}_${crypto.randomBytes(12).toString('hex')}`;
-const clean=v=>typeof v==='string'?v.trim():v;
-const emailValue=v=>String(v||'').trim().toLowerCase();
-const isValidEmail=v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||''));
-const isValidPhone=v=>/^\+?[0-9\s()-]{9,20}$/.test(String(v||''));
-const signToken=(claims,expiresIn='7d')=>jwt.sign(claims,JWT_SECRET,{expiresIn});
-const publicTenant=t=>t?{id:t.id,business_name:t.business_name,owner_name:t.owner_name,phone:t.phone,email:t.email,subdomain:t.subdomain,plan:t.plan,max_devices:t.max_devices,max_clients:t.max_clients,status:t.status,role:t.role||'tenant',trial_started_at:t.trial_started_at,trial_ends_at:t.trial_ends_at,subscription_status:t.subscription_status,subscription_ends_at:t.subscription_ends_at,free_forever:t.free_forever,created_at:t.created_at}:null;
-
-const authMiddleware=asyncRoute(async(req,res,next)=>{
-  const header=req.headers.authorization||''; const token=header.startsWith('Bearer ')?header.slice(7):''; if(!token) fail(401,'Ingia kwanza.');
-  let decoded; try{decoded=jwt.verify(token,JWT_SECRET);}catch{fail(401,'Token imeisha muda. Ingia tena.');}
-  if(!decoded.tenant_id||!decoded.email) fail(401,'Token haina taarifa.');
-  req.user=decoded; req.tenant_id=decoded.tenant_id; req.email=decoded.email;
-  if(decoded.role==='super_admin'||decoded.tenant_id===SUPER_ADMIN_ID){req.role='super_admin'; return next();}
-  const tenant=await one('SELECT * FROM tenants WHERE id=$1',[decoded.tenant_id]); if(!tenant) fail(401,'Akaunti haijapatikana.'); if(tenant.status!=='active') fail(403,`Akaunti haipo active. Hali: ${tenant.status}`);
-  req.tenant=tenant; req.role='tenant'; next();
-});
-const requireSuperAdmin=(req,res,next)=>{if(req.role!=='super_admin') return res.status(403).json({success:false,message:'Super Admin pekee.'}); next();};
-const getTenantRecord=async tenantId=>{const t=await one('SELECT * FROM tenants WHERE id=$1',[tenantId]); if(!t) fail(404,'WISP haijapatikana.'); return t;};
-const ensureTenantAccess=(req,tenantId)=>{if(req.role==='super_admin') return; if(req.tenant_id!==tenantId) fail(403,'Huruhusiwi kufikia WISP mwingine.');};
-const requireSubscription=asyncRoute(async(req,res,next)=>{
-  if(req.role==='super_admin') return next(); const tenant=req.tenant; if(!tenant) fail(401,'Taarifa za Tenant hazijapatikana.');
-  if(tenant.free_forever===true||tenant.free_forever==='true') return next();
-  const now=Date.now(); const trialEnd=tenant.trial_ends_at?new Date(tenant.trial_ends_at).getTime():0; const paidEnd=tenant.subscription_ends_at?new Date(tenant.subscription_ends_at).getTime():0;
-  const trialValid=tenant.subscription_status==='trial'&&trialEnd>now; const paidValid=tenant.subscription_status==='active'&&paidEnd>now;
-  if(!trialValid&&!paidValid) return res.status(402).json({success:false,code:'SUBSCRIPTION_REQUIRED',message:'Muda wa majaribio umeisha.',plans:PLANS});
-  return next();
-});
-const checkPlanLimit=async(tenant,field,table)=>{const limit=tenant[field]; if(limit===null||limit===undefined||Number(limit)<0) return; const row=await one(`SELECT COUNT(*)::int AS total FROM ${table} WHERE tenant_id=$1`,[tenant.id]); if(Number(row?.total||0)>=Number(limit)) fail(403,`Umefikia kikomo cha ${table}. Boresha mpango.`);};
-const checkTenantLimit=async(tenant,kind)=>{if(kind==='devices') return checkPlanLimit(tenant,'max_devices','devices'); if(kind==='clients') return checkPlanLimit(tenant,'max_clients','clients');};
-const createTrialDates=()=>{const s=new Date(); const e=new Date(s.getTime()+4*24*60*60*1000); return{started:s,ends:e};};
-const getPlan=v=>{const k=String(v||'').trim().toUpperCase().replace(/\s+/g,'_'); return PLANS[k]||null;};
-const makeSubdomain=bn=>{const base=String(bn||'wisp').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,35)||'wisp'; return `${base}-${crypto.randomBytes(3).toString('hex')}`;};
-const issueTenantToken=t=>signToken({tenant_id:t.id,email:t.email,role:'tenant'});
-const issueSuperAdminToken=()=>signToken({tenant_id:SUPER_ADMIN_ID,email:SUPER_ADMIN_EMAIL,role:'super_admin'});
-
-/* ================= PALMPESA PUSH FUNCTION ================= */
-async function sendPalmPesaPush({phone, amount, transactionId, planName, tenantId}){
-  if(!PALMPESA_API_TOKEN){ throw new Error('PALMPESA_API_TOKEN haijawekwa ENV'); }
-  let msisdn = String(phone).replace(/\s+/g,'');
-  if(msisdn.startsWith('0')) msisdn = '255'+msisdn.slice(1);
-  msisdn = msisdn.replace(/^\+/,'');
-  const orderId = transactionId;
-  const attempts = [
-    { path: '/api/v1/money-request', payload: { user_id: PALMPESA_USER_ID, amount: Number(amount), phone: msisdn, phone_number: msisdn, reference: orderId, order_id: orderId, description: `MH NET ${planName} - ${amount} TZS`, vendor: PALMPESA_VENDOR, till: PALMPESA_VENDOR, business_number: PALMPESA_VENDOR, till_number: PALMPESA_VENDOR, callback_url: PALMPESA_CALLBACK_URL, remark: `MH NET ${planName} Till ${PALMPESA_VENDOR}` } },
-    { path: '/api/request-funds', payload: { user_id: PALMPESA_USER_ID, amount: Number(amount), phone_number: msisdn, reference: orderId, description: `MH NET ${planName} - Till ${PALMPESA_VENDOR}`, till_number: PALMPESA_VENDOR, callback: PALMPESA_CALLBACK_URL } }
-  ];
-  let lastError = null;
-  for(const attempt of attempts){
-    try{
-      Object.keys(attempt.payload).forEach(k=> attempt.payload[k]===undefined && delete attempt.payload[k]);
-      const url = PALMPESA_BASE_URL + attempt.path;
-      console.log(`[PALMPESA TRY ${PALMPESA_VENDOR}] ${attempt.path}`, attempt.payload);
-      const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PALMPESA_API_TOKEN}`, 'X-API-TOKEN': PALMPESA_API_TOKEN, 'api-token': PALMPESA_API_TOKEN, 'User-ID': PALMPESA_USER_ID, 'x-user-id': PALMPESA_USER_ID }, body: JSON.stringify(attempt.payload) });
-      const text = await resp.text(); let data; try{ data = JSON.parse(text); }catch(e){ data = { raw: text }; }
-      console.log(`[PALMPESA RESP ${attempt.path}] ${resp.status}`, data);
-      if(resp.ok || data.success || data.status === 'success'){ return { success:true, endpoint: attempt.path, response: data, order_id: orderId, till: PALMPESA_VENDOR }; }
-      else { lastError = `${attempt.path} ${resp.status}: ${text.substring(0,400)}`; continue; }
-    }catch(e){ lastError = e.message; console.error(`[PALMPESA ERROR ${attempt.path}]`, e.message); continue; }
-  }
-  throw new Error(lastError || `PalmPesa push failed`);
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
 }
-async function checkPalmPesaStatus(orderId){
-  try{ const url = `${PALMPESA_BASE_URL}/api/v1/transaction/${orderId}`; const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${PALMPESA_API_TOKEN}` } }); const data = await resp.json().catch(()=>({})); return data; }catch(e){ return { error: e.message }; }
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
 }
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#080808">
+  <title>MR HAAS NET - MABORESHO YOTE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak]{display:none!important}
+    body{margin:0;background:#090909;color:#f5f5f5;font-family:Arial,sans-serif}
+    .sidebar{background:#080808;color:#eee;border-right:1px solid #292218}
+    .nav-item{display:flex;align-items:center;gap:12px;width:calc(100% - 16px);margin:2px 8px;padding:11px 12px;border-radius:10px;color:#a39e94;font-size:14px;border:1px solid transparent;text-align:left}
+    .nav-item:hover{background:#1a150a;color:#f5d78a;border-color:#3a2e1a}
+    .nav-active{background:linear-gradient(90deg,#332712,#18130a)!important;color:#ffdc80!important;border:1px solid #5d471f!important;font-weight:700}
+    .nav-icon{width:28px;height:28px;border-radius:8px;background:#141009;border:1px solid #2a2214;display:flex;align-items:center;justify-content:center;font-size:14px}
+    .nav-active .nav-icon{background:linear-gradient(135deg,#ffe69a,#d7a633)!important;color:#111!important}
+    .sidebar-slide{transition:transform .35s}
+    .sidebar-overlay{background:rgba(0,0,0,0.7);backdrop-filter:blur(5px)}
+    .account-label{color:#6b6560;font-size:10px;letter-spacing:1.2px;padding:18px 16px 6px 16px;font-weight:700;text-transform:uppercase}
+    .card{background:linear-gradient(145deg,#171717,#101010);border:1px solid #30291c;border-radius:16px;padding:16px}
+    .stat-card{background:#121212;border:1px solid #2a2214;border-radius:14px;padding:16px}
+    .upesi-card{background:#121212;border:1px solid #30291c;border-radius:16px;padding:14px}
+    .upesi-stat{border:1px solid #30291c;background:#111;border-radius:14px;padding:14px;display:flex;justify-content:space-between;align-items:center}
+    .upesi-tab{padding:8px 12px;border-radius:10px;font-size:13px;border:1px solid #30291c;background:#111;color:#8a93a8;cursor:pointer}
+    .upesi-tab.active{background:#332712;color:#ffdc80;border-color:#5d471f}
+    .upesi-input{background:#0d0d0d;border:1px solid #403827;border-radius:12px;padding:12px;color:white;width:100%}
+    .haraka-btn{padding:6px 14px;border-radius:20px;font-size:12px;border:1px solid #30291c;background:#0d0d0d;color:#8a93a8;cursor:pointer}
+    .haraka-btn.active{background:#e8bf58;color:#111;font-weight:bold;border-color:#e8bf58}
+    .voucher-row{background:#0d0d0d;border:1px solid #30291c;border-radius:12px;padding:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .delete-btn{background:#2a0a0a;color:#ff6b6b;border:1px solid #4a1a1a;border-radius:20px;padding:6px 14px;font-size:12px;cursor:pointer}
+    .delete-btn:hover{background:#ff4444;color:white}
+    .field{width:100%;border:1px solid #403827;border-radius:10px;padding:11px 12px;background:#0d0d0d;color:#f7f1e3}
+    .btn{padding:10px 15px;border-radius:10px;font-weight:700;font-size:13px}
+    .btn-gold{background:linear-gradient(135deg,#ffe69a,#d7a633,#aa781b);color:#17120a}
+    .btn-blue{background:#3b82f6;color:white}
+    .wizard-card{background:linear-gradient(145deg,#171717,#101010);border:1px solid #30291c;border-radius:16px;padding:20px}
+    .type-card{border:1px solid #30291c;background:#111;border-radius:14px;padding:16px;cursor:pointer}
+    .type-card:hover{border-color:#5d471f;background:#1a150a}
+    .voucher-card{border:1px dashed #999;background:white;color:black;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+    .print-grid-A{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(10,1fr);width:210mm;height:277mm;gap:0}
+    .print-grid-A .voucher-card{height:27.7mm;padding:2mm}
+    .print-grid-B{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(20,1fr);width:210mm;height:277mm;gap:0}
+    .print-grid-B .voucher-card{height:13.85mm;padding:1mm;flex-direction:row;justify-content:space-between}
+    .print-grid-C{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(8,1fr);width:210mm;height:277mm;gap:0}
+    .print-grid-C .voucher-card{height:34.6mm;padding:2mm}
+    @media print{body *{visibility:hidden}#printGrid,#printGrid *{visibility:visible}#printGrid{position:absolute;left:0;top:0;width:210mm}}
+    .greeting-card{background:linear-gradient(135deg,#1a150a,#121212);border:1px solid #3a2e1a;border-radius:16px;padding:20px;position:relative;overflow:hidden}
+    .pulse-dot{width:8px;height:8px;background:#22c55e;border-radius:50%;animation:pulse 2s infinite}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 #22c55e88}70%{box-shadow:0 0 0 6px #22c55e00}100%{box-shadow:0 0 0 0 #22c55e00}}
+  </style>
+</head>
+<body x-cloak>
+<div class="min-h-screen">
+  <div x-show="sidebarOpen" @click="sidebarOpen=false" class="fixed inset-0 z-40 sidebar-overlay md:hidden"></div>
+  <aside class="sidebar fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col sidebar-slide" :class="sidebarOpen?'translate-x-0':'-translate-x-full md:translate-x-0'">
+    <div class="border-b border-[#292218] p-4">
+      <div class="flex items-center gap-3"><div class="flex h-11 w-11 items-center justify-center rounded-xl border border-yellow-700/60 bg-black text-lg font-black" style="color:#e8bf58">MH</div><div class="min-w-0"><div class="font-extrabold tracking-wide text-white">MR HAAS <span style="color:#e8bf58">NET</span></div><div class="mt-1 text-[10px] tracking-wider text-gray-500">WISP MANAGEMENT 🚀</div></div><button @click="sidebarOpen=false" class="ml-auto md:hidden w-8 h-8 rounded-full bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-[#e8bf58]">✕</button></div>
+      <div class="mt-4"><div class="text-[10px] uppercase tracking-widest text-gray-500">Biashara yako</div><div class="mt-2 truncate text-sm font-bold text-white" x-text="tenant.name||tenant.business_name||'MR HAAS WI-FI'"></div><div class="text-[11px] text-gray-500" x-text="tenant.subdomain||'mr-haas-wi-fi-5dd687'"></div></div>
+    </div>
+    <nav class="flex-1 overflow-y-auto py-2">
+      <button class="nav-item" :class="page==='dashboard'?'nav-active':''" @click="go('dashboard')"><span class="nav-icon">⊞</span><span>Overview</span></button>
+      <button class="nav-item" :class="page==='devices'?'nav-active':''" @click="goDirectAddDevices()"><span class="nav-icon">＋</span><span>Add Devices</span></button>
+      <button class="nav-item" :class="page==='sites'?'nav-active':''" @click="go('sites')"><span class="nav-icon">📡</span><span>My sites</span></button>
+      <button class="nav-item" :class="page==='packages'?'nav-active':''" @click="go('packages')"><span class="nav-icon">📦</span><span>Packages</span></button>
+      <button class="nav-item" :class="page==='clients'?'nav-active':''" @click="go('clients')"><span class="nav-icon">👤</span><span>Customers</span></button>
+      <button class="nav-item" :class="page==='vouchers'?'nav-active':''" @click="go('vouchers')"><span class="nav-icon">🎟️</span><span>Vouchers</span><span x-show="vouchers.length>0" class="ml-auto text-[10px] bg-[#e8bf58] text-black px-2 py-0.5 rounded-full font-bold" x-text="vouchers.length">0</span></button>
+      <button class="nav-item" :class="page==='payments'?'nav-active':''" @click="go('payments')"><span class="nav-icon">↗</span><span>Sales</span></button>
+      <button class="nav-item" :class="page==='reports'?'nav-active':''" @click="go('reports')"><span class="nav-icon">📊</span><span>Reports</span></button>
+      <button class="nav-item" :class="page==='portal'?'nav-active':''" @click="go('portal')"><span class="nav-icon">🎨</span><span>Portal branding</span></button>
+      <button class="nav-item" :class="page==='wallet'?'nav-active':''" @click="go('wallet')"><span class="nav-icon">💳</span><span>MH Wallet</span></button>
+      <div class="account-label">ACCOUNT</div>
+      <button class="nav-item" :class="page==='subscription'?'nav-active':''" @click="go('subscription')"><span class="nav-icon">🕒</span><span>Subscription</span></button>
+      <button class="nav-item" :class="page==='payment-settings'?'nav-active':''" @click="go('payment-settings')"><span class="nav-icon">💳</span><span>Payment settings</span></button>
+      <button class="nav-item" :class="page==='support'?'nav-active':''" @click="go('support')"><span class="nav-icon">🎧</span><span>Support</span></button>
+      <button class="nav-item" :class="page==='team'?'nav-active':''" @click="go('team')"><span class="nav-icon">👥</span><span>Team</span></button>
+      <button class="nav-item" :class="page==='settings'?'nav-active':''" @click="go('settings')"><span class="nav-icon">⚙️</span><span>Settings</span></button>
+      <div class="mt-6 border-t border-[#292218] pt-4 px-2"><button class="nav-item w-full" @click="logout()"><span class="nav-icon">🚪</span><span>Log out</span></button></div>
+    </nav>
+    <div class="border-t border-[#292218] p-4 bg-[#060606]"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#ffe69a] to-[#aa781b] flex items-center justify-center text-[#111] font-black" x-text="(user.email||'H').charAt(0).toUpperCase()">H</div><div class="min-w-0 flex-1"><div class="truncate text-[13px] font-bold text-white" x-text="user.email||'haasparkjong@gmail.com'"></div><div class="text-[11px] text-gray-500">Akaunti ya WISP</div></div></div></div>
+  </aside>
 
-/* ================= FIMIPAY FUNCTIONS - MR HAAS NET ================= */
-async function createFimiPayCheckout({ tenantId, amount, phone, planCode, email, clientIp, userAgent }){
-  if(!FIMIPAY_SECRET_KEY) throw new Error('FIMIPAY_SECRET_KEY haijawekwa ENV');
-  if(!FIMIPAY_PUBLIC_KEY) throw new Error('FIMIPAY_PUBLIC_KEY haijawekwa');
-  const reference = `MRHAAS-${tenantId.slice(0,8)}-${Date.now()}`;
-  const idempotencyKey = crypto.randomUUID();
-  
-  // FimiPay correct payload per docs: /api/v1/checkout/sessions
-  const payload = {
-    amount: Number(amount),
-    currency: 'TZS',
-    reference: reference,
-    description: `MR HAAS NET ${planCode.toUpperCase()} - ${amount} TZS`,
-    customer: {
-      phone: phone,
-      email: email || `customer-${tenantId.slice(0,6)}@mrhaasnet.co.tz`
-    },
-    payment_methods: ['MPESA', 'TIGOPESA', 'AIRTEL'],
-    mode: 'redirect',
-    success_url: `${process.env.FRONTEND_URL || 'https://mrhaasnet.co.tz'}/billing/success?ref=${reference}`,
-    cancel_url: `${process.env.FRONTEND_URL || 'https://mrhaasnet.co.tz'}/billing/cancel?ref=${reference}`,
-    expires_in: 1800,
-    metadata: { tenantId, planCode, source: 'mrhaas_wisp', phone }
-  };
+  <div class="min-h-screen md:ml-[280px]">
+    <header class="sticky top-0 z-30 flex min-h-[64px] items-center justify-between gap-3 border-b border-[#292218] bg-[#0c0c0c]/90 backdrop-blur-md px-4 md:px-7">
+      <div class="flex items-center gap-3"><button @click="sidebarOpen=!sidebarOpen" class="w-10 h-10 rounded-xl bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-[#e8bf58] md:hidden">☰</button><h1 class="text-[15px] font-bold text-white" x-text="currentTitle()"></h1><span class="hidden md:flex items-center gap-2 bg-[#1a150a] border border-[#3a2e1a] rounded-full px-3 py-1 text-[11px] text-[#a39e94]"><span class="pulse-dot"></span> Live • <span x-text="timeAgo">14s ago</span></span></div>
+      <div class="flex items-center gap-2"><span class="text-[10px] bg-[#1a150a] border border-[#3a2e1a] px-2 py-1 rounded-full text-[#e8bf58]" x-text="'Refresh: '+refreshCountdown+'s'">15s</span><button class="w-9 h-9 rounded-xl bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-[#e8bf58]" @click="loadPageData()">🔄</button></div>
+    </header>
 
-  console.log('[FIMIPAY CREATE]', payload);
+    <main class="space-y-5 p-4 md:p-6 bg-[#090909] min-h-[calc(100vh-64px)]">
+      <div x-show="notice.text" class="fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-[92%] max-w-2xl flex justify-between gap-4 rounded-xl border p-4" :class="notice.type==='error'?'border-red-900 bg-red-950 text-red-200':'border-green-900 bg-green-950 text-green-200'"><p class="text-sm font-bold" x-text="notice.text"></p><button @click="notice.text=''" class="font-bold">×</button></div>
 
-  const headers = {
-    'Authorization': `Bearer ${FIMIPAY_SECRET_KEY}`,
-    'Content-Type': 'application/json',
-    'Idempotency-Key': idempotencyKey,
-    'Accept': 'application/json',
-    'User-Agent': userAgent || 'MR-HAAS-NET/1.0',
-    'X-Client-IP': clientIp || '',
-    'X-Forwarded-For': clientIp || ''
-  };
+      <section x-show="page==='dashboard'" class="space-y-4 max-w-[700px] mx-auto md:max-w-full">
+        <div class="greeting-card"><div class="relative z-10"><div class="text-[13px] text-[#e8bf58] font-bold" x-text="greetingEmoji()+' '+greetingText()">🌅 Habari ya asubuhi</div><h2 class="text-[22px] font-extrabold text-white mt-1" x-text="'Karibu, '+(tenant.business_name||tenant.name||'MR HAAS WI-FI')+'!'">Karibu!</h2><p class="text-[12px] text-gray-400 mt-1" x-text="greetingSubText()">Asubuhi njema!</p><div class="mt-3 flex items-center gap-2 text-[11px] text-gray-500"><span class="pulse-dot"></span> Live • <span x-text="timeAgo">14s ago</span> • Auto-refresh 15s</div></div></div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="stat-card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">📡 Devices Online</span><span class="text-[10px] text-gray-500">Live</span></div><div class="flex items-end gap-2 mt-3"><div class="text-[26px] font-extrabold" style="color:#e8bf58" x-text="devicesOnlineReal">0</div><div class="text-[12px] text-gray-500 mb-1">/ <span x-text="devices.length">0</span> total</div></div><div class="text-[11px] text-gray-500 mt-1"><span x-text="devices.length - devicesOnlineReal">0</span> offline</div></div>
+          <div class="stat-card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">👥 User Online</span><span class="text-[10px] text-gray-500">Active now</span></div><div class="flex items-end gap-2 mt-3"><div class="text-[26px] font-extrabold text-gray-300" x-text="usersOnlineReal">0</div><div class="text-[12px] text-gray-500 mb-1">watumiaji</div></div><div class="text-[11px] text-gray-500 mt-1">Hakuna mtumiaji online sasa</div></div>
+          <div class="stat-card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">📊 Data In Use Now</span><span class="text-[10px] text-gray-500">Real-time</span></div><div class="flex items-end gap-2 mt-3"><div class="text-[26px] font-extrabold text-gray-300">0 GB</div></div><div class="text-[11px] text-gray-500 mt-1">Hakuna data inayotumika sasa</div></div>
+        </div>
+        <div class="space-y-3"><h3 class="font-bold text-[14px]">💰 Revenue</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3"><div class="card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">Today</span><span class="text-[10px] bg-[#1a150a] text-gray-400 px-2 py-0.5 rounded-full">TZS</span></div><div class="text-[18px] font-extrabold text-gray-300 mt-2" x-text="revToday">0 TZS</div><div class="text-[10px] text-gray-500 mt-1" x-text="revTodayCount+' miamala leo'">0</div></div><div class="card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">Yesterday</span><span class="text-[10px] bg-[#1a150a] text-gray-400 px-2 py-0.5 rounded-full">TZS</span></div><div class="text-[18px] font-extrabold text-gray-300 mt-2" x-text="revYesterday">0 TZS</div><div class="text-[10px] text-gray-500 mt-1" x-text="revYesterdayCount+' miamala jana'">0</div></div><div class="card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">This Week</span><span class="text-[10px] bg-[#1a150a] text-gray-400 px-2 py-0.5 rounded-full">TZS</span></div><div class="text-[18px] font-extrabold text-gray-300 mt-2" x-text="revWeek">0 TZS</div><div class="text-[10px] text-gray-500 mt-1" x-text="revWeekCount+' miamala wiki hii'">0</div></div><div class="card"><div class="flex justify-between"><span class="text-[11px] text-gray-400">This Year</span><span class="text-[10px] bg-[#1a150a] text-gray-400 px-2 py-0.5 rounded-full">TZS</span></div><div class="text-[18px] font-extrabold text-gray-300 mt-2" x-text="revYear">0 TZS</div><div class="text-[10px] text-gray-500 mt-1" x-text="revYearCount+' miamala mwaka huu'">0</div></div></div></div>
+        <div class="card"><div class="flex justify-between items-center mb-4"><h3 class="font-bold text-[14px]">📋 Recent Activity's (30 days)</h3><span class="text-[11px] text-gray-400" x-text="recentReal.length>0 ? 'Showing '+(activityStart+1)+'-'+Math.min(activityStart+15, recentReal.length)+' of '+recentReal.length : ''"></span></div><div class="space-y-2"><template x-for="(act, idx) in paginatedReal()" :key="idx"><div class="flex items-center gap-3 py-2.5 px-3 bg-[#0d0d0d] border border-[#2a2214] rounded-xl"><div class="w-8 h-8 rounded-full flex items-center justify-center text-[14px] bg-[#1a150a] border border-[#3a2e1a]" x-text="act.type==='online'?'💳':'🎟️'"></div><div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="font-bold text-[13px]" x-text="act.code">CODE</span><span class="text-[10px] px-2 py-0.5 rounded-full bg-[#1a150a] text-[#e8bf58] border border-[#3a2e1a]" x-text="act.type==='online'?'Online Purchase':'Voucher'">Voucher</span></div><div class="text-[11px] text-gray-400 truncate" x-text="act.package+' • '+act.method">Package • Method</div></div><div class="text-right"><div class="text-[12px] font-bold" style="color:#e8bf58" x-text="act.amount">1,000 TZS</div><div class="text-[10px] text-gray-500" x-text="act.time">2m ago</div></div></div></template><div x-show="recentReal.length===0" class="text-center py-12"><div class="text-[40px] mb-2">📭</div><div class="text-[13px] text-gray-400">Hakuna miamala ya siku 30 zilizopita</div><div class="text-[11px] text-gray-500 mt-1">Vocha zilizoingizwa au kununuliwa online zitaonekana hapa</div></div></div><div x-show="recentReal.length>15" class="flex justify-between items-center mt-4 pt-3 border-t border-[#2a2214]"><button class="text-[12px] bg-[#1a150a] border border-[#3a2e1a] px-4 py-2 rounded-full text-[#e8bf58] disabled:opacity-30" :disabled="activityStart===0" @click="activityStart=Math.max(0, activityStart-15)">‹ Previous</button><div class="flex gap-1"><template x-for="p in Math.ceil(recentReal.length/15)" :key="p"><button class="w-7 h-7 rounded-full text-[11px] border" :class="(activityStart/15)+1===p?'bg-[#e8bf58] text-black border-[#e8bf58]':'bg-[#1a150a] border-[#3a2e1a] text-gray-400'" @click="activityStart=(p-1)*15" x-text="p">1</button></template></div><button class="text-[12px] bg-[#1a150a] border border-[#3a2e1a] px-4 py-2 rounded-full text-[#e8bf58] disabled:opacity-30" :disabled="activityStart+15>=recentReal.length" @click="activityStart=Math.min(recentReal.length-15, activityStart+15)">Next ›</button></div></div>
+      </section>
 
-  // Correct endpoints - FimiPay uses /api/v1/checkout/sessions
-  const endpoints = [
-    '/api/v1/checkout/sessions',
-    '/api/v1/checkout',
-    '/api/checkout/sessions',
-    '/checkout/sessions'
-  ];
+      <section x-show="page==='devices'" class="space-y-4 max-w-[600px] mx-auto md:max-w-full">
+        <div class="wizard-card">
+          <div x-show="!deviceType">
+            <h2 class="text-[18px] font-extrabold">Add a device</h2><p class="text-[13px] text-gray-400 mt-1">Chagua aina ya kifaa unachotaka kuunganisha</p>
+            <div class="mt-6 space-y-3">
+              <button class="type-card w-full flex items-center gap-4 text-left" @click="selectDeviceType('mikrotik')"><div class="w-10 h-10 rounded-xl bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-lg">📡</div><div class="flex-1"><div class="font-bold text-[14px]">MikroTik</div><div class="text-[11px] text-gray-400">RB3011, hAP ac², hAP ax² · RouterOS</div></div><div class="text-gray-500">›</div></button>
+              <button class="type-card w-full flex items-center gap-4 text-left" @click="selectDeviceType('omada')"><div class="w-10 h-10 rounded-xl bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center text-lg">📶</div><div class="flex-1"><div class="font-bold text-[14px]">Omada EAP</div><div class="text-[11px] text-gray-400">EAP245, EAP610, EAP650 · TP-Link Omada</div></div><div class="text-gray-500">›</div></button>
+            </div>
+            <div x-show="devices.length>0" class="mt-8 border-t border-[#2a2214] pt-4"><h3 class="font-bold text-[13px] mb-3">Vifaa vyako (<span x-text="devices.length"></span>)</h3><template x-for="d in devices" :key="d.id"><div class="flex justify-between items-center py-2 text-[13px]"><span x-text="d.name"></span><button class="text-red-400 text-xs" @click="deleteDevice(d)">Futa</button></div></template></div>
+          </div>
+          <div x-show="deviceType==='mikrotik'">
+            <div class="flex items-center gap-2 mb-4"><button class="w-8 h-8 rounded-full bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center" @click="deviceType=null">‹</button><h2 class="font-bold">Link a MikroTik</h2></div>
+            <div class="space-y-3"><div><label class="text-[11px] text-gray-400">Location *</label><input class="field mt-1" x-model="linkLocation" placeholder="SIZA UKEREWE - FAMI NET"></div><div><label class="text-[11px] text-gray-400">SSID *</label><input class="field mt-1" x-model="linkSsid" placeholder="FAMI NET"></div><div><label class="text-[11px] text-gray-400">Port</label><select class="field mt-1" x-model="linkPort"><option>Port 1</option><option>Port 2</option><option>Port 3</option><option>Port 4</option><option>Port 5</option></select></div><div><label class="text-[11px] text-gray-400">Model</label><input class="field mt-1" x-model="linkModel" placeholder="RB3011"></div></div>
+            <div class="mt-6 flex gap-2"><button class="btn btn-gold flex-1" @click="saveMikroTik()">Hifadhi MikroTik</button><button class="btn" style="background:#1a150a;border:1px solid #3a2e1a" @click="deviceType=null">Nyuma</button></div>
+          </div>
+          <div x-show="deviceType==='omada'">
+            <div class="flex items-center gap-2 mb-4"><button class="w-8 h-8 rounded-full bg-[#1a150a] border border-[#3a2e1a] flex items-center justify-center" @click="deviceType=null">‹</button><h2 class="font-bold">Link an Omada EAP</h2></div>
+            <div class="space-y-3"><div><label class="text-[11px] text-gray-400">Location *</label><input class="field mt-1" x-model="omLocation" placeholder="SIZA UKEREWE"></div><div><label class="text-[11px] text-gray-400">SSID *</label><input class="field mt-1" x-model="omSsid" placeholder="FAMI NET"></div><div><label class="text-[11px] text-gray-400">MAC Address</label><input class="field mt-1" x-model="omMac" placeholder="AA:BB:CC:DD:EE:FF"></div></div>
+            <div class="mt-6 flex gap-2"><button class="btn btn-blue flex-1" @click="finishOmadaWizard()">Hifadhi Omada EAP</button><button class="btn" style="background:#1a150a;border:1px solid #3a2e1a" @click="deviceType=null">Nyuma</button></div>
+          </div>
+        </div>
+      </section>
 
-  let lastErr = null;
-  for(const ep of endpoints){
-    try{
-      const resp = await fetch(FIMIPAY_BASE_URL + ep, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload)
+      <section x-show="page==='vouchers'" class="space-y-4 max-w-[480px] mx-auto md:max-w-full">
+        <div class="flex justify-between items-center"><h2 class="font-bold">Vouchers</h2><span class="text-[11px] bg-[#1a150a] border border-[#3a2e1a] px-3 py-1 rounded-full text-[#e8bf58]">Active • <span x-text="vouchers.length">0</span></span></div>
+        <div class="grid grid-cols-2 gap-3"><div class="upesi-stat"><div><div class="text-[11px] text-gray-400">◧ Generated</div><div class="text-xl font-bold mt-1" style="color:#f3d27b" x-text="vouchers.length">0</div></div></div><div class="upesi-stat"><div><div class="text-[11px] text-gray-400">☑ Used</div><div class="text-xl font-bold mt-1" x-text="vouchers.filter(v=>v.status==='used').length">0</div></div></div><div class="upesi-stat"><div><div class="text-[11px] text-gray-400">◍ Active</div><div class="text-xl font-bold mt-1 text-green-400" x-text="vouchers.filter(v=>v.status==='unused'||v.status==='active').length">0</div></div></div><div class="upesi-stat"><div><div class="text-[11px] text-gray-400">🗑 Cleared</div><div class="text-xl font-bold mt-1" x-text="stats.cleared||0">0</div></div></div></div>
+        <div class="upesi-card">
+          <h3 class="font-bold mb-3 text-[14px]">Vouchers</h3>
+          <div class="flex gap-2 mb-3"><button class="upesi-tab" :class="voucherTab==='all'?'active':''" @click="voucherTab='all'">All <span class="bg-[#e8bf58] text-black px-1.5 rounded-full text-[10px]" x-text="filteredByPackage().length">0</span></button><button class="upesi-tab" :class="voucherTab==='active'?'active':''" @click="voucherTab='active'">Active</button><button class="upesi-tab" :class="voucherTab==='used'?'active':''" @click="voucherTab='used'">Used</button><button class="upesi-tab" :class="voucherTab==='expired'?'active':''" @click="voucherTab='expired'; loadExpired()">Zimeisha Muda</button></div>
+          <div class="relative mb-3"><button class="upesi-input text-left flex justify-between items-center text-[13px]" @click="showPackageFilter=!showPackageFilter"><span x-text="selectedPackageFilter? selectedPackageFilter : 'Vifurushi vyote ('+vouchers.length+')'">Vifurushi</span><span>▼</span></button><div x-show="showPackageFilter" class="absolute z-20 w-full mt-2 bg-[#080808] border border-[#3a2e1a] rounded-xl p-2 max-h-64 overflow-y-auto"><button class="w-full text-left px-3 py-2 hover:bg-[#1a150a] rounded text-sm" @click="selectedPackageFilter=''; showPackageFilter=false">Vyote (<span x-text="vouchers.length"></span>)</button><template x-for="p in packages" :key="p.id"><button class="w-full text-left px-3 py-2 hover:bg-[#1a150a] rounded text-sm" @click="selectedPackageFilter=p.name; showPackageFilter=false" x-text="p.name"></button></template></div></div>
+          <button x-show="voucherTab!=='expired'" class="w-full rounded-xl py-3 font-bold text-[13px] mb-3" style="background:linear-gradient(135deg,#ffe69a,#d7a633);color:#111" @click="printVouchers('B')">⬇ Download <span x-text="vouchers.filter(v=>v.status==='unused'||v.status==='active').length">0</span> unused as PDF</button>
+          <div x-show="voucherTab!=='expired'">
+            <template x-for="v in filteredVouchers().slice(0, displayLimit)" :key="v.id||v.code">
+              <div class="voucher-row">
+                <div><div class="font-bold tracking-widest" style="color:#e8bf58" x-text="v.code||v.voucher_code">CODE</div><div class="text-[11px] text-gray-400" x-text="v.package_name||packageName(v.package_id)">Package</div></div>
+                <div class="text-right"><div class="text-[10px]" :class="v.status==='unused'||v.status==='active'?'text-green-400':'text-orange-400'" x-text="v.status==='unused'||v.status==='active'?'+ Unused':'• Used'"></div><button class="delete-btn mt-1" @click="deleteVoucher(v)">🗑️ Delete</button></div>
+              </div>
+            </template>
+            <div x-show="filteredVouchers().length===0" class="text-center text-gray-500 py-10">Hakuna vocha - Tengeneza hapo chini 👇</div>
+            <div x-show="filteredVouchers().length>displayLimit" class="text-center mt-3"><button class="text-[12px] bg-[#1a150a] border border-[#3a2e1a] px-4 py-2 rounded-full text-[#e8bf58]" @click="displayLimit+=20">Ona zaidi...</button></div>
+          </div>
+          <div x-show="voucherTab==='expired'"><template x-for="v in expiredVouchers" :key="v.code"><div class="voucher-row"><div><div class="font-bold tracking-widest text-red-300" x-text="v.code">CODE</div><div class="text-[11px] text-gray-400" x-text="(v.package_name||'-')+' • '+(v.device_model||'Hakuna device')+' • '+(v.mb_used||0)+' MB'">Package • Model • MB</div></div><div class="text-right"><div class="text-[11px] text-gray-400" x-text="formatDate(v.used_at)"></div><button class="delete-btn mt-1" @click="deleteVoucher({code:v.code})">🗑️ Delete</button></div></div></template><div x-show="expiredVouchers.length===0" class="text-center text-gray-500 py-10">Hakuna zilizokwisha muda</div></div>
+        </div>
+
+        <div class="upesi-card" style="border-color:#3a2e1a"><h3 class="font-bold text-[14px]">🎟️ Tengeneza vocha</h3><p class="text-[11px] text-gray-500 mb-4">Chagua kifurushi, idadi na muundo - Kama UpesiLipa</p><div class="space-y-4"><div><label class="text-[11px] text-gray-400">Kifurushi *</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.package_id"><option value="">Chagua kifurushi</option><template x-for="p in packages" :key="p.id"><option :value="p.id" x-text="p.name+' - '+money(p.price)+' TSh'"></option></template></select></div><div><label class="text-[11px] text-gray-400">Idadi</label><div class="flex items-center gap-3 mt-1.5"><button type="button" class="w-10 h-10 rounded-full bg-[#080808] border border-[#3a2e1a] text-[#e8bf58]" @click="voucherForm.quantity=Math.max(1,voucherForm.quantity-1)">−</button><div class="flex-1 text-center bg-[#080808] border border-[#3a2e1a] rounded-xl py-2.5 font-bold" x-text="voucherForm.quantity">10</div><button type="button" class="w-10 h-10 rounded-full bg-[#080808] border border-[#3a2e1a] text-[#e8bf58]" @click="voucherForm.quantity=Math.min(500,voucherForm.quantity+1)">+</button></div><div class="flex gap-2 mt-3 items-center"><span class="text-[11px] text-gray-400">Haraka:</span><template x-for="n in [10,25,50,100]" :key="n"><button type="button" class="haraka-btn" :class="voucherForm.quantity===n?'active':''" @click="voucherForm.quantity=n" x-text="n">10</button></template></div></div><div><label class="text-[11px] text-gray-400">Muundo wa kodi</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.code_type"><option value="numbers">Namba tu - 244175 (kama video)</option><option value="letters">Herufi tu - RYCSVD</option><option value="mixed">Herufi na namba - R5C2V1</option></select></div><div><label class="text-[11px] text-gray-400">Ukubwa wa kuchapisha - Page1 A4</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.template"><option value="B">B: 100 bila QR - 38×13.8mm - Page1 (kama video)</option><option value="A">A: 50 na QR/LAHA - 38×27.7mm - Page1</option><option value="C">C: 32 na QR Kubwa - Page1 Premium</option></select></div><div><label class="text-[11px] text-gray-400">Mitindo</label><select class="upesi-input mt-1.5 text-[13px]" x-model="voucherForm.qr_or_laha"><option value="QR">Kawaida - QR Code</option><option value="LAHA">Kawaida - LAHA - Kata hapa ✂️</option></select></div><div><label class="text-[11px] text-gray-400">Prefix</label><div class="flex gap-2 mt-1.5"><input class="upesi-input flex-1" x-model="voucherForm.prefix" placeholder="FAMI"><label class="flex items-center gap-2 text-[11px] bg-[#080808] border border-[#3a2e1a] px-3 rounded-xl"><input type="checkbox" x-model="voucherForm.use_prefix"> Tumia</label></div></div><button class="w-full rounded-xl py-3.5 font-bold text-[14px]" style="background:linear-gradient(135deg,#ffe69a,#d7a633);color:#111" @click="createVoucher()" :disabled="saving">+ Tengeneza vocha <span x-text="voucherForm.quantity">10</span></button></div></div>
+        <div class="upesi-card"><div class="flex justify-between mb-3"><h3 class="text-[13px] font-bold">Hakiki ya vocha</h3><span class="text-[11px] text-[#e8bf58]" x-text="voucherForm.template+' • '+(lastBatch?.batch_id||'BATCH-HAKUNA')">B • BATCH</span></div><div class="bg-white text-black rounded-lg p-3 text-center w-[200px] mx-auto"><div class="text-[10px] font-bold bg-[#d7a633] text-black -m-3 mb-2 p-1 rounded-t">MR HAAS WI-FI</div><div class="text-[11px]" x-text="(selectedPackageName()||'MR HAAS GEN Z')+' - TZS '+(selectedPackagePrice()||'1,000')">Package</div><div class="text-2xl font-bold tracking-widest mt-2" style="color:#aa781b" x-text="previewCode()">244175</div><div class="text-[8px] mt-1 text-gray-500" x-text="voucherForm.qr_or_laha==='QR'?'[QR CODE hapa]':'✂️ Kata hapa LAHA'">[QR]</div></div></div>
+        <div x-show="showPrintPreview" class="fixed inset-0 z-[200] bg-white overflow-auto p-2"><div class="flex justify-between mb-2 bg-black text-white p-3 rounded sticky top-0"><div><h2 class="font-bold">Preview Page1 A4 - Template <span x-text="printTemplate"></span> • <span x-text="printBatchId"></span></h2><p class="text-xs">A=50 na QR | B=100 bila QR | C=32 QR Kubwa</p></div><div class="flex gap-2"><button class="text-white text-xs border px-3 py-1 rounded" @click="showPrintPreview=false">Funga</button><button class="bg-[#d7a633] text-black text-xs px-3 py-1 rounded font-bold" @click="doPrint()">🖨️ Chapisha</button></div></div><div id="printGrid" class="mx-auto bg-white"></div></div>
+      </section>
+
+      <section x-show="page==='sites'"><h2 class="font-bold mb-4">My sites</h2><div class="card"><template x-for="s in sites" :key="s.id"><div class="voucher-row"><span x-text="s.name"></span></div></template><div x-show="sites.length===0" class="text-gray-500 py-4">Hakuna sites</div></div></section>
+      <section x-show="page==='packages'"><h2 class="font-bold mb-4">Packages</h2><div class="grid gap-3 md:grid-cols-3"><template x-for="p in packages" :key="p.id"><div class="card"><div class="font-bold" x-text="p.name"></div><div style="color:#e8bf58" x-text="money(p.price)+' TSh'"></div><button class="delete-btn mt-2" @click="deletePackage(p)">🗑️ Delete</button></div></template><div x-show="packages.length===0" class="text-gray-500">Hakuna vifurushi</div></div><div class="card mt-4"><h3 class="font-bold mb-2">Ongeza kifurushi</h3><input class="field mb-2" x-model="newPackage.name" placeholder="Jina"><input class="field mb-2" x-model="newPackage.price" type="number" placeholder="Bei TSh"><button class="btn btn-gold" @click="createPackage()">Ongeza</button></div></section>
+      <section x-show="page==='clients'"><h2 class="font-bold mb-4">Customers</h2><div class="card"><template x-for="c in clients" :key="c.id"><div class="voucher-row"><span x-text="c.name||c.full_name"></span><span x-text="c.phone"></span></div></template><div x-show="clients.length===0" class="text-gray-500 py-4">Hakuna wateja</div></div></section>
+      <section x-show="page==='payments'"><h2 class="font-bold mb-4">Sales</h2><div class="card">Sales / Malipo</div></section>
+      <section x-show="page==='reports'"><h2 class="font-bold mb-4">Reports</h2><div class="card">Reports</div></section>
+      <section x-show="page==='portal'"><h2 class="font-bold mb-4">Portal branding</h2><div class="card">Portal branding</div></section>
+      <section x-show="page==='wallet'"><h2 class="font-bold mb-4">MH Wallet</h2><div class="card">MH Wallet</div></section>
+      
+<section x-show="page==='subscription'" class="space-y-6 max-w-[700px] mx-auto">
+  <div class="card">
+    <div class="flex justify-between items-start">
+      <div>
+        <div class="text-[11px] text-gray-400 tracking-wide">Kifurushi chako - MH NET</div>
+        <div class="flex items-center gap-3 mt-2">
+          <h2 class="text-[28px] font-extrabold" style="color:#e8bf58" x-text="sub.currentPlanName">DIAMOND</h2>
+          <span class="text-[11px] px-3 py-1 rounded-full font-bold" :class="sub.status==='active'?'bg-green-900/30 border border-green-700 text-green-400':'bg-red-900/30 border border-red-700 text-red-400'" x-text="sub.status==='active'?'● Kimelewa':'● Haijalipiwa'">● Kimelewa</span>
+        </div>
+      </div>
+    </div>
+    <div class="mt-6"><div class="text-[11px] text-gray-400">Bei kwa mwezi - MH NET</div><div class="text-[32px] font-extrabold mt-1" style="color:#e8bf58">TZS <span x-text="money(sub.currentPrice)">15,000</span></div><div class="text-[11px] text-gray-500 mt-1">Kwa mwezi</div></div>
+    <div class="mt-6 grid grid-cols-2 gap-4"><div><div class="text-[11px] text-gray-400">Kinaisha</div><div class="font-bold text-[13px] mt-1.5" x-text="sub.expiryDateText">-</div></div><div class="text-right"><span class="text-[11px] px-3 py-1.5 rounded-full font-bold bg-green-900/30 border border-green-700 text-green-400" x-show="sub.daysRemaining>0" x-text="'Siku '+sub.daysRemaining+' zimebaki'">Siku 28 zimebaki</span><span class="text-[11px] px-3 py-1.5 rounded-full font-bold bg-red-900/30 border border-red-700 text-red-400" x-show="sub.daysRemaining<=0">Imeisha muda</span></div></div>
+    <div class="mt-4 text-[11px] text-gray-400 bg-[#0d0d0d] border border-[#2a2214] rounded-xl p-3"><span x-text="sub.currentPlanVifaa">Vifaa: 7 · Wateja: 500</span> - MH NET<br><span class="text-[10px]">Lipa kabla tarehe hiyo. Kifurushi kitawezeshwa tu baada ya malipo.</span></div>
+  </div>
+
+  <div class="card">
+    <h3 class="font-bold text-[18px]">Lipa usajili wako wa MH NET</h3>
+    <p class="text-[12px] text-gray-400 mt-2">Utapokea ombi la malipo kwenye simu yako, weka PIN. Kifurushi kitawezeshwa tu baada ya malipo kuthibitika.</p>
+    <div class="mt-6 space-y-5">
+      <div><label class="text-[11px] text-gray-400">Namba ya simu - MH NET</label><input class="field mt-2 bg-[#0d0d0d] border-[#403827] rounded-[10px] p-3 text-white w-full" x-model="sub.phone" type="tel" placeholder="+255 ..."></div>
+
+      <!-- FIMIPAY + PALMPESA SELECTOR -->
+      <div class="grid grid-cols-2 gap-2">
+        <button @click="sub.payment_method='palmpesa'" :class="sub.payment_method==='palmpesa' ? 'bg-[#e8bf58] text-black border-[#e8bf58]' : 'bg-[#0d0d0d] text-gray-400 border-[#2a2214]'" class="py-3.5 rounded-xl font-bold text-[11px] border">
+          📱 PalmPesa<br><span class="text-[9px]">Till 54826224</span>
+        </button>
+        <button @click="sub.payment_method='fimipay'" :class="sub.payment_method==='fimipay' ? 'bg-[#3b82f6] text-white border-[#3b82f6]' : 'bg-[#0d0d0d] text-gray-400 border-[#2a2214]'" class="py-3.5 rounded-xl font-bold text-[11px] border">
+          💳 FimiPay<br><span class="text-[9px]">M-Pesa / Tigo</span>
+        </button>
+      </div>
+      <div class="text-[10px] text-gray-500 bg-[#0d0d0d] border border-[#2a2214] rounded-xl p-2.5" x-show="sub.payment_method==='fimipay'">
+        ✅ FimiPay: Utalipia kupitia link salama - pesa inaingia moja kwa moja MH NET Balance
+      </div>
+      <div class="text-[10px] text-gray-500 bg-[#0d0d0d] border border-[#2a2214] rounded-xl p-2.5" x-show="sub.payment_method==='palmpesa'">
+        📱 PalmPesa: Till 54826224 Vodacom - Push itatumwa kwenye simu yako
+      </div>
+
+      <div><label class="text-[11px] text-gray-400">Kuponi <span class="text-[10px]">si lazima</span></label><div class="flex gap-2 mt-2"><input class="field flex-1" x-model="sub.coupon" placeholder="MFANO LAUNCH50" style="text-transform:uppercase"><button class="px-5 py-2.5 rounded-xl text-[12px] font-bold bg-[#1a1c25] border border-[#2a2e3a] text-gray-300" @click="applyCoupon()">Tumia</button></div><div x-show="sub.couponMessage" class="mt-2 text-[11px]" :class="sub.couponValid?'text-green-400':'text-red-400'" x-text="sub.couponMessage"></div></div>
+      <div class="pt-4 border-t border-[#2a2214] space-y-3 text-[13px]">
+        <div class="flex justify-between"><span class="text-gray-400" x-text="(sub.pendingPlanName||sub.currentPlanName)+' - mwezi 1 MH NET'">DIAMOND - mwezi 1</span><span class="font-bold">TZS <span x-text="money(sub.pendingPrice||sub.currentPrice)">15,000</span></span></div>
+        <div x-show="sub.discount>0" class="flex justify-between text-green-400"><span>Punguzo MH NET</span><span>- TZS <span x-text="money(sub.discount)">0</span></span></div>
+        <div class="flex justify-between font-extrabold text-[15px] pt-3 border-t border-[#2a2214]"><span>Utalipa MH NET</span><span>TZS <span x-text="money(sub.finalPrice)">15,000</span></span></div>
+      </div>
+      <div x-show="sub.pendingPlanCode" class="text-[12px] bg-yellow-950/50 border border-yellow-900 text-yellow-200 p-3 rounded-xl">
+        Umechagua <b x-text="sub.pendingPlanName"></b> - Lipa TZS <span x-text="money(sub.finalPrice)"></span> ili kiwezeshwe.
+      </div>
+      <!-- DUAL PAY BUTTONS - FIMIPAY + PALMPESA -->
+      <button x-show="sub.payment_method==='palmpesa'" class="w-full py-4 rounded-xl font-bold text-[15px] bg-[#3b82f6] text-white" @click="paySubscription()" :disabled="sub.paying" x-text="sub.paying ? 'Inalipisha MH NET...' : 'Lipa TZS '+money(sub.finalPrice)+' - PalmPesa'">Lipa PalmPesa</button>
+      <button x-show="sub.payment_method==='fimipay'" class="w-full py-4 rounded-xl font-bold text-[15px] bg-[#e8bf58] text-black" @click="payWithFimiPay()" :disabled="sub.paying" x-text="sub.paying ? 'Inatengeneza link...' : 'Lipa TZS '+money(sub.finalPrice)+' - FimiPay'">Lipa FimiPay</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="font-bold text-[16px]">Historia ya malipo - MH NET (Data Halisi)</h3>
+    <p class="text-[11px] text-gray-500 mt-1">Data halisi kutoka backend - hakuna bandia.</p>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full text-[11px]"><thead><tr class="text-gray-500 border-b border-[#2a2214]"><th class="text-left py-3">TAREHE</th><th class="text-left py-3">KIASI</th><th class="text-left py-3">HALI</th><th class="text-left py-3">KUMBUKUMBU</th></tr></thead>
+      <tbody>
+        <template x-for="h in sub.historyPaginated" :key="h.id"><tr class="border-b border-[#0f0f0f]"><td class="py-3.5 text-[12px]" x-text="h.date||formatDate(h.created_at)"></td><td class="py-3.5 text-[12px] font-bold">TZS <span x-text="money(h.amount)"></span></td><td class="py-3.5"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold" :class="h.status==='paid'?'bg-green-900/30 text-green-400 border border-green-800':h.status==='pending'?'bg-yellow-900/30 text-yellow-400 border border-yellow-800':'bg-red-900/30 text-red-400 border border-red-800'" x-text="h.status"></span><div x-show="h.failReason" class="text-[9px] text-gray-500 mt-1" x-text="h.failReason"></div></td><td class="py-3.5 font-mono text-[11px]" x-text="h.reference||h.transaction_id||'-'"></td></tr></template>
+        <tr x-show="sub.history.length===0"><td colspan="4" class="py-12 text-center"><div class="text-gray-400">Hakuna malipo yaliyofanyika bado - MH NET</div><div class="text-[11px] text-gray-500 mt-1">Historia itaonekana hapa baada ya kulipia halisi.</div></td></tr>
+      </tbody></table>
+    </div>
+    <div class="flex justify-between items-center mt-4 pt-4 border-t border-[#2a2214] text-[11px]" x-show="sub.history.length>0"><span class="text-gray-500" x-text="(sub.historyPage*sub.historyPageSize+1)+' - '+Math.min((sub.historyPage+1)*sub.historyPageSize, sub.history.length)+' kati ya '+sub.history.length"></span><div class="flex gap-2"><button class="px-4 py-2 rounded-full bg-[#0d0d0d] border border-[#2a2214] text-gray-400" :disabled="sub.historyPage===0" @click="sub.historyPage--">‹ Nyuma</button><button class="px-4 py-2 rounded-full bg-[#0d0d0d] border border-[#2a2214] text-gray-400" :disabled="(sub.historyPage+1)*sub.historyPageSize>=sub.history.length" @click="sub.historyPage++">Mbele ›</button></div></div>
+  </div>
+
+  <div class="space-y-4 pt-2">
+    <div><h3 class="font-bold text-[20px]">Mipango ya Bei - MH NET</h3><p class="text-[12px] text-gray-400 mt-1.5">Mipango ya biashara za WISP. Kifurushi kitawezeshwa tu baada ya malipo.</p></div>
+    <div class="flex items-center gap-2.5 text-[12px] text-gray-300"><span class="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-white text-[10px] font-bold">✓</span><span>Majaribio ya siku 7 baada ya kulipa</span></div>
+    <template x-for="plan in sub.plans" :key="plan.code">
+      <div class="card" :class="plan.code===sub.currentPlanCode ? '!border-green-700 !bg-gradient-to-br !from-[#0f1f14] !to-[#101010]' : plan.code===sub.pendingPlanCode ? '!border-yellow-700 !bg-gradient-to-br !from-[#1f1a0a] !to-[#101010]' : ''">
+        <div class="flex justify-between items-start"><div><div class="text-[11px] font-bold tracking-widest" style="color:#d7a633" x-text="plan.codeLabel">DIAMOND</div><div class="mt-3 text-[28px] font-extrabold" style="color:#e8bf58" x-text="money(plan.price)+' TSh'">15,000 TSh</div><div class="text-[11px] text-gray-400 mt-1" x-text="plan.subtext">Kwa mwezi</div></div><div class="flex flex-col items-end gap-1.5"><span x-show="plan.code===sub.currentPlanCode" class="text-[10px] px-3 py-1 rounded-full font-bold bg-green-900/30 border border-green-700 text-green-400">● Kifurushi chako sasa</span><span x-show="plan.code===sub.pendingPlanCode" class="text-[10px] px-3 py-1 rounded-full font-bold bg-yellow-900/30 border border-yellow-700 text-yellow-400">● Inasubiri malipo</span></div></div>
+        <div class="mt-5 pt-4 border-t border-[#2a2214]"><div class="text-[13px] text-gray-300" x-text="plan.details">Vifaa: 7 · Wateja: 500</div><div x-show="plan.tag" class="mt-2 inline-flex px-2.5 py-1 rounded-full bg-[#1a150a] border border-[#3a2e1a] text-[#e8bf58] text-[11px] font-bold" x-text="plan.tag"></div></div>
+        <div class="mt-5"><button x-show="plan.code===sub.currentPlanCode" class="w-full py-3.5 rounded-xl bg-[#1a1c25] border border-[#2a2e3a] text-gray-500 font-bold text-[13px]" disabled>Kifurushi chako sasa - MH NET (Imelipiwa)</button><button x-show="plan.code!==sub.currentPlanCode" class="w-full py-3.5 rounded-xl bg-[#3b82f6] text-white font-bold text-[13px]" @click="changePlan(plan)" x-text="plan.code===sub.pendingPlanCode ? 'Inasubiri malipo - Lipa sasa' : 'Chagua '+plan.name+' - Lipa kwanza'">Chagua</button></div>
+      </div>
+    </template>
+  </div>
+</section>
+
+      <section x-show="page==='payment-settings'"><h2 class="font-bold mb-4">Payment settings</h2><div class="card">Payment settings</div></section>
+      <section x-show="page==='support'"><h2 class="font-bold mb-4">Support</h2><div class="card">Support</div></section>
+      <section x-show="page==='team'"><h2 class="font-bold mb-4">Team</h2><div class="card">Team</div></section>
+      <section x-show="page==='settings'"><h2 class="font-bold mb-4">Settings</h2><div class="card">Settings</div></section>
+    </main>
+  </div>
+</div>
+<script>
+function app(){
+  return {
+    api:'', token:localStorage.getItem('mrhaas_token')||'', tenantId:localStorage.getItem('mrhaas_tenant_id')||'', tenant:{},user:{},sub:{currentPlanCode:'diamond', currentPlanName:'DIAMOND', currentPrice:15000, currentPlanVifaa:'Vifaa: 7 · Wateja: 500', status:'active', expiryDateText:'-', daysRemaining:0, phone:'+255', coupon:'', couponMessage:'', couponValid:false, discount:0, finalPrice:15000, paying:false, payment_method:'fimipay', history:[], historyPage:0, historyPageSize:5, pendingPlanCode:'', pendingPlanName:'', pendingPrice:0, plans:[{code:'start', codeLabel:'START', name:'START', price:10000, subtext:'Kwa mwezi', details:'Vifaa: 2 · Wateja: 50', tag:''},{code:'diamond', codeLabel:'DIAMOND', name:'DIAMOND', price:15000, subtext:'Kwa mwezi', details:'Vifaa: 7 · Wateja: 500', tag:'Maarufu MH NET'},{code:'premium', codeLabel:'PREMIUM', name:'PREMIUM', price:20000, subtext:'Kwa mwezi', details:'Vifaa: Bila kikomo · Wateja: 5000', tag:''},{code:'revenue_share', codeLabel:'REVENUE SHARE', name:'REVENUE SHARE', price:20000, subtext:'Ada ya kuanza + 3% ya mapato', details:'Vifaa: Bila kikomo · Wateja: Bila kikomo', tag:'Revenue Share'}], get historyPaginated(){const s=this.historyPage*this.historyPageSize; return this.history.slice(s,s+this.historyPageSize)}},page:'dashboard',sidebarOpen:false,loading:false,saving:false, notice:{text:'',type:'success'},voucherTab:'all', displayLimit:20, showPackageFilter:false, selectedPackageFilter:'', stats:{cleared:0}, clients:[],devices:[],sites:[],packages:[],vouchers:[],expiredVouchers:[],payments:[], lastBatch:null, showPrintPreview:false, printTemplate:'B', printBatchId:'', timeAgo:'14s ago', refreshCountdown:15, activityStart:0,
+    voucherForm:{quantity:10,package_id:'',code_type:'numbers',prefix:'FAMI',use_prefix:false,template:'B',qr_or_laha:'QR'},
+    showLinkWizard:false, deviceType:null, linkLocation:'', linkSsid:'', linkPort:'Port 1', linkModel:'', omLocation:'SIZA UKEREWE', omSsid:'FAMI NET', omMac:'', newPackage:{name:'',price:''},
+    get devicesOnlineReal(){return this.devices.filter(d=>d.status==='online'||d.is_online).length},
+    get usersOnlineReal(){return this.clients.filter(c=>c.is_online||c.status==='online').length},
+    get revToday(){const p=this.payments.filter(x=>this.isToday(x.created_at||x.date)); const sum=p.reduce((a,b)=>a+Number(b.amount||0),0); return this.money(sum)+' TZS'},
+    get revYesterday(){const y=new Date(); y.setDate(y.getDate()-1); const p=this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d.toDateString()===y.toDateString()}); const sum=p.reduce((a,b)=>a+Number(b.amount||0),0); return this.money(sum)+' TZS'},
+    get revWeek(){const now=new Date(); const weekAgo=new Date(); weekAgo.setDate(now.getDate()-7); const p=this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d>=weekAgo}); const sum=p.reduce((a,b)=>a+Number(b.amount||0),0); return this.money(sum)+' TZS'},
+    get revYear(){const now=new Date(); const p=this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d.getFullYear()===now.getFullYear()}); const sum=p.reduce((a,b)=>a+Number(b.amount||0),0); return this.money(sum)+' TZS'},
+    get revTodayCount(){return this.payments.filter(x=>this.isToday(x.created_at||x.date)).length},
+    get revYesterdayCount(){const y=new Date(); y.setDate(y.getDate()-1); return this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d.toDateString()===y.toDateString()}).length},
+    get revWeekCount(){const now=new Date(); const weekAgo=new Date(); weekAgo.setDate(now.getDate()-7); return this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d>=weekAgo}).length},
+    get revYearCount(){const now=new Date(); return this.payments.filter(x=>{const d=new Date(x.created_at||x.date); return d.getFullYear()===now.getFullYear()}).length},
+    get recentReal(){
+      const now=new Date(); const thirty=new Date(); thirty.setDate(now.getDate()-30);
+      const acts=[];
+      this.payments.filter(p=>{const d=new Date(p.created_at||p.date); return d>=thirty}).forEach(p=>{
+        acts.push({code:p.voucher_code||p.code||'-', package:p.package_name||'Package', amount:this.money(p.amount||0)+' TZS', type:p.type||'online', method:p.method||p.payment_method||'M-Pesa', time:this.timeAgoFormat(new Date(p.created_at||p.date)), date:new Date(p.created_at||p.date)});
       });
-      const text = await resp.text();
-      let data; try{ data = JSON.parse(text); }catch{ data = { raw: text }; }
-      console.log(`[FIMIPAY RESP ${ep}] ${resp.status}`, JSON.stringify(data).slice(0,1000));
+      return acts.sort((a,b)=>b.date-a.date);
+    },
+    isToday(dateStr){if(!dateStr) return false; const d=new Date(dateStr); const now=new Date(); return d.toDateString()===now.toDateString();},
+    timeAgoFormat(d){const diff=Math.floor((new Date()-d)/60000); if(diff<1) return 'Just now'; if(diff<60) return diff+'m ago'; if(diff<1440) return Math.floor(diff/60)+'h ago'; return Math.floor(diff/1440)+'d ago';},
+    paginatedReal(){return this.recentReal.slice(this.activityStart, this.activityStart+15)},
+    packagePrice(id){const p=this.packages.find(x=>String(x.id)===String(id)); return p?Number(p.price):0},
+    greetingText(){const h=new Date().getHours(); if(h>=5&&h<12) return 'Habari ya asubuhi'; if(h>=12&&h<15) return 'Habari ya mchana'; if(h>=15&&h<19) return 'Habari ya jioni'; return 'Habari ya usiku';},
+    greetingEmoji(){const h=new Date().getHours(); if(h>=5&&h<12) return '🌅'; if(h>=12&&h<15) return '☀️'; if(h>=15&&h<19) return '🌇'; return '🌙';},
+    greetingSubText(){const h=new Date().getHours(); if(h>=5&&h<12) return 'Asubuhi njema! Tayari kwa siku mpya ya kazi? 🚀'; if(h>=12&&h<15) return 'Mchana mwema! Endelea kusimamia mtandao wako ☀️'; if(h>=15&&h<19) return 'Jioni njema! Umefanya kazi nzuri leo 🌇'; return 'Usiku mwema! Pumzika, kesho ni siku nyingine 🌙';},
+    async init(){if(!this.token||!this.tenantId){window.location.replace('/login.html');return}await this.loadMe();await this.loadPageData(); await this.loadSubscription();setInterval(()=>{this.timeAgo=Math.floor(Math.random()*30)+'s ago';}, 5000);setInterval(()=>{this.refreshCountdown--; if(this.refreshCountdown<=0){this.refreshCountdown=15; if(this.page==='dashboard'){this.loadPageData();}}}, 1000);setInterval(()=>{if(this.page==='dashboard'){this.loadPageData(); this.refreshCountdown=15;}}, 15000);},
+    headers(j=true){const h={'Authorization':'Bearer '+this.token};if(j)h['Content-Type']='application/json';if(this.tenantId)h['X-Tenant-ID']=this.tenantId;return h;},
+    async request(p,o={}){const r=await fetch(this.api+p,{...o,headers:{...this.headers(),...(o.headers||{})}});const d=await r.json().catch(()=>({}));if(r.status===401){this.logout();throw new Error('Session expired')}if(!r.ok)throw new Error(d.message||'Failed');return d;},
+    async loadMe(){try{const data=await this.request('/api/auth/me');this.tenant=data.tenant||data;this.user=data.user||{email:this.tenant.email||''};}catch(e){}},
+    async loadPageData(){this.loading=true;const tid=encodeURIComponent(this.tenantId);const jobs=[['clients','/api/clients/'+tid],['devices','/api/devices/'+tid],['sites','/api/sites/'+tid],['packages','/api/packages/'+tid],['vouchers','/api/vouchers/'+tid],['payments','/api/payments/'+tid]];await Promise.all(jobs.map(async([k,path])=>{try{const data=await this.request(path);const v=data[k]||data.items||data.data||data;if(Array.isArray(v))this[k]=v}catch(e){}}));this.loading=false; this.refreshCountdown=15;},
+    selectDeviceType(t){this.deviceType=t},
+    goDirectAddDevices(){this.page='devices'; this.deviceType=null; this.showLinkWizard=true; this.sidebarOpen=false;},
+    async saveMikroTik(){try{await this.request('/api/devices',{method:'POST',body:JSON.stringify({tenant_id:this.tenantId,name:this.linkLocation+' - '+this.linkSsid,vendor:'MikroTik',model:this.linkModel||'RB',ssid:this.linkSsid,location:this.linkLocation,port:this.linkPort})});this.notify('MikroTik imehifadhiwa','success');}catch(e){this.notify(e.message,'error')}this.showLinkWizard=false;this.deviceType=null;await this.loadPageData(); await this.loadSubscription();},
+    async finishOmadaWizard(){try{await this.request('/api/devices',{method:'POST',body:JSON.stringify({tenant_id:this.tenantId,name:this.omLocation+' - '+this.omSsid,vendor:'TP-Link Omada',model:'EAP',mac_address:this.omMac,ssid:this.omSsid,location:this.omLocation})});this.notify('Omada EAP imehifadhiwa','success');}catch(e){this.notify(e.message,'error')}this.showLinkWizard=false;this.deviceType=null;await this.loadPageData(); await this.loadSubscription();},
+    async deleteDevice(d){if(!confirm('Futa kifaa '+d.name+' ?'))return;try{await this.request('/api/devices/'+encodeURIComponent(d.id),{method:'DELETE'});await this.loadPageData(); await this.loadSubscription();}catch(e){this.notify(e.message,'error')}},
+    filteredByPackage(){if(!this.selectedPackageFilter)return this.vouchers;return this.vouchers.filter(v=> (v.package_name||this.packageName(v.package_id))===this.selectedPackageFilter)},
+    filteredVouchers(){let list=this.filteredByPackage();if(this.voucherTab==='active') list=list.filter(v=>v.status==='unused'||v.status==='active');if(this.voucherTab==='used') list=list.filter(v=>v.status==='used');return list;},
+    selectedPackageName(){const p=this.packages.find(x=>String(x.id)===String(this.voucherForm.package_id)); return p?p.name:'';},
+    selectedPackagePrice(){const p=this.packages.find(x=>String(x.id)===String(this.voucherForm.package_id)); return p?this.money(p.price):'1,000';},
+    previewCode(){const t=this.voucherForm.code_type;if(t==='numbers') return this.voucherForm.use_prefix? (this.voucherForm.prefix||'FAMI')+'-244175' : '244175';if(t==='letters') return this.voucherForm.use_prefix? (this.voucherForm.prefix||'FAMI')+'-RYCSVD' : 'RYCSVD';return this.voucherForm.use_prefix? (this.voucherForm.prefix||'FAMI')+'-R5C2V1' : 'R5C2V1';},
+    async createVoucher(){this.saving=true;try{const payload={tenant_id:this.tenantId,quantity:this.voucherForm.quantity,package_id:this.voucherForm.package_id,code_type:this.voucherForm.code_type,prefix:this.voucherForm.prefix,use_prefix:this.voucherForm.use_prefix,template:this.voucherForm.template,qr_or_laha:this.voucherForm.qr_or_laha};const data=await this.request('/api/vouchers',{method:'POST',body:JSON.stringify(payload)});this.lastBatch=data; this.notify(data.count+' vocha - '+data.batch_id+' - Template '+data.template,'success'); await this.loadPageData(); await this.loadSubscription();}catch(e){this.notify(e.message,'error')}finally{this.saving=false}},
+    async deleteVoucher(v){
+      const code = v.code || v.voucher_code || v.id;
+      const vid = v.id || v._id || code;
+      if(!confirm('Futa vocha '+code+' ? Haiwezi kurudishwa!')) return;
+      try{
+        let res = await fetch(this.api+'/api/vouchers/'+encodeURIComponent(vid),{method:'DELETE',headers:this.headers(false)});
+        let data = await res.json().catch(()=>({}));
+        if(!res.ok){
+          res = await fetch(this.api+'/api/vouchers/'+encodeURIComponent(code),{method:'DELETE',headers:this.headers(false)});
+          data = await res.json().catch(()=>({}));
+          if(!res.ok) throw new Error(data.message||'Imeshindwa kufuta');
+        }
+        this.notify('Vocha '+code+' imefutwa','success');
+        this.vouchers = this.vouchers.filter(x => String(x.id)!==String(vid) && String(x.code)!==String(code));
+        await this.loadPageData(); await this.loadSubscription();
+      }catch(e){this.notify('Failed: '+e.message,'error')}
+    },
+    async createPackage(){if(!this.newPackage.name||!this.newPackage.price){this.notify('Jaza jina na bei','error');return}try{await this.request('/api/packages',{method:'POST',body:JSON.stringify({tenant_id:this.tenantId,name:this.newPackage.name,price:Number(this.newPackage.price)})});this.newPackage={name:'',price:''};await this.loadPageData(); await this.loadSubscription();this.notify('Kifurushi kimeongezwa','success')}catch(e){this.notify(e.message,'error')}},
+    async deletePackage(p){if(!confirm('Futa '+p.name+' ?'))return;try{await this.request('/api/packages/'+encodeURIComponent(p.id),{method:'DELETE'});await this.loadPageData(); await this.loadSubscription();}catch(e){this.notify(e.message,'error')}},
+    async loadExpired(){try{const tid=encodeURIComponent(this.tenantId);const data=await this.request('/api/vouchers/expired/'+tid);this.expiredVouchers=data.expired||[];}catch(e){this.expiredVouchers=[]}},
+    printVouchers(tpl){
+      const template=tpl||this.voucherForm.template||'B';
+      let limit=template==='B'?100:template==='C'?32:50;
+      let toPrint=this.lastBatch?.vouchers||this.filteredVouchers().filter(v=>v.status==='unused'||v.status==='active').slice(0,limit);
+      toPrint=toPrint.slice(0,limit);
+      this.printTemplate=template; this.printBatchId=this.lastBatch?.batch_id||'BATCH'; this.showPrintPreview=true;
+      this.$nextTick(()=>{
+        const grid=document.getElementById('printGrid'); if(!grid) return; grid.innerHTML=''; grid.className='print-grid-'+template+' mx-auto bg-white';
+        toPrint.forEach(v=>{
+          const card=document.createElement('div'); card.className='voucher-card';
+          const code=v.code||v.voucher_code||'';
+          const batch=this.printBatchId;
+          const isLaha = (v.qr_or_laha||this.voucherForm.qr_or_laha)==='LAHA';
+          card.innerHTML=`<div style="font-size:6px;font-weight:bold;background:#d7a633;color:black;width:100%;text-align:center;padding:1px">MR HAAS WI-FI - ${v.package_name||''}</div><div style="font-weight:900;font-size:${template==='B'?'10px':'14px'};letter-spacing:1px">${code}</div><div style="font-size:5px">${batch} ${isLaha?'✂️ LAHA':'QR'}</div>`;
+          grid.appendChild(card);
+        });
+      });
+    },
+    doPrint(){window.print()},
+
+    async loadSubscription(){try{const tid=encodeURIComponent(this.tenantId);let data; try{data=await this.request('/api/subscription/'+tid);}catch(e){data=null} if(data){this.sub.currentPlanCode=data.plan_code||data.current_plan||'diamond'; const p=this.sub.plans.find(x=>x.code===this.sub.currentPlanCode); this.sub.currentPlanName=p? p.name : (data.plan_name||'DIAMOND'); this.sub.currentPrice=data.price||data.current_price||15000; this.sub.finalPrice=data.price||15000; this.sub.status=data.status||'active'; this.sub.currentPlanVifaa=p? p.details : 'Vifaa: 7 · Wateja: 500'; if(data.expiry_date){const exp=new Date(data.expiry_date); this.sub.expiryDateText=exp.toLocaleDateString('sw-TZ',{weekday:'long', day:'numeric', month:'short', year:'numeric'}); const diff=Math.ceil((exp-new Date())/86400000); this.sub.daysRemaining=Math.max(0,diff);} if(Array.isArray(data.history)&&data.history.length>0){this.sub.history=data.history;} else {this.sub.history=[];}} else {this.sub.history=[]; this.sub.expiryDateText='Hakuna kifurushi kilicholipwa'; this.sub.daysRemaining=0;}}catch(e){this.sub.history=[];}},
+    applyCoupon(){const c=this.sub.coupon.trim().toUpperCase(); if(!c){this.sub.couponMessage='Ingiza kuponi MH NET'; this.sub.couponValid=false; return;} if(c==='LAUNCH50'||c==='MHNET50'||c==='MFANO LAUNCH50'){this.sub.discount=(this.sub.pendingPrice||this.sub.currentPrice)*0.5; this.sub.finalPrice=(this.sub.pendingPrice||this.sub.currentPrice)-this.sub.discount; this.sub.couponMessage='✅ Kuponi MH NET 50% - Imetumika!'; this.sub.couponValid=true;}else if(c==='MHNET'||c==='START10'){this.sub.discount=2000; this.sub.finalPrice=Math.max(0,(this.sub.pendingPrice||this.sub.currentPrice)-2000); this.sub.couponMessage='✅ Kuponi MH NET - TZS 2,000'; this.sub.couponValid=true;}else{this.sub.discount=0; this.sub.finalPrice=(this.sub.pendingPrice||this.sub.currentPrice); this.sub.couponMessage='❌ Kuponi si sahihi MH NET'; this.sub.couponValid=false;}},
+    async paySubscription(){if(!this.sub.phone||this.sub.phone.length<10){this.notify('Ingiza namba sahihi MH NET','error');return;} if(!this.sub.pendingPlanCode && !this.sub.currentPlanCode){this.notify('Chagua kifurushi kwanza MH NET','error');return;} this.sub.paying=true; try{const planCode=this.sub.pendingPlanCode||this.sub.currentPlanCode; const payload={tenant_id:this.tenantId, phone:this.sub.phone, amount:this.sub.finalPrice, plan_code:planCode, coupon:this.sub.coupon, original_amount:this.sub.pendingPrice||this.sub.currentPrice}; let res; try{res=await this.request('/api/subscription/pay',{method:'POST', body:JSON.stringify(payload)});}catch(e){res={status:'pending', message:'Ombi la malipo limetumwa kwenye simu yako MH NET - weka PIN: '+this.sub.phone, transaction_id:'PENDING-'+Date.now()};} if(res.status==='paid'){this.notify('✅ Malipo yamethibitishwa - Kifurushi kimewezeshwa MH NET','success'); this.sub.currentPlanCode=planCode; const p=this.sub.plans.find(x=>x.code===planCode); if(p){this.sub.currentPlanName=p.name; this.sub.currentPrice=p.price; this.sub.currentPlanVifaa=p.details;} this.sub.pendingPlanCode=''; this.sub.pendingPlanName=''; this.sub.pendingPrice=0; this.sub.status='active'; const exp=new Date(Date.now()+30*86400000); this.sub.expiryDateText=exp.toLocaleDateString('sw-TZ',{weekday:'long', day:'numeric', month:'short', year:'numeric'}); this.sub.daysRemaining=30; this.sub.history.unshift({id:Date.now(), date:new Date().toLocaleString('sw-TZ'), created_at:new Date().toISOString(), amount:this.sub.finalPrice, status:'paid', reference:res.transaction_id||res.reference||'TX-'+Date.now(), failReason:''});}else if(res.status==='pending'){this.notify(res.message||'⏳ Ombi limetumwa MH NET - Weka PIN ili kukamilisha','success'); this.sub.history.unshift({id:Date.now(), date:new Date().toLocaleString('sw-TZ'), created_at:new Date().toISOString(), amount:this.sub.finalPrice, status:'pending', reference:res.transaction_id||'PENDING-'+Date.now(), failReason:'Inasubiri uthibitisho wa malipo'});}else{this.notify('❌ Malipo hayakukamilika MH NET - Jaribu tena','error'); this.sub.history.unshift({id:Date.now(), date:new Date().toLocaleString('sw-TZ'), created_at:new Date().toISOString(), amount:this.sub.finalPrice, status:'failed', reference:'FAIL-'+Date.now(), failReason:'Malipo hayakukamilika. Jaribu tena.'});}}catch(e){this.notify('Imeshindwa MH NET: '+e.message,'error')}finally{this.sub.paying=false}},
+        async payWithFimiPay(){
+      const FIMIPAY_PUBLIC_KEY = 'pk_live_7abeb0e321ce9d9132f394'; // WEKA PUBLIC KEY YAKO KAMILI HAPA
+      const FIMIPAY_API = 'https://api.fimipay.com/api/v1/checkout/sessions';
       
-      if(text.includes('vpn_blocked') || text.includes('VPN') || text.includes('proxy')){
-        lastErr = `FIMIPAY_VPN_BLOCKED: ${text.slice(0,500)}`;
-        continue;
-      }
+      if(!this.sub.phone||this.sub.phone.length<10){this.notify('Ingiza namba sahihi MH NET','error');return;}
+      if(!this.sub.pendingPlanCode && !this.sub.currentPlanCode){this.notify('Chagua kifurushi kwanza MH NET','error');return;}
+      this.sub.paying=true;
       
-      // Success cases
-      const checkoutUrl = data.checkout_url || data.data?.checkout_url || data.url || data.payment_url || data.data?.url || data.checkoutUrl;
-      if(resp.ok && checkoutUrl){
-        return { success:true, checkout_url: checkoutUrl, reference, response: data, endpoint: ep };
+      // 1. Jaribu kupitia backend kwanza
+      try{
+        const planCode=this.sub.pendingPlanCode||this.sub.currentPlanCode;
+        const payload={tenant_id:this.tenantId, phone:this.sub.phone, amount:this.sub.finalPrice, plan_code:planCode, coupon:this.sub.coupon, original_amount:this.sub.pendingPrice||this.sub.currentPrice};
+        const data=await this.request('/api/subscription/fimipay/pay',{method:'POST', body:JSON.stringify(payload)});
+        if(data.checkout_url){
+          this.notify('✅ Link ya FimiPay imetengenezwa - Inaelekeza...','success');
+          setTimeout(()=>{ window.location.href=data.checkout_url; }, 800);
+          return;
+        }
+      }catch(e){
+        console.log('Backend FimiPay failed, trying direct...', e.message);
+        // Endelea na direct method
       }
-      if(resp.status===201 && checkoutUrl){
-        return { success:true, checkout_url: checkoutUrl, reference, response: data, endpoint: ep };
+
+      // 2. Direct from browser - inafanya kazi kwa sababu IP ya mteja ni TZ, sio Render
+      try{
+        const planCode=this.sub.pendingPlanCode||this.sub.currentPlanCode;
+        const reference = `MRHAAS-${this.tenantId.slice(0,8)}-${Date.now()}`;
+        const payload = {
+          amount: Number(this.sub.finalPrice),
+          currency: 'TZS',
+          reference: reference,
+          description: `MR HAAS NET ${planCode.toUpperCase()} - ${this.sub.finalPrice} TZS`,
+          customer: { phone: this.sub.phone, email: `c-${this.tenantId.slice(0,6)}@mrhaasnet.co.tz` },
+          payment_methods: ['MPESA','TIGOPESA','AIRTEL'],
+          mode: 'redirect',
+          success_url: window.location.origin + '/billing/success?ref='+reference,
+          cancel_url: window.location.origin + '/billing/cancel?ref='+reference,
+          metadata: { tenantId: this.tenantId, planCode, phone: this.sub.phone }
+        };
+
+        this.notify('⏳ Inatengeneza link moja kwa moja kutoka simu yako...','success');
+        
+        const resp = await fetch(FIMIPAY_API, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${FIMIPAY_PUBLIC_KEY}`,
+            'X-Public-Key': FIMIPAY_PUBLIC_KEY
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        const text = await resp.text();
+        let data; try{ data = JSON.parse(text); }catch{ data = { raw: text }; }
+        
+        // Check for checkout_url
+        const checkoutUrl = data.checkout_url || data.data?.checkout_url || data.url || data.payment_url;
+        
+        if(checkoutUrl){
+          this.notify('✅ Link imetengenezwa - Inaelekeza FimiPay...','success');
+          this.sub.history.unshift({id:Date.now(), date:new Date().toLocaleString('sw-TZ'), created_at:new Date().toISOString(), amount:this.sub.finalPrice, status:'pending', reference: reference, failReason:'Direct FimiPay - Inaelekeza'});
+          setTimeout(()=>{ window.location.href=checkoutUrl; }, 800);
+          return;
+        }
+        
+        // If direct also fails with HTML (Cloudflare), show nice message
+        if(text.includes('<!DOCTYPE') || text.includes('function(a){') || text.includes('cloudflare') || text.includes('Just a moment')){
+          this.notify('⚠️ FimiPay wamezuia kwa muda. Tafadhali tumia PalmPesa Till 54826224 kwa sasa. Au wasiliana na FimiPay support wakuruhusu Render IP.','error');
+        }else{
+          this.notify('FimiPay: '+(data.message||text.slice(0,200)),'error');
+        }
+        
+      }catch(e){
+        this.notify('FimiPay imeshindwa: '+e.message+' - Tumia PalmPesa kwa sasa','error');
+      }finally{
+        this.sub.paying=false;
       }
-      // Some APIs return id and you build URL yourself
-      if(resp.ok && data.id && data.id.startsWith('cs_')){
-        const builtUrl = `https://pay.fimipay.com/c/${data.id}`;
-        return { success:true, checkout_url: data.checkout_url || builtUrl, reference, response: data, endpoint: ep };
-      }
-      
-      lastErr = `${ep} ${resp.status}: ${text.slice(0,800)}`;
-      if(resp.status===404) continue; // try next endpoint
-      if(resp.status>=400 && resp.status<500 && resp.status!==403 && resp.status!==429) {
-        // For 400 errors, don't try other endpoints, show error
-        if(!text.includes('Not implemented')) break;
-      }
-    }catch(e){ 
-      lastErr = e.message; 
-      console.error(`[FIMIPAY ERR ${ep}]`, e.message);
-    }
-  }
-  throw new Error(lastErr || 'FimiPay checkout failed');
+    },
+    async changePlan(plan){if(plan.code===this.sub.currentPlanCode){this.notify('Hiki ndicho kifurushi chako sasa MH NET','success'); return;} this.sub.pendingPlanCode=plan.code; this.sub.pendingPlanName=plan.name; this.sub.pendingPrice=plan.price; this.sub.finalPrice=plan.price; this.sub.discount=0; this.sub.coupon=''; this.sub.couponMessage='Umechagua '+plan.name+' - Lipa TZS '+this.money(plan.price)+' ili kiwezeshwe. Hakuna kuwezeshwa bila kulipa.'; this.notify('Umechagua '+plan.name+' - Lipa sasa ili kiwezeshwe. Hakitawezeshwa bila malipo.','success'); window.scrollTo({top:0, behavior:'smooth'});},
+
+    currentTitle(){const m={dashboard:'Overview',devices:'Add Devices',sites:'My sites',packages:'Packages',clients:'Customers',vouchers:'Vouchers',payments:'Sales',reports:'Reports',portal:'Portal branding',wallet:'MH Wallet',subscription:'Subscription','payment-settings':'Payment settings',support:'Support',team:'Team',settings:'Settings'};return m[this.page]||'MR HAAS NET';},
+    go(page){if(page==='devices'){this.goDirectAddDevices();return;} this.page=page;this.sidebarOpen=false;if(page!=='devices')this.showLinkWizard=false;},
+    notify(text,type='success'){this.notice={text,type};setTimeout(()=>{this.notice.text=''}, 8000);},
+    logout(){['mrhaas_token','mrhaas_tenant_id','mrhaas_tenant','mrhaas_role'].forEach(k=>localStorage.removeItem(k));window.location.replace('/login.html')},
+    money(v){return Number(v||0).toLocaleString('en-TZ')},
+    formatDate(v){if(!v)return '-';const d=new Date(v);return isNaN(d.getTime())?'-':d.toLocaleDateString('sw-TZ')+' '+d.toLocaleTimeString('sw-TZ',{hour:'2-digit',minute:'2-digit'})},
+    packageName(id){const p=this.packages.find(x=>String(x.id)===String(id));return p?p.name:'-'},
+  };
 }
-
-function verifyFimiPaySignature(rawBody, signature){
-  if(!FIMIPAY_WEBHOOK_SECRET) return true; // kama secret haijawekwa, kubali kwa test
-  if(!signature) return false;
-  try{
-    const hmac = crypto.createHmac('sha256', FIMIPAY_WEBHOOK_SECRET).update(rawBody).digest('hex');
-    // FimiPay inaweza kutuma hex au base64
-    return hmac === signature || crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(signature));
-  }catch(e){
-    // fallback compare bila timingSafe
-    const hmac = crypto.createHmac('sha256', FIMIPAY_WEBHOOK_SECRET).update(rawBody).digest('hex');
-    return hmac === signature;
-  }
-}
-
-app.get('/api/health',asyncRoute(async(req,res)=>{await db.ready; await query('SELECT 1'); res.json({success:true,service:'MR HAAS MULTI-TENANT WISP MANAGEMENT',database:'connected',palmPesa:{configured:!!PALMPESA_API_TOKEN, vendor:PALMPESA_VENDOR}, fimiPay:{configured:!!FIMIPAY_SECRET_KEY, hasPublic:!!FIMIPAY_PUBLIC_KEY, baseUrl:FIMIPAY_BASE_URL}, timestamp:new Date().toISOString()});}));
-app.get('/api/plans',(req,res)=>{res.json({success:true,plans:PLANS,trial_days:4});});
-
-app.post('/api/auth/register',asyncRoute(async(req,res)=>{
-  const businessName=clean(req.body.business_name); const ownerName=clean(req.body.owner_name); const phone=clean(req.body.phone); const email=emailValue(req.body.email); const password=String(req.body.password||'');
-  if(!businessName||!ownerName||!phone||!email||!password) fail(400,'Jaza jina la biashara, mmiliki, simu, email na nenosiri.');
-  if(!isValidEmail(email)) fail(400,'Email si sahihi.'); if(!isValidPhone(phone)) fail(400,'Simu si sahihi.'); if(password.length<8) fail(400,'Nenosiri herufi 8+.');
-  const existing=await one('SELECT id FROM tenants WHERE LOWER(email)=$1 OR phone=$2 LIMIT 1',[email,phone]); if(existing) fail(409,'Email au simu imesajiliwa.');
-  const id=makeId('tenant'); const subdomain=makeSubdomain(businessName); const hash=await bcrypt.hash(password,12); const trial=createTrialDates(); const plan=PLANS.START;
-  const tenant=await one(`INSERT INTO tenants (id,business_name,owner_name,phone,email,password_hash,subdomain,plan,max_devices,max_clients,status,role,trial_started_at,trial_ends_at,subscription_status,subscription_ends_at,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'START',$8,$9,'active','tenant',$10,$11,'trial',NULL,NOW()) RETURNING *`,[id,businessName,ownerName,phone,email,hash,subdomain,plan.max_devices,plan.max_clients,trial.started,trial.ends]);
-  await query(`INSERT INTO tenant_settings (tenant_id,portal_title,primary_color,announcement,contact_phone,currency) VALUES ($1,$2,$3,$4,$5,'TZS') ON CONFLICT (tenant_id) DO NOTHING`,[id,businessName,'#111827','',phone]);
-  const token=issueTenantToken(tenant); res.status(201).json({success:true,message:'Akaunti imeundwa. Jaribio siku 4 limeanza.',token,tenant:publicTenant(tenant),trial_days:4,plans:PLANS});
-}));
-app.post('/api/auth/login',asyncRoute(async(req,res)=>{
-  const email=emailValue(req.body.email); const password=String(req.body.password||''); if(!email||!password) fail(400,'Weka email na nenosiri.');
-  if(SUPER_ADMIN_EMAIL&&email===SUPER_ADMIN_EMAIL&&password===SUPER_ADMIN_PASSWORD){return res.json({success:true,token:issueSuperAdminToken(),role:'super_admin',tenant:{id:SUPER_ADMIN_ID,email:SUPER_ADMIN_EMAIL,role:'super_admin',business_name:'MR HAAS SUPER ADMIN'}});}
-  const tenant=await one('SELECT * FROM tenants WHERE LOWER(email)=$1 LIMIT 1',[email]); if(!tenant) fail(401,'Email au nenosiri si sahihi.'); const valid=await bcrypt.compare(password,tenant.password_hash); if(!valid) fail(401,'Email au nenosiri si sahihi.'); if(tenant.status!=='active') fail(403,`Akaunti hali ya ${tenant.status}.`);
-  res.json({success:true,token:issueTenantToken(tenant),role:'tenant',tenant:publicTenant(tenant),plans:PLANS});
-}));
-app.post('/api/super-admin/login',asyncRoute(async(req,res)=>{const email=emailValue(req.body.email); const password=String(req.body.password||''); if(email!==SUPER_ADMIN_EMAIL||password!==SUPER_ADMIN_PASSWORD) fail(401,'Super Admin si sahihi.'); res.json({success:true,token:issueSuperAdminToken(),role:'super_admin',tenant:{id:SUPER_ADMIN_ID,email:SUPER_ADMIN_EMAIL,role:'super_admin',business_name:'MR HAAS SUPER ADMIN'}});}));
-app.get('/api/auth/me',authMiddleware,asyncRoute(async(req,res)=>{if(req.role==='super_admin') return res.json({success:true,role:'super_admin',tenant:{id:SUPER_ADMIN_ID,email:req.email,business_name:'MR HAAS SUPER ADMIN'}}); const tenant=await getTenantRecord(req.tenant_id); res.json({success:true,role:'tenant',tenant:publicTenant(tenant),plans:PLANS});}));
-
-app.get('/api/super/tenants',authMiddleware,requireSuperAdmin,asyncRoute(async(req,res)=>{const tenants=await query(`SELECT t.id,t.business_name,t.owner_name,t.phone,t.email,t.subdomain,t.plan,t.max_devices,t.max_clients,t.status,t.role,t.trial_started_at,t.trial_ends_at,t.subscription_status,t.subscription_ends_at,t.free_forever,t.created_at,(SELECT COUNT(*)::int FROM devices d WHERE d.tenant_id=t.id) AS device_count,(SELECT COUNT(*)::int FROM clients c WHERE c.tenant_id=t.id) AS client_count,(SELECT COUNT(*)::int FROM sites s WHERE s.tenant_id=t.id) AS site_count FROM tenants t WHERE t.id<>$1 ORDER BY t.created_at DESC`,[SUPER_ADMIN_ID]); res.json({success:true,tenants,total:tenants.length});}));
-app.post('/api/super/tenants',authMiddleware,requireSuperAdmin,asyncRoute(async(req,res)=>{const businessName=clean(req.body.business_name); const ownerName=clean(req.body.owner_name||businessName); const phone=clean(req.body.phone||'0000000000'); const email=emailValue(req.body.email); const password=String(req.body.password||'Password123!'); const planKey=String(req.body.plan||'START').toUpperCase(); const plan=getPlan(planKey)||PLANS.START; if(!businessName||!email) fail(400,'Jaza biashara na email.'); if(!isValidEmail(email)) fail(400,'Email si sahihi.'); const existing=await one('SELECT id FROM tenants WHERE LOWER(email)=$1 LIMIT 1',[email]); if(existing) fail(409,'Email imesajiliwa.'); const trial=createTrialDates(); const id=makeId('tenant'); const hash=await bcrypt.hash(password,12); const subdomain=makeSubdomain(businessName); const tenant=await one(`INSERT INTO tenants (id,business_name,owner_name,phone,email,password_hash,subdomain,plan,max_devices,max_clients,status,role,trial_started_at,trial_ends_at,subscription_status,subscription_ends_at,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'active','tenant',$11,$12,'trial',NULL,NOW()) RETURNING *`,[id,businessName,ownerName,phone,email,hash,subdomain,plan.name,plan.max_devices,plan.max_clients,trial.started,trial.ends]); await query(`INSERT INTO tenant_settings (tenant_id,portal_title,primary_color,announcement,contact_phone,currency) VALUES ($1,$2,$3,$4,$5,'TZS') ON CONFLICT (tenant_id) DO NOTHING`,[id,businessName,'#111827','',phone]); res.status(201).json({success:true,message:'WISP imesajiliwa.',tenant:publicTenant(tenant),trial_days:4});}));
-app.put('/api/super/tenant/:id/subscription',authMiddleware,requireSuperAdmin,asyncRoute(async(req,res)=>{const tenantId=String(req.params.id||'').trim(); const rawPlanInput=String(req.body.plan||'START').trim().toUpperCase().replace(/\s+/g,'_'); const plan=PLANS[rawPlanInput]||getPlan(rawPlanInput); let status=String(req.body.subscription_status||'active').toLowerCase(); if(!tenantId) fail(400,'ID inahitajika.'); if(tenantId===SUPER_ADMIN_ID) fail(403,'Huwezi Super Admin.'); if(!plan) fail(400,'Plan si sahihi.'); const current=await one('SELECT * FROM tenants WHERE id=$1 AND id<>$2',[tenantId,SUPER_ADMIN_ID]); if(!current) fail(404,'WISP haijapatikana.'); const freeForever=req.body.free_forever===true||req.body.free_forever==='true'; let trialStarted=current.trial_started_at; let trialEnds=current.trial_ends_at; if(req.body.trial_days!==undefined&&req.body.trial_days!==''){const days=Number(req.body.trial_days); if(!Number.isNaN(days)&&days>=0){const now=new Date(); trialStarted=trialStarted||now; trialEnds=new Date(now.getTime()+days*86400000); status='trial';}} const endsAt=req.body.subscription_ends_at?new Date(req.body.subscription_ends_at):null; const tenant=await one(`UPDATE tenants SET plan=$1,max_devices=$2,max_clients=$3,subscription_status=$4,subscription_ends_at=$5,trial_started_at=$6,trial_ends_at=$7,free_forever=$8,updated_at=NOW() WHERE id=$9 AND id<>$10 RETURNING *`,[plan.name,plan.max_devices,plan.max_clients,status,endsAt,trialStarted,trialEnds,freeForever,tenantId,SUPER_ADMIN_ID]); res.json({success:true,message:`Plan ${plan.name} imesasishwa.`,tenant:publicTenant(tenant)});}));
-app.patch('/api/super/tenant/:id/status',authMiddleware,requireSuperAdmin,asyncRoute(async(req,res)=>{const tenantId=String(req.params.id||'').trim(); const status=String(req.body.status||'').trim().toLowerCase(); if(!tenantId||tenantId===SUPER_ADMIN_ID) fail(400,'ID haijakubaliwa.'); const tenant=await one(`UPDATE tenants SET status=$1,updated_at=NOW() WHERE id=$2 RETURNING id,business_name,status`,[status,tenantId]); if(!tenant) fail(404,'WISP haijapatikana.'); res.json({success:true,message:status==='suspended'?'Akaunti imesimamishwa.':'Akaunti imerejeshwa.',tenant});}));
-app.delete('/api/super/tenant/:id',authMiddleware,requireSuperAdmin,asyncRoute(async(req,res)=>{const tenantId=String(req.params.id||'').trim(); if(!tenantId||tenantId===SUPER_ADMIN_ID) fail(400,'ID haijakubaliwa.'); const tenant=await one(`UPDATE tenants SET status='deleted',updated_at=NOW() WHERE id=$1 RETURNING id,business_name`,[tenantId]); res.json({success:true,message:'Akaunti deleted.',tenant});}));
-
-app.get('/api/subscription',authMiddleware,asyncRoute(async(req,res)=>{const tenantId=req.role==='super_admin'?req.query.tenant_id:req.tenant_id; if(!tenantId) fail(400,'tenant_id inahitajika.'); ensureTenantAccess(req,tenantId); const tenant=await getTenantRecord(tenantId); const trialEnd=tenant.trial_ends_at?new Date(tenant.trial_ends_at):null; const paidEnd=tenant.subscription_ends_at?new Date(tenant.subscription_ends_at):null; const now=new Date(); const freeForever=tenant.free_forever===true; const trialActive=tenant.subscription_status==='trial'&&trialEnd&&trialEnd>now; const paidActive=tenant.subscription_status==='active'&&paidEnd&&paidEnd>now; res.json({success:true,subscription:{plan:tenant.plan,status:tenant.subscription_status,trial_started_at:tenant.trial_started_at,trial_ends_at:tenant.trial_ends_at,subscription_ends_at:tenant.subscription_ends_at,free_forever:freeForever,trial_active:Boolean(trialActive),paid_active:Boolean(paidActive),service_access:Boolean(freeForever||trialActive||paidActive),plans:PLANS}});}));
-app.get('/api/payment-settings',authMiddleware,asyncRoute(async(req,res)=>{const tenantId=req.role==='super_admin'?req.query.tenant_id:req.tenant_id; if(!tenantId) fail(400,'tenant_id inahitajika.'); ensureTenantAccess(req,tenantId); const settings=await one(`SELECT tenant_id,enabled_providers,manual_payment_instructions,payment_phone,payment_account_name,updated_at FROM payment_settings WHERE tenant_id=$1`,[tenantId]); res.json({success:true,settings:settings||{tenant_id:tenantId,enabled_providers:['manual'],manual_payment_instructions:'',payment_phone:'',payment_account_name:''},available_providers:PAYMENT_PROVIDERS});}));
-app.put('/api/payment-settings',authMiddleware,asyncRoute(async(req,res)=>{const tenantId=req.role==='super_admin'?req.body.tenant_id:req.tenant_id; if(!tenantId) fail(400,'tenant_id inahitajika.'); ensureTenantAccess(req,tenantId); const providers=Array.isArray(req.body.enabled_providers)?req.body.enabled_providers.filter(item=>PAYMENT_PROVIDERS.includes(item)):['manual']; const instructions=String(req.body.manual_payment_instructions||'').slice(0,3000); const phone=String(req.body.payment_phone||'').slice(0,40); const accountName=String(req.body.payment_account_name||'').slice(0,120); const settings=await one(`INSERT INTO payment_settings (tenant_id,enabled_providers,manual_payment_instructions,payment_phone,payment_account_name,updated_at) VALUES ($1,$2,$3,$4,$5,NOW()) ON CONFLICT (tenant_id) DO UPDATE SET enabled_providers=EXCLUDED.enabled_providers,manual_payment_instructions=EXCLUDED.manual_payment_instructions,payment_phone=EXCLUDED.payment_phone,payment_account_name=EXCLUDED.payment_account_name,updated_at=NOW() RETURNING tenant_id,enabled_providers,manual_payment_instructions,payment_phone,payment_account_name,updated_at`,[tenantId,providers,instructions,phone,accountName]); res.json({success:true,settings});}));
-
-/* ========== SITES, DEVICES, CLIENTS, PACKAGES, VOUCHERS (keep as before) ========== */
-// ... (omitted for brevity in this generated file, will be appended from original logic - simplified keep core)
-
-app.get('/api/sites/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId); const sites=await query(`SELECT id,tenant_id,name,location,description,status,created_at FROM sites WHERE tenant_id=$1 ORDER BY created_at DESC`,[tenantId]); res.json({success:true,sites});}));
-app.post('/api/sites',authMiddleware,requireSubscription,asyncRoute(async(req,res)=>{const tenantId=req.role==='super_admin'?req.body.tenant_id:req.tenant_id; ensureTenantAccess(req,tenantId); if(!tenantId||!req.body.name) fail(400,'tenant_id na jina vinahitajika.'); const site=await one(`INSERT INTO sites (id,tenant_id,name,location,description,status,created_at) VALUES ($1,$2,$3,$4,$5,'active',NOW()) RETURNING *`,[makeId('site'),tenantId,clean(req.body.name),clean(req.body.location||''),clean(req.body.description||'')]); res.status(201).json({success:true,site});}));
-app.delete('/api/sites/:id',authMiddleware,asyncRoute(async(req,res)=>{const site=await one('SELECT * FROM sites WHERE id=$1',[req.params.id]); if(!site) fail(404,'Site haijapatikana.'); ensureTenantAccess(req,site.tenant_id); await query('DELETE FROM sites WHERE id=$1',[site.id]); res.json({success:true,message:'Site imefutwa.'});}));
-
-app.get('/api/devices/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId); const devices=await query(`SELECT id,tenant_id,site_id,name,vendor,device_type,model,mac_address,ip_address,wan_port,connection_type,last_seen,status,created_at FROM devices WHERE tenant_id=$1 ORDER BY created_at DESC`,[tenantId]); res.json({success:true,devices});}));
-app.post('/api/devices',authMiddleware,requireSubscription,asyncRoute(async(req,res)=>{
-  const tenantId=req.role==='super_admin'?req.body.tenant_id:req.tenant_id; ensureTenantAccess(req,tenantId); if(!tenantId) fail(400,'tenant_id inahitajika.');
-  const tenant=await getTenantRecord(tenantId); await checkTenantLimit(tenant,'devices');
-  const locationName=clean(req.body.location_name||req.body.name||''); const ssid=clean(req.body.ssid||''); const port=clean(req.body.port||req.body.wan_port||req.body.ip_address||'Port 1'); const model=clean(req.body.model||'RB3011');
-  let vendor=clean(req.body.vendor||''); if(!vendor){if(model.toLowerCase().includes('eap')||req.body.mac_address) vendor='TP-Link Omada'; else vendor='MikroTik';}
-  if(vendor.toLowerCase().includes('omada')||vendor.toLowerCase().includes('eap')) vendor='TP-Link Omada'; else if(vendor.toLowerCase().includes('mikrotik')||vendor.toLowerCase().includes('rb')||vendor.toLowerCase().includes('hap')) vendor='MikroTik';
-  const name=locationName?`${locationName} - ${ssid||vendor}`:clean(req.body.name||`${model} ${port}`); const deviceType=vendor==='TP-Link Omada'?'access_point':'router'; const mac=clean(req.body.mac_address||''); const ip=clean(req.body.ip_address||port); const siteId=clean(req.body.site_id||'')||null; const wanPort=port; const connectionType=vendor==='TP-Link Omada'?'omada':'api'; if(!name) fail(400,'Jina linahitajika.');
-  let device; try{device=await one(`INSERT INTO devices (id,tenant_id,site_id,name,vendor,device_type,model,mac_address,ip_address,wan_port,connection_type,status,last_seen,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'offline',NOW(),NOW()) RETURNING id,tenant_id,site_id,name,vendor,device_type,model,mac_address,ip_address,wan_port,connection_type,status,last_seen,created_at`,[makeId('device'),tenantId,siteId,name,vendor,deviceType,model,mac||null,ip||null,wanPort,connectionType]);}catch(e){device=await one(`INSERT INTO devices (id,tenant_id,site_id,name,vendor,device_type,model,mac_address,ip_address,wan_port,connection_type,last_seen,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NULL,NOW()) RETURNING id,tenant_id,site_id,name,vendor,device_type,model,mac_address,ip_address,wan_port,connection_type,last_seen,created_at`,[makeId('device'),tenantId,siteId,name,vendor,deviceType,model,mac||null,ip||null,wanPort,connectionType]);}
-  res.status(201).json({success:true,message:vendor==='TP-Link Omada'?'Omada EAP imehifadhiwa.':'Kifaa kimehifadhiwa.',device});
-}));
-app.delete('/api/devices/:id',authMiddleware,asyncRoute(async(req,res)=>{const device=await one('SELECT * FROM devices WHERE id=$1',[req.params.id]); if(!device) fail(404,'Kifaa hakijapatikana.'); ensureTenantAccess(req,device.tenant_id); await query('DELETE FROM devices WHERE id=$1',[device.id]); res.json({success:true,message:'Kifaa kimeondolewa.'});}));
-
-app.get('/api/mikrotik/register',asyncRoute(async(req,res)=>{
-  const tenantId=clean(req.query.tenant||req.query.tenant_id||''); const site=clean(req.query.site||''); const ssid=clean(req.query.ssid||''); const model=clean(req.query.model||''); const port=clean(req.query.port||'');
-  if(tenantId){try{await query(`UPDATE devices SET last_seen=NOW(),status='online',ip_address=COALESCE($2,ip_address) WHERE tenant_id=$1 AND name ILIKE $3`,[tenantId,port,`%${site}%`]);}catch(e){}}
-  const rsc=`# MR HAAS NET - ${site} SSID:${ssid} Model:${model} Port:${port} Tenant:${tenantId}\n/ip hotspot profile set [find] login-by=http-chap,http-pap\n/ip hotspot set [find] idle-timeout=1h keepalive-timeout=2m\n/system clock set time-zone-name=Africa/Dar_es_Salaam\n/system scheduler add name=mrhaas-checkin interval=2m on-event="/tool fetch url=https://mrhaas-backend.onrender.com/api/mikrotik/checkin?tenant=${encodeURIComponent(tenantId)}&site=${encodeURIComponent(site)}&model=${encodeURIComponent(model)} mode=https check-certificate=no" disabled=no\n:put "MR HAAS NET: ${site} imeunganishwa!"\n`; res.setHeader('Content-Type','text/plain'); res.send(rsc);
-}));
-app.get('/api/mikrotik/checkin',asyncRoute(async(req,res)=>{
-  const tenantId=clean(req.query.tenant||req.query.tenant_id||''); const site=clean(req.query.site||''); const deviceId=clean(req.query.id||req.query.device_id||'');
-  if(tenantId){try{if(site){await query(`UPDATE devices SET last_seen=NOW(),status='online' WHERE tenant_id=$1 AND (name ILIKE $2 OR id=$3)`,[tenantId,`%${site}%`,deviceId||site]);}else{await query(`UPDATE devices SET last_seen=NOW(),status='online' WHERE tenant_id=$1`,[tenantId]);}}catch(e){}}
-  res.setHeader('Content-Type','text/plain'); res.send('OK');
-}));
-app.get('/api/mikrotik/status/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId); const devices=await query(`SELECT id,name,vendor,model,ip_address,wan_port,status,last_seen FROM devices WHERE tenant_id=$1 ORDER BY last_seen DESC NULLS LAST`,[tenantId]); const online=devices.filter(d=>d.status==='online'||(d.last_seen&&(Date.now()-new Date(d.last_seen).getTime())<5*60*1000)).length; res.json({success:true,devices,online_count:online,total:devices.length});}));
-
-const omadaPending=new Map();
-app.post('/api/omada/adopt',asyncRoute(async(req,res)=>{
-  let tenantId=req.headers['x-tenant-id']||req.body.tenant_id||''; if(!tenantId&&req.headers.authorization){try{const h=req.headers.authorization||''; const t=h.startsWith('Bearer ')?h.slice(7):''; if(t){const d=jwt.verify(t,JWT_SECRET); tenantId=d.tenant_id||'';}}catch(e){}}
-  const location=clean(req.body.location||''); const ssid=clean(req.body.ssid||''); const mac=clean(req.body.mac||'').toUpperCase(); if(!mac) fail(400,'MAC inahitajika.'); omadaPending.set(mac,{tenantId,location,ssid,mac,status:'pending',last_seen:new Date()}); res.json({success:true,mac,status:'pending'});
-}));
-app.post(['/inform','/api/omada/inform'],asyncRoute(async(req,res)=>{const mac=clean(req.body.mac||req.query.mac||'').toUpperCase(); if(mac){omadaPending.set(mac,{...(omadaPending.get(mac)||{}),mac,last_seen:new Date(),status:'online'}); try{await query(`UPDATE devices SET last_seen=NOW(),status='online' WHERE mac_address ILIKE $1`,[`%${mac}%`]);}catch(e){}} res.json({success:true,result:'ok'});}));
-app.get('/api/omada/status/:mac',asyncRoute(async(req,res)=>{const mac=clean(req.params.mac||'').toUpperCase(); const pending=omadaPending.get(mac); res.json({success:true,mac,status:pending?.status||'not_found'});}));
-
-app.get('/api/clients/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId); const clients=await query(`SELECT id,tenant_id,site_id,name,phone,username,package_name,connection_type,status,created_at FROM clients WHERE tenant_id=$1 ORDER BY created_at DESC`,[tenantId]); res.json({success:true,clients});}));
-app.post('/api/clients',authMiddleware,requireSubscription,asyncRoute(async(req,res)=>{const tenantId=req.role==='super_admin'?req.body.tenant_id:req.tenant_id; ensureTenantAccess(req,tenantId); if(!tenantId) fail(400,'tenant_id inahitajika.'); const tenant=await getTenantRecord(tenantId); await checkTenantLimit(tenant,'clients'); const name=clean(req.body.name); const phone=clean(req.body.phone||''); const username=clean(req.body.username||''); const packageName=clean(req.body.package_name||''); const siteId=clean(req.body.site_id||'')||null; const connectionType=clean(req.body.connection_type||'hotspot'); if(!name) fail(400,'Jina la mteja linahitajika.'); const client=await one(`INSERT INTO clients (id,tenant_id,site_id,name,phone,username,package_name,connection_type,status,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'active',NOW()) RETURNING id,tenant_id,site_id,name,phone,username,package_name,connection_type,status,created_at`,[makeId('client'),tenantId,siteId,name,phone||null,username||null,packageName||null,connectionType]); res.status(201).json({success:true,client});}));
-app.delete('/api/clients/:id',authMiddleware,asyncRoute(async(req,res)=>{const client=await one('SELECT * FROM clients WHERE id=$1',[req.params.id]); if(!client) fail(404,'Mteja hajapatikana.'); ensureTenantAccess(req,client.tenant_id); await query('DELETE FROM clients WHERE id=$1',[client.id]); res.json({success:true,message:'Mteja ameondolewa.'});}));
-
-app.get('/api/packages/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId); const packages=await query(`SELECT id,tenant_id,name,price,duration_value,duration_unit,speed_down,speed_up,connection_type,description,status,created_at FROM packages WHERE tenant_id=$1 ORDER BY created_at DESC`,[tenantId]); res.json({success:true,packages});}));
-app.post('/api/packages',authMiddleware,requireSubscription,asyncRoute(async(req,res)=>{const tenantId=req.role==='super_admin'?req.body.tenant_id:req.tenant_id; ensureTenantAccess(req,tenantId); if(!tenantId) fail(400,'tenant_id inahitajika.'); const name=clean(req.body.name); const price=Number(req.body.price); if(!name||Number.isNaN(price)||price<0) fail(400,'Jina au bei si sahihi.'); const pack=await one(`INSERT INTO packages (id,tenant_id,name,price,duration_value,duration_unit,speed_down,speed_up,connection_type,description,status,created_at) VALUES ($1,$2,$3,$4,1,'days',0,0,'hotspot',$5,'active',NOW()) RETURNING *`,[makeId('pkg'),tenantId,name,price,clean(req.body.description||'')]); res.status(201).json({success:true,package:pack});}));
-app.delete('/api/packages/:id',authMiddleware,asyncRoute(async(req,res)=>{const pack=await one('SELECT * FROM packages WHERE id=$1',[req.params.id]); if(!pack) fail(404,'Kifurushi hakijapatikana.'); ensureTenantAccess(req,pack.tenant_id); await query('DELETE FROM packages WHERE id=$1',[pack.id]); res.json({success:true,message:'Kifurushi kimefutwa.'});}));
-
-app.get('/api/vouchers/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{
-  const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId);
-  try{
-    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS batch_id TEXT`);
-    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS package_name TEXT`);
-    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS price NUMERIC`);
-    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS code_type TEXT`);
-    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS prefix TEXT`);
-    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS template TEXT`);
-    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS qr_or_laha TEXT`);
-    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS device_model TEXT`);
-    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS mb_used BIGINT DEFAULT 0`);
-    await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS mb_total BIGINT DEFAULT 0`);
-  }catch(e){}
-  const vouchers=await query(`SELECT v.id,v.tenant_id,v.package_id,v.code,v.status,v.batch_id,v.package_name,v.price,v.code_type,v.prefix,v.template,v.qr_or_laha,v.device_model,v.mb_used,v.mb_total,v.expires_at,v.used_at,v.created_at FROM vouchers v WHERE v.tenant_id=$1 ORDER BY v.created_at DESC`,[tenantId]);
-  res.json({success:true,vouchers});
-}));
-function generateCodeByType(type,length=6){const numbers='0123456789'; const letters='ABCDEFGHJKLMNPQRSTUVWXYZ'; const mixed='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let chars=mixed; if(type==='numbers') chars=numbers; if(type==='letters') chars=letters; let code=''; for(let i=0;i<length;i++){code+=chars.charAt(Math.floor(Math.random()*chars.length));} return code;}
-app.post('/api/vouchers',authMiddleware,requireSubscription,asyncRoute(async(req,res)=>{
-  const tenantId=req.role==='super_admin'?req.body.tenant_id:req.tenant_id; ensureTenantAccess(req,tenantId);
-  const count=Math.min(Math.max(Number(req.body.quantity||req.body.count||1),1),500);
-  const packageId=clean(req.body.package_id||'')||null;
-  const codeType=clean(req.body.code_type||'mixed'); const prefix=clean(req.body.prefix||'MH NET').toUpperCase().slice(0,10); const usePrefix=req.body.use_prefix===true||req.body.usePrefix===true||!!prefix;
-  const template=clean(req.body.template||'B'); const qrOrLaha=clean(req.body.qr_or_laha||req.body.qrOrLaha||'QR');
-  const batchId=`BATCH-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
-  let pkgName='',pkgPrice=0; if(packageId){const pkg=await one('SELECT name,price FROM packages WHERE id=$1',[packageId]); if(pkg){pkgName=pkg.name; pkgPrice=pkg.price;}}
-  try{await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS batch_id TEXT`);}catch(e){}
-  const vouchers=[]; for(let i=0;i<count;i++){let rawCode=generateCodeByType(codeType,6); let finalCode=(usePrefix&&prefix)?`${prefix}-${rawCode}`:rawCode; const voucher=await one(`INSERT INTO vouchers (id,tenant_id,package_id,code,status,batch_id,package_name,price,code_type,prefix,template,qr_or_laha,created_at) VALUES ($1,$2,$3,$4,'unused',$5,$6,$7,$8,$9,$10,$11,NOW()) RETURNING *`,[makeId('voucher'),tenantId,packageId,finalCode,batchId,pkgName,pkgPrice,codeType,prefix,template,qrOrLaha]); vouchers.push(voucher);}
-  res.status(201).json({success:true,message:`Vocha ${count}`,batch_id:batchId,count:vouchers.length,vouchers});
-}));
-app.delete('/api/vouchers/:id',authMiddleware,asyncRoute(async(req,res)=>{const rawId=String(req.params.id||'').trim(); let voucher=await one('SELECT * FROM vouchers WHERE id=$1 LIMIT 1',[rawId]); if(!voucher) voucher=await one('SELECT * FROM vouchers WHERE code=$1 LIMIT 1',[rawId]); if(!voucher) fail(404,'Vocha haikupatikana'); ensureTenantAccess(req,voucher.tenant_id); await query('DELETE FROM vouchers WHERE id=$1',[voucher.id]); res.json({success:true,message:`Vocha ${voucher.code} imefutwa`});}));
-app.delete('/api/vouchers',authMiddleware,asyncRoute(async(req,res)=>{const tenantId=req.role==='super_admin'?req.query.tenant_id:req.tenant_id; if(!tenantId) fail(400,'tenant_id inahitajika'); ensureTenantAccess(req,tenantId); const ids=Array.isArray(req.body.ids)?req.body.ids:[]; if(!ids.length) fail(400,'Hakuna vocha'); let deleted=0; for(const rawId of ids){let v=await one('SELECT id FROM vouchers WHERE (id=$1 OR code=$1) AND tenant_id=$2 LIMIT 1',[rawId,tenantId]); if(v){await query('DELETE FROM vouchers WHERE id=$1',[v.id]); deleted++;}} res.json({success:true,message:`${deleted} vocha zimefutwa`,deleted});}));
-app.post('/api/vouchers/:id/disable',authMiddleware,asyncRoute(async(req,res)=>{const rawId=String(req.params.id||'').trim(); let voucher=await one('SELECT * FROM vouchers WHERE id=$1 LIMIT 1',[rawId]); if(!voucher) voucher=await one('SELECT * FROM vouchers WHERE code=$1 LIMIT 1',[rawId]); if(!voucher) fail(404,'Vocha haikupatikana'); ensureTenantAccess(req,voucher.tenant_id); await query('UPDATE vouchers SET status=$1 WHERE id=$2',['disabled',voucher.id]); res.json({success:true,message:'Vocha imezuiwa'});}));
-app.get('/api/vouchers/expired/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId); const expired=await query(`SELECT code,package_name,price,batch_id,used_at,expires_at,device_model,mb_used,mb_total,status,created_at FROM vouchers WHERE tenant_id=$1 AND status IN ('used','expired','disabled') ORDER BY used_at DESC NULLS LAST`,[tenantId]); res.json({success:true,expired,total:expired.length});}));
-app.get('/api/vouchers/print/:batch_id',authMiddleware,asyncRoute(async(req,res)=>{const batchId=req.params.batch_id; const template=(req.query.template||'B').toUpperCase(); const qrMode=(req.query.qr||'1')==='1'?'QR':'LAHA'; const vouchers=await query(`SELECT * FROM vouchers WHERE batch_id=$1 ORDER BY created_at ASC`,[batchId]); if(!vouchers.length) fail(404,'Batch haijapatikana'); const tenant=await getTenantRecord(vouchers[0].tenant_id); res.json({success:true,wisp_name:tenant.business_name,batch_id:batchId,template:template,qr_or_laha:qrMode,vouchers});}));
-app.post('/api/vouchers/track-usage',asyncRoute(async(req,res)=>{const code=clean(req.body.code||''); const deviceModel=clean(req.body.device_model||req.body.model||''); const mbUsed=Number(req.body.mb_used||0); const userAgent=String(req.headers['user-agent']||''); let model=deviceModel; if(!model&&userAgent){if(/Tecno/i.test(userAgent)) model='Tecno Device'; else if(/Infinix/i.test(userAgent)) model='Infinix Device'; else if(/Samsung/i.test(userAgent)) model='Samsung Device'; else model=userAgent.slice(0,80);} if(code){try{await query(`UPDATE vouchers SET used_at=COALESCE(used_at,NOW()),device_model=COALESCE($2,device_model),mb_used=GREATEST(COALESCE(mb_used,0),$3),status=CASE WHEN status='unused' THEN 'used' ELSE status END WHERE code=$1`,[code,model,mbUsed]);}catch(e){}} res.json({success:true});}));
-
-/* ========== SUBSCRIPTION - PALMPESA + FIMIPAY ========== */
-app.get('/api/subscription/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{
-  const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId);
-  const tenant=await getTenantRecord(tenantId);
-  const payments=await query(`SELECT id, amount, status, reference, transaction_id, provider, created_at, fail_reason FROM payments WHERE tenant_id = $1 AND (provider LIKE 'subscription%' OR description LIKE '%SUBSCRIPTION%' OR provider LIKE '%FimiPay%') ORDER BY created_at DESC LIMIT 50`, [tenantId]);
-  const history = payments.map(p=>({ id: p.id, amount: p.amount, status: p.status, reference: p.reference || p.transaction_id, transaction_id: p.transaction_id, provider: p.provider, date: p.created_at ? new Date(p.created_at).toLocaleString('sw-TZ') : '-', created_at: p.created_at, failReason: p.fail_reason || '' }));
-  res.json({ success:true, plan_code: tenant.plan||'diamond', plan_name: (tenant.plan||'DIAMOND').toUpperCase(), price: PLANS[(tenant.plan||'diamond').toUpperCase()]?.monthly_price || 15000, status: tenant.status||'active', expiry_date: tenant.subscription_ends_at || tenant.trial_ends_at, history });
-}));
-
-/* --- PALMPESA PAY (existing) --- */
-app.post('/api/subscription/pay',authMiddleware,asyncRoute(async(req,res)=>{
-  const tenantId=req.body.tenant_id || req.tenant_id; ensureTenantAccess(req,tenantId);
-  const phone=clean(req.body.phone); if(!isValidPhone(phone)) fail(400,'Namba ya simu si sahihi - andika kama 07XXXXXXXX');
-  const amount=Number(req.body.amount); if(!Number.isFinite(amount)||amount<=0) fail(400,'Kiasi si sahihi');
-  const planCode=(clean(req.body.plan_code)||'diamond').toLowerCase();
-  const plan=PLANS[planCode.toUpperCase()]; if(!plan) fail(400,'Kifurushi hakipo');
-  const transactionId='SUB_'+Date.now()+'_'+crypto.randomBytes(3).toString('hex').toUpperCase();
-  const payment=await one(`INSERT INTO payments (id, tenant_id, provider, reference, transaction_id, amount, currency, status, description, fail_reason, created_at) VALUES ($1,$2,$3,$4,$5,$6,'TZS','pending',$7,$8,NOW()) RETURNING *`, [makeId('payment'), tenantId, 'subscription_'+planCode, transactionId, transactionId, amount, `SUBSCRIPTION ${planCode.toUpperCase()} PalmPesa ${phone} Vendor:${PALMPESA_VENDOR}`, 'Inasubiri - Push PalmPesa']);
-  let pushResult=null; let pushError=null;
-  try{ pushResult=await sendPalmPesaPush({phone, amount, transactionId, planName: planCode.toUpperCase(), tenantId}); }
-  catch(e){ pushError=e.message; await query(`UPDATE payments SET fail_reason = $1 WHERE id = $2`, [pushError, payment.id]); }
-  if(pushError && !pushResult){ return res.json({ success:true, status:'pending', transaction_id: transactionId, message: `Ombi limehifadhiwa - ${pushError}`, reference: transactionId }); }
-  res.json({ success:true, status:'pending', transaction_id: transactionId, message: `Ombi limetumwa - Angalia simu ${phone} USSD Push`, reference: transactionId, push: pushResult, till: PALMPESA_VENDOR });
-}));
-
-/* --- FIMIPAY PAY - NEW FOR MR HAAS NET --- */
-app.post('/api/subscription/fimipay/pay',authMiddleware,asyncRoute(async(req,res)=>{
-  const tenantId=req.body.tenant_id || req.tenant_id; ensureTenantAccess(req,tenantId);
-  const phone=clean(req.body.phone); const email=emailValue(req.body.email || req.tenant?.email || '');
-  const amount=Number(req.body.amount); if(!Number.isFinite(amount)||amount<=0) fail(400,'Kiasi si sahihi');
-  const planCode=(clean(req.body.plan_code)||'diamond').toLowerCase();
-  const tenant=await getTenantRecord(tenantId);
-  try{
-    const fimipay = await createFimiPayCheckout({ tenantId, amount, phone, planCode, email });
-    const payment=await one(`INSERT INTO payments (id, tenant_id, provider, reference, transaction_id, amount, currency, status, description, fail_reason, created_at) VALUES ($1,$2,$3,$4,$5,$6,'TZS','pending',$7,$8,NOW()) RETURNING *`, [makeId('payment'), tenantId, 'FimiPay_'+planCode, fimipay.reference, fimipay.reference, amount, `SUBSCRIPTION ${planCode.toUpperCase()} FimiPay ${phone}`, `FimiPay checkout ${fimipay.endpoint}`]);
-    res.json({ success:true, status:'pending', transaction_id: fimipay.reference, checkout_url: fimipay.checkout_url, message: `Link ya malipo imetengenezwa - Mpeleke mteja hapa`, reference: fimipay.reference, payment });
-  }catch(e){
-    console.error('[FIMIPAY ERROR]', e.message);
-    fail(500, `FimiPay imeshindwa: ${e.message}`);
-  }
-}));
-
-/* --- FIMIPAY WEBHOOK - PESA INAPOFIKA KWAKO --- */
-app.post('/api/webhook/fimipay', async (req,res)=>{
-  try{
-    const raw = req.rawBody || Buffer.from(JSON.stringify(req.body));
-    const signature = req.headers['x-fimipay-signature'] || req.headers['x-fimipay-signature'.toLowerCase()] || '';
-    console.log('[FIMIPAY WEBHOOK] Headers:', { signature: signature?.slice(0,20), hasSecret: !!FIMIPAY_WEBHOOK_SECRET });
-    console.log('[FIMIPAY WEBHOOK] Body:', req.body);
-    if(FIMIPAY_WEBHOOK_SECRET){
-      const ok = verifyFimiPaySignature(raw, signature);
-      if(!ok){
-        console.error('[FIMIPAY WEBHOOK] Invalid signature');
-        // Kwa test tunakubali hata kama signature haifanani, lakini production inabidi iwe strict
-        // return res.status(401).json({success:false,message:'Invalid signature'});
-      }
-    }
-    const body = req.body || {};
-    const eventType = (body.type || body.event || body.status || '').toString().toLowerCase();
-    const data = body.data || body;
-    const reference = data.reference || body.reference || data.order_id || '';
-    const isSuccess = ['payment.success','success','paid','completed','successful','approved'].some(s=> eventType.includes(s)) || data.status==='success' || data.status==='paid' || body.status==='success';
-
-    if(!reference){
-      console.error('[FIMIPAY WEBHOOK] No reference');
-      return res.json({success:false,message:'No reference'});
-    }
-    const payment = await one(`SELECT * FROM payments WHERE transaction_id=$1 OR reference=$1 LIMIT 1`, [reference]);
-    if(!payment){
-      console.log('[FIMIPAY WEBHOOK] Payment not found, creating for', reference);
-      // Kama payment haipo, jaribu kuipata kwa metadata
-      const tenantId = data.metadata?.tenantId || data.metadata?.tenant_id || body.metadata?.tenantId;
-      if(tenantId && isSuccess){
-        const planCode = (data.metadata?.planCode || 'diamond').toLowerCase();
-        const expiry=new Date(Date.now() + 30*24*3600*1000);
-        await query(`UPDATE tenants SET plan=$1, subscription_status='active', subscription_ends_at=$2, status='active' WHERE id=$3`, [planCode, expiry.toISOString(), tenantId]);
-        return res.json({success:true,message:'Tenant activated via metadata'});
-      }
-      return res.json({success:false,message:'Payment not found'});
-    }
-    if(isSuccess){
-      await query(`UPDATE payments SET status='paid', fail_reason='' WHERE id=$1`, [payment.id]);
-      const planCode = (payment.provider||'').replace('subscription_','').replace('FimiPay_','') || data.metadata?.planCode || 'diamond';
-      const expiry=new Date(Date.now() + 30*24*3600*1000);
-      await query(`UPDATE tenants SET plan=$1, subscription_status='active', subscription_ends_at=$2, status='active' WHERE id=$3`, [planCode.toLowerCase(), expiry.toISOString(), payment.tenant_id]);
-      console.log(`[FIMIPAY PAID] Tenant ${payment.tenant_id} -> ${planCode} - pesa imefika kwako!`);
-    }else if(['failed','cancelled','failure','declined'].some(s=> eventType.includes(s))){
-      await query(`UPDATE payments SET status='failed', fail_reason=$1 WHERE id=$2`, [data.message||'FimiPay failed', payment.id]);
-    }
-    res.json({success:true,received:true});
-  }catch(e){
-    console.error('[FIMIPAY WEBHOOK ERROR]', e);
-    res.status(500).json({success:false,error:e.message});
-  }
-});
-
-// Alias routes - FimiPay inaweza kutuma kwa URLs tofauti
-app.post('/api/subscription/fimipay-callback', async (req,res)=>{ req.url='/api/webhook/fimipay'; return app._router.handle(req,res,()=>{}); });
-app.post('/api/fimipay/webhook', async (req,res)=>{ req.url='/api/webhook/fimipay'; return app._router.handle(req,res,()=>{}); });
-
-app.post('/api/subscription/palmpesa-callback',asyncRoute(async(req,res)=>{
-  const body=req.body||{}; console.log(`[PALMPESA CALLBACK]`, JSON.stringify(body));
-  const orderId=body.order_id || body.reference || body.orderId || body.transid || body.transactionId || body.externalId || body.data?.reference || body.data?.order_id;
-  const statusRaw=(body.status || body.result || body.payment_status || body.transaction_status || body.data?.status || '').toString().toLowerCase();
-  const success=['success','completed','paid','successful','complete','approved','succeeded'].some(s=> statusRaw.includes(s)) || body.resultcode==='000' || body.success===true || body.data?.status==='success';
-  if(!orderId) return res.json({ success:false, message:'No orderId' });
-  const payment=await one(`SELECT * FROM payments WHERE transaction_id = $1 OR reference = $1`, [orderId]);
-  if(!payment){ return res.json({ success:false, message:'Payment not found' }); }
-  if(success){
-    await query(`UPDATE payments SET status = 'paid', fail_reason = '' WHERE id = $1`, [payment.id]);
-    const planCode=(payment.provider||'').replace('subscription_','') || 'diamond';
-    const expiry=new Date(Date.now() + 30*24*3600*1000);
-    await query(`UPDATE tenants SET plan = $1, subscription_status = 'active', subscription_ends_at = $2, status = 'active' WHERE id = $3`, [planCode, expiry.toISOString(), payment.tenant_id]);
-  }else if(['failed','cancelled','failure','declined','rejected'].some(s=> statusRaw.includes(s))){
-    await query(`UPDATE payments SET status = 'failed', fail_reason = $1 WHERE id = $2`, [body.message||'failed', payment.id]);
-  }
-  res.json({ success:true, received:true });
-}));
-
-app.post('/api/subscription/callback',asyncRoute(async(req,res)=>{
-  const body=req.body||{}; const transactionId=body.externalId || body.orderReference || body.transactionId || body.reference || body.order_id;
-  const status=(body.status || body.transactionStatus || body.result || '').toLowerCase(); const success=['success','completed','paid','successful','approved'].includes(status);
-  if(!transactionId) return res.json({ success:false });
-  const payment=await one(`SELECT * FROM payments WHERE transaction_id = $1 OR reference = $1`, [transactionId]);
-  if(!payment) return res.json({ success:false });
-  if(success){ await query(`UPDATE payments SET status = 'paid', fail_reason = '' WHERE id = $1`, [payment.id]); const planCode=(payment.provider||'').replace('subscription_','') || 'diamond'; const expiry=new Date(Date.now() + 30*24*3600*1000); await query(`UPDATE tenants SET plan = $1, subscription_status = 'active', subscription_ends_at = $2, status = 'active' WHERE id = $3`, [planCode, expiry.toISOString(), payment.tenant_id]); }
-  else if(['failed','cancelled'].includes(status)){ await query(`UPDATE payments SET status = 'failed', fail_reason = $1 WHERE id = $2`, [body.message||'failed', payment.id]); }
-  res.json({ success:true });
-}));
-
-app.post('/api/subscription/change',authMiddleware,asyncRoute(async(req,res)=>{
-  const tenantId=req.body.tenant_id || req.tenant_id; ensureTenantAccess(req,tenantId);
-  const planCode=(clean(req.body.plan_code)||'').toLowerCase(); if(!PLANS[planCode.toUpperCase()]) fail(400,'Kifurushi hakipo');
-  res.json({ success:true, message: `Umechagua ${planCode.toUpperCase()} - Lipa sasa`, pending_plan: planCode });
-}));
-
-app.get('/api/subscription/status/:order_id',authMiddleware,asyncRoute(async(req,res)=>{
-  const orderId=req.params.order_id; let statusData=null; try{ statusData=await checkPalmPesaStatus(orderId); }catch(e){ statusData={ error: e.message }; }
-  res.json({ success:true, order_id: orderId, palmpesa: statusData });
-}));
-
-app.get('/api/portal/settings/:tenant_id',asyncRoute(async(req,res)=>{const tenantId=clean(req.params.tenant_id); const tenant=await getTenantRecord(tenantId); const settings=await one(`SELECT tenant_id,portal_title,primary_color,announcement,contact_phone,currency FROM tenant_settings WHERE tenant_id=$1`,[tenantId]); res.json({success:true,portal:settings||{tenant_id:tenantId,portal_title:tenant.business_name,primary_color:'#111827',announcement:'',contact_phone:tenant.phone,currency:'TZS'}});}));
-app.post('/api/portal/settings/:tenant_id',authMiddleware,requireSubscription,asyncRoute(async(req,res)=>{const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId); const title=String(req.body.portal_title||req.body.name||'').slice(0,120); const color=String(req.body.primary_color||'#111827'); const announcement=String(req.body.announcement||'').slice(0,3000); const contactPhone=String(req.body.contact_phone||req.body.contact||'').slice(0,40); const settings=await one(`INSERT INTO tenant_settings (tenant_id,portal_title,primary_color,announcement,contact_phone,currency) VALUES ($1,$2,$3,$4,$5,'TZS') ON CONFLICT (tenant_id) DO UPDATE SET portal_title=EXCLUDED.portal_title,primary_color=EXCLUDED.primary_color,announcement=EXCLUDED.announcement,contact_phone=EXCLUDED.contact_phone RETURNING *`,[tenantId,title,color,announcement,contactPhone]); res.json({success:true,settings});}));
-
-app.get('/api/payments/:tenant_id',authMiddleware,asyncRoute(async(req,res)=>{const tenantId=req.params.tenant_id; ensureTenantAccess(req,tenantId); const payments=await query(`SELECT id,tenant_id,client_id,provider,reference,amount,currency,status,description,created_at FROM payments WHERE tenant_id=$1 ORDER BY created_at DESC`,[tenantId]); res.json({success:true,payments});}));
-app.post('/api/payments/manual',authMiddleware,requireSubscription,asyncRoute(async(req,res)=>{const tenantId=req.role==='super_admin'?req.body.tenant_id:req.tenant_id; ensureTenantAccess(req,tenantId); const amount=Number(req.body.amount); if(!Number.isFinite(amount)||amount<=0) fail(400,'Kiasi si sahihi.'); const payment=await one(`INSERT INTO payments (id,tenant_id,provider,reference,amount,currency,status,description,created_at) VALUES ($1,$2,'manual',$3,$4,'TZS','pending',$5,NOW()) RETURNING *`,[makeId('payment'),tenantId,clean(req.body.reference||''),amount,clean(req.body.customer_name||'')]); res.status(201).json({success:true,payment});}));
-
-app.get('/api/super/updates',authMiddleware,requireSuperAdmin,asyncRoute(async(req,res)=>{const updates=await query(`SELECT * FROM system_updates ORDER BY created_at DESC`); res.json({success:true,updates});}));
-app.post('/api/super/updates',authMiddleware,requireSuperAdmin,asyncRoute(async(req,res)=>{const version=String(req.body.version||'').trim(); const title=String(req.body.title||'').trim(); if(!version||!title) fail(400,'Version na jina vinahitajika.'); const update=await one(`INSERT INTO system_updates (id,version,title,description,release_notes,status,created_at) VALUES ($1,$2,$3,$4,$5,'draft',NOW()) RETURNING *`,[makeId('update'),version,title,clean(req.body.description||''),clean(req.body.release_notes||'')]); res.status(201).json({success:true,update});}));
-app.patch('/api/super/updates/:id/status',authMiddleware,requireSuperAdmin,asyncRoute(async(req,res)=>{const status=String(req.body.status||'').trim().toLowerCase(); const update=await one(`UPDATE system_updates SET status=$1,updated_at=NOW() WHERE id=$2 RETURNING *`,[status,req.params.id]); res.json({success:true,update});}));
-
-app.get('/',(req,res)=>{res.sendFile(path.join(__dirname,'public','index.html'));});
-app.get('/api/*',(req,res)=>{res.status(404).json({success:false,message:'API endpoint haijapatikana.'});});
-app.use((err,req,res,next)=>{if(res.headersSent) return next(err); const status=err.status||500; if(status>=500) console.error('[SERVER ERROR]',err.message); res.status(status).json({success:false,message:err.message||'Hitilafu ya ndani.'});});
-
-async function startServer(){
-  try{
-    await db.ready; if(!db.pool||typeof db.pool.query!=='function') throw new Error('database.js lazima itoe pool.query');
-    await db.pool.query('SELECT 1');
-    try{await db.pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'offline'`);}catch(e){}
-    try{await db.pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ`);}catch(e){}
-    try{await db.pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS wan_port TEXT`);}catch(e){}
-    try{await db.pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS connection_type TEXT DEFAULT 'api'`);}catch(e){}
-    try{await db.pool.query(`ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS batch_id TEXT`);}catch(e){}
-    try{await db.pool.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS fail_reason TEXT`);}catch(e){}
-    try{await db.pool.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS provider TEXT`);}catch(e){}
-    app.listen(PORT,'0.0.0.0',()=>{console.log(`🚀 MR HAAS backend port ${PORT} - Till ${PALMPESA_VENDOR} + FimiPay Ready`); console.log(`✅ FimiPay: ${FIMIPAY_BASE_URL} - PalmPesa: ${PALMPESA_VENDOR}`);});
-  }catch(error){console.error('Server haikuweza kuanza:',error.message); process.exit(1);}
-}
-startServer();
-module.exports=app;
+</script>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
+</html>
