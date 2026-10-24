@@ -148,7 +148,7 @@ async function checkPalmPesaStatus(orderId){
 }
 
 /* ================= FIMIPAY FUNCTIONS - MR HAAS NET ================= */
-async function createFimiPayCheckout({ tenantId, amount, phone, planCode, email }){
+async function createFimiPayCheckout({ tenantId, amount, phone, planCode, email, clientIp, userAgent }){
   if(!FIMIPAY_SECRET_KEY) throw new Error('FIMIPAY_SECRET_KEY haijawekwa ENV - weka kwenye Render');
   if(!FIMIPAY_PUBLIC_KEY) throw new Error('FIMIPAY_PUBLIC_KEY haijawekwa');
   const reference = `MRHAAS-${tenantId.slice(0,8)}-${Date.now()}`;
@@ -166,20 +166,39 @@ async function createFimiPayCheckout({ tenantId, amount, phone, planCode, email 
     metadata: { tenantId: tenantId, planCode: planCode, source: 'mrhaas_wisp' }
   };
   Object.keys(payload).forEach(k=> payload[k]===undefined && delete payload[k]);
-  console.log('[FIMIPAY CREATE]', payload);
-  // Try V4 and V3 endpoints
-  const endpoints = ['/api/v1/checkout', '/api/v1/payments', '/v4/checkout', '/api/checkout'];
+  console.log('[FIMIPAY CREATE]', payload, {clientIp, userAgent});
+
+  const browserHeaders = {
+    'Authorization': `Bearer ${FIMIPAY_SECRET_KEY}`,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'User-Agent': userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Origin': process.env.FRONTEND_URL || 'https://mrhaasnet.co.tz',
+    'Referer': (process.env.FRONTEND_URL || 'https://mrhaasnet.co.tz') + '/',
+    'X-Forwarded-For': clientIp || '',
+    'X-Real-IP': clientIp || '',
+    'CF-Connecting-IP': clientIp || ''
+  };
+  Object.keys(browserHeaders).forEach(k=> !browserHeaders[k] && delete browserHeaders[k]);
+
+  const endpoints = ['/api/v1/checkout', '/api/v1/payments', '/v4/checkout', '/api/checkout', '/api/v1/checkout/session'];
   let lastErr = null;
   for(const ep of endpoints){
     try{
       const resp = await fetch(FIMIPAY_BASE_URL + ep, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${FIMIPAY_SECRET_KEY}`, 'Content-Type': 'application/json' },
+        headers: browserHeaders,
         body: JSON.stringify(payload)
       });
       const text = await resp.text();
       let data; try{ data = JSON.parse(text); }catch{ data = { raw: text }; }
       console.log(`[FIMIPAY RESP ${ep}] ${resp.status}`, data);
+      // Handle VPN blocked specifically
+      if(resp.status===403 && (text.includes('vpn_blocked') || text.includes('proxy') || text.includes('VPN'))){
+        lastErr = `FIMIPAY_VPN_BLOCKED: ${text.slice(0,500)} | IP ya Render imezuiwa na FimiPay. Tafadhali wasiliana na FimiPay support wakuruhusu IP au tumia domain yako mwenyewe.`;
+        // Try next endpoint, but likely all will fail, so we keep error
+        continue;
+      }
       if(resp.ok && (data.checkout_url || data.data?.checkout_url || data.url || data.payment_url)){
         const checkoutUrl = data.checkout_url || data.data?.checkout_url || data.url || data.payment_url || data.data?.url;
         return { success:true, checkout_url: checkoutUrl, reference, response: data, endpoint: ep };
