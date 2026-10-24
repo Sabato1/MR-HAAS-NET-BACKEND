@@ -389,7 +389,16 @@ function app(){
         }else{
           this.notify('✅ Ombi la FimiPay limetumwa - Kumb: '+(data.reference||''),'success');
         }
-      }catch(e){this.notify('FimiPay imeshindwa: '+e.message,'error');}
+      }catch(e){
+        let msg=e.message||'Imeshindwa';
+        if(msg.includes('vpn_blocked') || msg.includes('VPN') || msg.includes('proxy') || msg.includes('FIMIPAY_VPN_BLOCKED')){
+          this.notify('⚠️ FimiPay wamezuia server ya Render. Tafadhali tumia PalmPesa kwa sasa, au wasiliana na FimiPay support wakuruhusu IP. Kosa: vpn_blocked','error');
+        }else if(msg.includes('Not implemented')){
+          this.notify('⚠️ FimiPay endpoint haipo - tumia PalmPesa kwa sasa. Tutarekebisha server.','error');
+        }else{
+          this.notify('FimiPay imeshindwa: '+msg,'error');
+        }
+      }
       finally{this.sub.paying=false;}
     },
     async changePlan(plan){if(plan.code===this.sub.currentPlanCode){this.notify('Hiki ndicho kifurushi chako sasa MH NET','success'); return;} this.sub.pendingPlanCode=plan.code; this.sub.pendingPlanName=plan.name; this.sub.pendingPrice=plan.price; this.sub.finalPrice=plan.price; this.sub.discount=0; this.sub.coupon=''; this.sub.couponMessage='Umechagua '+plan.name+' - Lipa TZS '+this.money(plan.price)+' ili kiwezeshwe. Hakuna kuwezeshwa bila kulipa.'; this.notify('Umechagua '+plan.name+' - Lipa sasa ili kiwezeshwe. Hakitawezeshwa bila malipo.','success'); window.scrollTo({top:0, behavior:'smooth'});},
